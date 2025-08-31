@@ -2111,3 +2111,17 @@ setTimeout(() => {
     lob._wired = true;
   }
 }, 0);
+// ==== REMOVE "Max" buttons from Stock & FX tables ====
+document.addEventListener('DOMContentLoaded', () => {
+  document
+    .querySelectorAll('[data-sell-max], [data-fxmax]')
+    .forEach(btn => btn.remove());
+});
+
+// dodatkowo przy każdym rerenderze (po klikach) – obserwator
+const observer = new MutationObserver(() => {
+  document
+    .querySelectorAll('[data-sell-max], [data-fxmax]')
+    .forEach(btn => btn.remove());
+});
+observer.observe(document.body, { childList: true, subtree: true });

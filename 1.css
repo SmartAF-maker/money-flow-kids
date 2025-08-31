@@ -854,11 +854,6 @@ thead th{
   vertical-align: middle;
   padding: 8px 12px;
 }
-/* ——— FX: ukryj kolumnę “Avg. rate” (3. kolumna) ——— */
-#tab-fx table th:nth-child(3),
-#tab-fx table td:nth-child(3) {
-  display: none !important;
-}
 
 /* ——— Komórka z przyciskami: jeden rząd, brak zawijania ——— */
 #tab-fx td.space,
@@ -926,4 +921,69 @@ thead th{
 .jar-actions .btn{
   flex:0 0 auto;        /* nie rozciąga się */
   white-space:nowrap;   /* tekst się nie łamie */
+}
+/* HIDE/REMOVE "Max" column buttons – safe selectors */
+#tab-fx td.space .btn-max,
+#tab-invest td.space .btn-max { display: none !important; }
+
+/* if układ był kolumnowy, po usunięciu Maxa wyrównaj w jednej linii */
+#tab-fx td.space,
+#tab-invest td.space{
+  display:flex !important;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+/* === STOCK PORTFOLIO = jak FX, bez scrolla === */
+#tab-invest .tableWrap table{ min-width:0 !important; }     /* nie wymuszaj szerokości */
+#tab-invest .tableWrap{ overflow-x:hidden; }                 /* i tak nie będzie potrzebny */
+
+#tab-invest th,
+#tab-invest td{
+  white-space:nowrap !important;
+  text-align:center;
+  vertical-align:middle;
+  padding:8px 10px;                                         /* tak samo jak w FX */
+}
+
+/* węższy input ilości jak w FX */
+#tab-invest input[type="number"],
+#tab-invest input.qty,
+#tab-invest .input{
+  width:72px !important;
+  min-width:72px !important;
+}
+
+/* akcje w jednej linii */
+#tab-invest td.space{
+  display:flex !important;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap !important;
+}
+
+/* opcjonalnie: stałe proporcje kolumn, żeby ładnie się mieściło */
+#tab-invest table{ table-layout:fixed; }
+#tab-invest th:nth-child(1), #tab-invest td:nth-child(1){ width:12%; } /* Ticker   */
+#tab-invest th:nth-child(2), #tab-invest td:nth-child(2){ width:8%;  } /* Shares   */
+#tab-invest th:nth-child(3), #tab-invest td:nth-child(3){ width:15%; } /* Avg cost */
+#tab-invest th:nth-child(4), #tab-invest td:nth-child(4){ width:15%; } /* Price    */
+#tab-invest th:nth-child(5), #tab-invest td:nth-child(5){ width:15%; } /* Value    */
+#tab-invest th:nth-child(6), #tab-invest td:nth-child(6){ width:15%; } /* P/L      */
+#tab-invest th:nth-child(7), #tab-invest td:nth-child(7){ width:20%; } /* Qty+Sell */
+/* === FIX: ostatnia kolumna w Stock Portfolio === */
+#tab-invest td.space {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  white-space: nowrap;
+  width: 100% !important;   /* ⬅️ pełna szerokość */
+  box-sizing: border-box;
+}
+
+/* ostatnia kolumna w tabeli też ma sięgać do końca */
+#tab-invest table th:last-child,
+#tab-invest table td:last-child {
+  width: auto !important;
 }
