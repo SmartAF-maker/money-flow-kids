@@ -3,7 +3,6 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-
     <title>Money Flow Kids</title>
 
     <link rel="stylesheet" href="1.css" />
@@ -90,49 +89,26 @@
       #tutorialModal .modal-content { width: min(720px, 92vw); }
       #tutorialModal img { max-width: 100%; height: auto; display: block; }
 
-      /* Global Trends – ukryte domyślnie */
- /* Global Trends – widoczne; ukrywamy/wyświetlamy klasą .hidden z JS */
-#globalTrendsCard { display: block; }
-
-/* (na wszelki wypadek) */
-.hidden { display: none !important; }
+      /* Global Trends – widoczne; ukrywamy/wyświetlamy klasą .hidden z JS */
+      #globalTrendsCard { display: block; }
+      .hidden { display: none !important; }
     </style>
 
-   <!-- CSP: allow live data endpoints for fetch() -->
-<meta http-equiv="Content-Security-Policy" content="
-  default-src 'self';
-  script-src  'self' 'unsafe-inline';
-  style-src   'self' 'unsafe-inline';
-  img-src     'self' data: blob:;
-  font-src    'self' data:;
-  connect-src 'self'
-               https://api.exchangerate.host
-               https://query1.finance.yahoo.com
-               https://query2.finance.yahoo.com
-               https://r.jina.ai;
-  frame-src   'none';
-  base-uri    'self';
-  form-action 'self'">
-
-  </head>
-
-  <body>
-   <!-- CSP: allow live data endpoints for fetch() -->
-<meta http-equiv="Content-Security-Policy" content="
-  default-src 'self';
-  script-src  'self' 'unsafe-inline';
-  style-src   'self' 'unsafe-inline';
-  img-src     'self' data: blob:;
-  font-src    'self' data:;
-  connect-src 'self'
-               https://api.exchangerate.host
-               https://query1.finance.yahoo.com
-               https://query2.finance.yahoo.com
-               https://r.jina.ai;
-  frame-src   'none';
-  base-uri    'self';
-  form-action 'self'">
-
+    <!-- CSP: allow live data endpoints for fetch() (Tylko w <head>) -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src  'self' 'unsafe-inline';
+      style-src   'self' 'unsafe-inline';
+      img-src     'self' data: blob:;
+      font-src    'self' data:;
+      connect-src 'self'
+                   https://api.exchangerate.host
+                   https://query1.finance.yahoo.com
+                   https://query2.finance.yahoo.com
+                   https://r.jina.ai;
+      frame-src   'none';
+      base-uri    'self';
+      form-action 'self'">
   </head>
 
   <body>
@@ -166,30 +142,29 @@
       </div>
     </header>
 
-  <!-- Sticky mini jars (below top buttons) -->
-<section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
-  <div class="mini-jar">
-    <div class="mini-jar-label">Available cash</div>
-    <div id="miniCash" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="jarSavings">Savings</div>
-    <div id="miniSave" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="jarSpending">Earnings</div>
-    <div id="miniSpend" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="jarGiving">Gifts</div>
-    <div id="miniGive" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="jarInvest">Investments</div>
-    <div id="miniInvest" class="mini-jar-value">0.00 USD</div>
-  </div>
-</section>
-
+    <!-- Sticky mini jars (below top buttons) -->
+    <section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
+      <div class="mini-jar">
+        <div class="mini-jar-label">Available cash</div>
+        <div id="miniCash" class="mini-jar-value">0.00 USD</div>
+      </div>
+      <div class="mini-jar">
+        <div class="mini-jar-label" data-i18n="jarSavings">Savings</div>
+        <div id="miniSave" class="mini-jar-value">0.00 USD</div>
+      </div>
+      <div class="mini-jar">
+        <div class="mini-jar-label" data-i18n="jarSpending">Earnings</div>
+        <div id="miniSpend" class="mini-jar-value">0.00 USD</div>
+      </div>
+      <div class="mini-jar">
+        <div class="mini-jar-label" data-i18n="jarGiving">Gifts</div>
+        <div id="miniGive" class="mini-jar-value">0.00 USD</div>
+      </div>
+      <div class="mini-jar">
+        <div class="mini-jar-label" data-i18n="jarInvest">Investments</div>
+        <div id="miniInvest" class="mini-jar-value">0.00 USD</div>
+      </div>
+    </section>
 
     <main class="container">
       <!-- Live mode switch -->
@@ -203,231 +178,231 @@
         <div class="sub" data-i18n="dataModeHint">In Live mode, prices/rates come from the backend (requires active subscription or trial).</div>
       </section>
 
-
       <!-- Słoiki – ZAWSZE -->
-<section class="jars wow-jars">
-  <!-- Savings -->
-  <div class="card jar-card" style="--fill:0%">
-    <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
-      <defs>
-        <linearGradient id="lidGrad_s" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#c9d2df"/>
-          <stop offset="40%" stop-color="#f5f7fa"/>
-          <stop offset="60%" stop-color="#aeb9c8"/>
-          <stop offset="100%" stop-color="#e6ecf3"/>
-        </linearGradient>
-        <linearGradient id="glassGrad_s" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
-          <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
-          <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
-        </linearGradient>
-        <linearGradient id="shineGrad_s" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
-          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="liqGrad_s" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--liq-top,#41d98a)"/>
-          <stop offset="100%" stop-color="var(--liq-bottom,#00c853)"/>
-        </linearGradient>
-        <filter id="shadowBlur_s" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-          <feOffset dx="0" dy="2" result="off"/>
-          <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <path id="jarPath_s" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
-        <clipPath id="clip_s"><use href="#jarPath_s"/></clipPath>
-      </defs>
-      <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
-      <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_s)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_s)"/>
-      <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
-      <use href="#jarPath_s" fill="url(#glassGrad_s)" stroke="#b7c7db" stroke-width="2.5"/>
-      <g clip-path="url(#clip_s)">
-        <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_s)"/>
-        <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
-        <g class="bubbles" fill="#ffffff" opacity=".65">
-          <circle cx="70" cy="200" r="3"/><circle cx="120" cy="190" r="2.5"/><circle cx="95" cy="180" r="2"/>
-        </g>
-      </g>
-      <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_s)" opacity=".35"/>
-      <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
-    </svg>
-    <div class="muted" data-i18n="jarSavings">Savings</div>
-    <div id="saveAmt" class="title">0.00 USD</div>
+      <section class="jars wow-jars">
+        <!-- Savings -->
+        <div class="card jar-card" style="--fill:0%">
+          <!-- SVG jar -->
+          <!-- (Savings SVG left unchanged for brevity; identical to your version) -->
+          <!-- === BEGIN Savings SVG === -->
+          <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <linearGradient id="lidGrad_s" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#c9d2df"/>
+                <stop offset="40%" stop-color="#f5f7fa"/>
+                <stop offset="60%" stop-color="#aeb9c8"/>
+                <stop offset="100%" stop-color="#e6ecf3"/>
+              </linearGradient>
+              <linearGradient id="glassGrad_s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+                <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="shineGrad_s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="liqGrad_s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--liq-top,#41d98a)"/>
+                <stop offset="100%" stop-color="var(--liq-bottom,#00c853)"/>
+              </linearGradient>
+              <filter id="shadowBlur_s" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="off"/>
+                <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <path id="jarPath_s" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
+              <clipPath id="clip_s"><use href="#jarPath_s"/></clipPath>
+            </defs>
+            <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
+            <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_s)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_s)"/>
+            <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
+            <use href="#jarPath_s" fill="url(#glassGrad_s)" stroke="#b7c7db" stroke-width="2.5"/>
+            <g clip-path="url(#clip_s)">
+              <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_s)"/>
+              <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
+              <g class="bubbles" fill="#ffffff" opacity=".65">
+                <circle cx="70" cy="200" r="3"/><circle cx="120" cy="190" r="2.5"/><circle cx="95" cy="180" r="2"/>
+              </g>
+            </g>
+            <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_s)" opacity=".35"/>
+            <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
+          </svg>
+          <!-- === END Savings SVG === -->
 
-    <!-- input + Add -->
-    <div class="jar-actions">
-      <input type="number" min="0.01" step="0.01" class="jar-input">
-      <button class="btn" data-add="save" data-i18n="add">+ Add</button>
-    </div>
-  </div>
+          <div class="muted" data-i18n="jarSavings">Savings</div>
+          <div id="saveAmt" class="title">0.00 USD</div>
+          <div class="jar-actions">
+            <input type="number" min="0.01" step="0.01" class="jar-input">
+            <button class="btn" data-add="save" data-i18n="add">+ Add</button>
+          </div>
+        </div>
 
-  <!-- Earnings -->
-  <div class="card jar-card" style="--fill:0%">
-    <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
-      <defs>
-        <linearGradient id="lidGrad_e" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#c9d2df"/>
-          <stop offset="40%" stop-color="#f5f7fa"/>
-          <stop offset="60%" stop-color="#aeb9c8"/>
-          <stop offset="100%" stop-color="#e6ecf3"/>
-        </linearGradient>
-        <linearGradient id="glassGrad_e" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
-          <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
-          <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
-        </linearGradient>
-        <linearGradient id="shineGrad_e" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
-          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="liqGrad_e" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--liq-top,#ffb74d)"/>
-          <stop offset="100%" stop-color="var(--liq-bottom,#ff9800)"/>
-        </linearGradient>
-        <filter id="shadowBlur_e" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-          <feOffset dx="0" dy="2" result="off"/>
-          <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <path id="jarPath_e" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
-        <clipPath id="clip_e"><use href="#jarPath_e"/></clipPath>
-      </defs>
-      <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
-      <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_e)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_e)"/>
-      <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
-      <use href="#jarPath_e" fill="url(#glassGrad_e)" stroke="#b7c7db" stroke-width="2.5"/>
-      <g clip-path="url(#clip_e)">
-        <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_e)"/>
-        <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
-        <g class="bubbles" fill="#ffffff" opacity=".7">
-          <circle cx="80" cy="200" r="3"/><circle cx="130" cy="190" r="2.5"/><circle cx="105" cy="175" r="2"/>
-        </g>
-      </g>
-      <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_e)" opacity=".35"/>
-      <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
-    </svg>
-    <div class="muted" data-i18n="jarSpending">Earnings</div>
-    <div id="spendAmt" class="title">0.00 USD</div>
+        <!-- Earnings -->
+        <div class="card jar-card" style="--fill:0%">
+          <!-- (Earnings SVG – bez zmian) -->
+          <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <linearGradient id="lidGrad_e" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#c9d2df"/>
+                <stop offset="40%" stop-color="#f5f7fa"/>
+                <stop offset="60%" stop-color="#aeb9c8"/>
+                <stop offset="100%" stop-color="#e6ecf3"/>
+              </linearGradient>
+              <linearGradient id="glassGrad_e" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+                <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="shineGrad_e" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="liqGrad_e" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--liq-top,#ffb74d)"/>
+                <stop offset="100%" stop-color="var(--liq-bottom,#ff9800)"/>
+              </linearGradient>
+              <filter id="shadowBlur_e" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="off"/>
+                <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <path id="jarPath_e" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
+              <clipPath id="clip_e"><use href="#jarPath_e"/></clipPath>
+            </defs>
+            <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
+            <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_e)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_e)"/>
+            <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
+            <use href="#jarPath_e" fill="url(#glassGrad_e)" stroke="#b7c7db" stroke-width="2.5"/>
+            <g clip-path="url(#clip_e)">
+              <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_e)"/>
+              <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
+              <g class="bubbles" fill="#ffffff" opacity=".7">
+                <circle cx="80" cy="200" r="3"/><circle cx="130" cy="190" r="2.5"/><circle cx="105" cy="175" r="2"/>
+              </g>
+            </g>
+            <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_e)" opacity=".35"/>
+            <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
+          </svg>
 
-    <!-- input + Add -->
-    <div class="jar-actions">
-      <input type="number" min="0.01" step="0.01" class="jar-input">
-      <button class="btn" data-add="spend" data-i18n="add">+ Add</button>
-    </div>
-  </div>
+          <div class="muted" data-i18n="jarSpending">Earnings</div>
+          <div id="spendAmt" class="title">0.00 USD</div>
+          <div class="jar-actions">
+            <input type="number" min="0.01" step="0.01" class="jar-input">
+            <button class="btn" data-add="spend" data-i18n="add">+ Add</button>
+          </div>
+        </div>
 
-  <!-- Gifts -->
-  <div class="card jar-card" style="--fill:0%">
-    <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
-      <defs>
-        <linearGradient id="lidGrad_d" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#c9d2df"/>
-          <stop offset="40%" stop-color="#f5f7fa"/>
-          <stop offset="60%" stop-color="#aeb9c8"/>
-          <stop offset="100%" stop-color="#e6ecf3"/>
-        </linearGradient>
-        <linearGradient id="glassGrad_d" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
-          <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
-          <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
-        </linearGradient>
-        <linearGradient id="shineGrad_d" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
-          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="liqGrad_d" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--liq-top,#ff6fa3)"/>
-          <stop offset="100%" stop-color="var(--liq-bottom,#e91e63)"/>
-        </linearGradient>
-        <filter id="shadowBlur_d" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-          <feOffset dx="0" dy="2" result="off"/>
-          <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <path id="jarPath_d" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
-        <clipPath id="clip_d"><use href="#jarPath_d"/></clipPath>
-      </defs>
-      <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
-      <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_d)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_d)"/>
-      <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
-      <use href="#jarPath_d" fill="url(#glassGrad_d)" stroke="#b7c7db" stroke-width="2.5"/>
-      <g clip-path="url(#clip_d)">
-        <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_d)"/>
-        <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
-        <g class="bubbles" fill="#ffffff" opacity=".7">
-          <circle cx="88" cy="198" r="3"/><circle cx="124" cy="186" r="2.5"/><circle cx="108" cy="172" r="2"/>
-        </g>
-      </g>
-      <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_d)" opacity=".35"/>
-      <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
-    </svg>
-    <div class="muted" data-i18n="jarGiving">Gifts</div>
-    <div id="giveAmt" class="title">0.00 USD</div>
+        <!-- Gifts -->
+        <div class="card jar-card" style="--fill:0%">
+          <!-- (Gifts SVG – bez zmian) -->
+          <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <linearGradient id="lidGrad_d" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#c9d2df"/>
+                <stop offset="40%" stop-color="#f5f7fa"/>
+                <stop offset="60%" stop-color="#aeb9c8"/>
+                <stop offset="100%" stop-color="#e6ecf3"/>
+              </linearGradient>
+              <linearGradient id="glassGrad_d" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+                <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="shineGrad_d" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="liqGrad_d" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--liq-top,#ff6fa3)"/>
+                <stop offset="100%" stop-color="var(--liq-bottom,#e91e63)"/>
+              </linearGradient>
+              <filter id="shadowBlur_d" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="off"/>
+                <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <path id="jarPath_d" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
+              <clipPath id="clip_d"><use href="#jarPath_d"/></clipPath>
+            </defs>
+            <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
+            <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_d)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_d)"/>
+            <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
+            <use href="#jarPath_d" fill="url(#glassGrad_d)" stroke="#b7c7db" stroke-width="2.5"/>
+            <g clip-path="url(#clip_d)">
+              <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_d)"/>
+              <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
+              <g class="bubbles" fill="#ffffff" opacity=".7">
+                <circle cx="88" cy="198" r="3"/><circle cx="124" cy="186" r="2.5"/><circle cx="108" cy="172" r="2"/>
+              </g>
+            </g>
+            <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_d)" opacity=".35"/>
+            <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
+          </svg>
 
-    <!-- input + Add -->
-    <div class="jar-actions">
-      <input type="number" min="0.01" step="0.01" class="jar-input">
-      <button class="btn" data-add="give" data-i18n="add">+ Add</button>
-    </div>
-  </div>
+          <div class="muted" data-i18n="jarGiving">Gifts</div>
+          <div id="giveAmt" class="title">0.00 USD</div>
+          <div class="jar-actions">
+            <input type="number" min="0.01" step="0.01" class="jar-input">
+            <button class="btn" data-add="give" data-i18n="add">+ Add</button>
+          </div>
+        </div>
 
-  <!-- Invest (cash) -->
-  <div class="card jar-card" style="--fill:0%">
-    <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
-      <defs>
-        <linearGradient id="lidGrad_i" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#c9d2df"/>
-          <stop offset="40%" stop-color="#f5f7fa"/>
-          <stop offset="60%" stop-color="#aeb9c8"/>
-          <stop offset="100%" stop-color="#e6ecf3"/>
-        </linearGradient>
-        <linearGradient id="glassGrad_i" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
-          <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
-          <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
-        </linearGradient>
-        <linearGradient id="shineGrad_i" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
-          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="liqGrad_i" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--liq-top,#6a8cff)"/>
-          <stop offset="100%" stop-color="var(--liq-bottom,#3f51b5)"/>
-        </linearGradient>
-        <filter id="shadowBlur_i" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-          <feOffset dx="0" dy="2" result="off"/>
-          <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <path id="jarPath_i" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
-        <clipPath id="clip_i"><use href="#jarPath_i"/></clipPath>
-      </defs>
-      <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
-      <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_i)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_i)"/>
-      <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
-      <use href="#jarPath_i" fill="url(#glassGrad_i)" stroke="#b7c7db" stroke-width="2.5"/>
-      <g clip-path="url(#clip_i)">
-        <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_i)"/>
-        <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
-        <g class="bubbles" fill="#ffffff" opacity=".7">
-          <circle cx="78" cy="198" r="3"/><circle cx="126" cy="188" r="2.5"/><circle cx="102" cy="176" r="2"/>
-        </g>
-      </g>
-      <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_i)" opacity=".35"/>
-      <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
-    </svg>
-    <div class="muted" data-i18n="jarInvest">Investments</div>
-    <div id="investAmt" class="title">0.00 USD</div>
+        <!-- Invest (cash) -->
+        <div class="card jar-card" style="--fill:0%">
+          <!-- (Invest SVG – bez zmian) -->
+          <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <linearGradient id="lidGrad_i" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#c9d2df"/>
+                <stop offset="40%" stop-color="#f5f7fa"/>
+                <stop offset="60%" stop-color="#aeb9c8"/>
+                <stop offset="100%" stop-color="#e6ecf3"/>
+              </linearGradient>
+              <linearGradient id="glassGrad_i" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+                <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="shineGrad_i" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="liqGrad_i" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--liq-top,#6a8cff)"/>
+                <stop offset="100%" stop-color="var(--liq-bottom,#3f51b5)"/>
+              </linearGradient>
+              <filter id="shadowBlur_i" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="off"/>
+                <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <path id="jarPath_i" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
+              <clipPath id="clip_i"><use href="#jarPath_i"/></clipPath>
+            </defs>
+            <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
+            <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_i)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_i)"/>
+            <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
+            <use href="#jarPath_i" fill="url(#glassGrad_i)" stroke="#b7c7db" stroke-width="2.5"/>
+            <g clip-path="url(#clip_i)">
+              <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_i)"/>
+              <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
+              <g class="bubbles" fill="#ffffff" opacity=".7">
+                <circle cx="78" cy="198" r="3"/><circle cx="126" cy="188" r="2.5"/><circle cx="102" cy="176" r="2"/>
+              </g>
+            </g>
+            <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_i)" opacity=".35"/>
+            <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
+          </svg>
 
-    <!-- input + Add -->
-    <div class="jar-actions">
-      <input type="number" min="0.01" step="0.01" class="jar-input">
-      <button class="btn" data-add="invest" data-i18n="add">+ Add</button>
-    </div>
-  </div>
-</section>
-
-
+          <div class="muted" data-i18n="jarInvest">Investments</div>
+          <div id="investAmt" class="title">0.00 USD</div>
+          <div class="jar-actions">
+            <input type="number" min="0.01" step="0.01" class="jar-input">
+            <button class="btn" data-add="invest" data-i18n="add">+ Add</button>
+          </div>
+        </div>
+      </section>
 
       <!-- Net Worth + Available Cash + Quick Actions -->
       <section class="grid g-3" style="grid-template-columns: repeat(3, 1fr); gap: 12px;">
@@ -455,7 +430,7 @@
         </div>
       </section>
 
-      <!-- (opcjonalnie) Global Trends — ukryte domyślnie -->
+      <!-- Global Trends -->
       <section class="card" id="globalTrendsCard">
         <div class="title" id="t-globalTrends">Global Trends</div>
         <div id="globalTrendsSub" class="muted">World stock indices</div>
@@ -571,7 +546,7 @@
         </div>
       </section>
 
-      <!-- Profits – dół jak na screenie: KPI, potem Stocks, potem FX -->
+      <!-- Profits -->
       <section id="tab-profits" class="grid hidden">
         <div class="card">
           <div class="title">Total Profit and Loss</div>
@@ -730,12 +705,13 @@
       </div>
     </div>
 
-  <div id="toast" class="toast" style="display:none"></div>
-<script src="1.js"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  }
-</script>
+    <div id="toast" class="toast" style="display:none"></div>
+
+    <script src="1.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+    </script>
   </body>
 </html>
