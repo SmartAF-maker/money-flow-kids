@@ -532,6 +532,36 @@ save(app);
 
 let selectedStock = null;
 let selectedFxPair = null;
+setInterval(() => {
+  if (app.liveMode) return;
+  Object.values(app.children).forEach(ch => {
+    ch.stocks = ch.stocks.map(s => {
+      const drift = 1 + (Math.random() - 0.5) * 0.01;
+      const np = clamp(s.p * drift, 1, 9999);
+      return { ...s, p: Number(np.toFixed(2)) };
+    });
+  });
+  save(app);
+  if (!__qtyTyping) {
+    renderStocks(stockSearch?.value || "");
+    renderPortfolioStocks();
+    renderJars();
+    renderProfits();
+  }
+}, 2000);
+
+let __qtyTyping = false;
+document.addEventListener('focusin',  e => {
+  if (e.target && (e.target.matches('input[data-fxsell-q]') || e.target.matches('input[data-sell-q]'))) {
+    __qtyTyping = true;
+  }
+});
+document.addEventListener('focusout', e => {
+  if (e.target && (e.target.matches('input[data-fxsell-q]') || e.target.matches('input[data-sell-q]'))) {
+    __qtyTyping = false;
+  }
+});
+
 
 let stockExpanded = false;
 function updateStockMoreBtn(totalCount, isDefaultView) {
@@ -573,12 +603,26 @@ function arrowHtml(dir) {
 }
 function activeChild() { return app.children[app.activeChildId]; }
 function toast(msg) {
-  if (!toastEl) return;
+  if (!toastEl) {
+    alert(String(msg || 'Info'));
+    return;
+  }
+
   toastEl.textContent = msg;
+  toastEl.classList.add('_show');
   toastEl.style.display = 'block';
+
   clearTimeout(toastEl._t);
-  toastEl._t = setTimeout(() => toastEl.style.display = 'none', 2200);
+  toastEl._t = setTimeout(() => {
+    toastEl.classList.remove('_show');
+    setTimeout(() => {
+      toastEl.style.display = 'none';
+      toastEl.textContent = '';
+    }, 250);
+  }, 7000); // 7 sekund
 }
+
+
 
 // ====== PRICING ======
 // Kurs pary A/B = baseFx[A] / baseFx[B] (PLN „per unit” → otrzymujemy A/B)
@@ -789,12 +833,25 @@ stockSearch?.addEventListener('input', (e) => renderStocks(e.target.value));
 
 function renderPortfolioStocks() {
   const ch = activeChild(); if (!ch || !portfolioBody) return;
+
+  // ➜ Zachowaj wpisane ilości zanim wyczyścimy tabelę
+  const prevVals = {};
+  portfolioBody.querySelectorAll('input[data-sell-q]').forEach(inp => {
+    prevVals[inp.getAttribute('data-sell-q')] = inp.value;
+  });
+
   portfolioBody.innerHTML = "";
   Object.entries(ch.portfolio).forEach(([t, p]) => {
     const s = ch.stocks.find(x => x.t === t) || { p: p.b };
     const value = (p.s || 0) * s.p;
     const pnl = (s.p - p.b) * (p.s || 0);
     const qMax = Math.max(1, Math.abs(p.s || 0));
+
+    // przywróć to, co wpisał użytkownik (z klamrą)
+    let vInit = Number(prevVals[t] ?? 1);
+    if (!isFinite(vInit) || vInit < 1) vInit = 1;
+    if (vInit > qMax) vInit = qMax;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td style="font-weight:600">${t}</td>
@@ -804,7 +861,9 @@ function renderPortfolioStocks() {
       <td>${PLN(value)}</td>
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
-        <input type="number" min="1" step="1" value="${qMax}" class="input" style="width:90px" data-sell-q="${t}">
+        <input type="number" min="1" max="${qMax}" step="1"
+               value="${vInit}" class="input" style="width:90px"
+               data-sell-q="${t}" placeholder="max ${qMax}">
         <button class="btn" data-sell-row="${t}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-sell-max="${t}">Max</button>
       </td>`;
@@ -815,12 +874,18 @@ function renderPortfolioStocks() {
   portfolioEmpty && (portfolioEmpty.style.display = has ? 'none' : 'block');
   tableWrapStocks && (tableWrapStocks.style.display = has ? 'block' : 'none');
 
+  // ➜ Klik w wierszu: klamrujemy qty do [1..max]
   portfolioBody.onclick = (e) => {
     const btnSell = e.target.closest('[data-sell-row]');
     if (btnSell) {
       const t = btnSell.getAttribute('data-sell-row');
+      const pos = activeChild().portfolio[t];
+      const qMax = Math.max(1, Math.abs(pos?.s || 0));
       const inp = portfolioBody.querySelector(`input[data-sell-q="${t}"]`);
-      const qty = Math.max(1, parseInt((inp?.value) || "1", 10));
+      let qty = parseInt((inp?.value) || "1", 10);
+      if (!isFinite(qty)) qty = 1;
+      qty = Math.max(1, Math.min(qty, qMax));
+      if (inp) inp.value = qty;          // pokaż skorygowaną wartość
       sellStock(t, qty);
       return;
     }
@@ -833,6 +898,7 @@ function renderPortfolioStocks() {
     }
   };
 }
+
 
 
 // === NOWE FUNKCJE do sumowania zaokrąglonego P/L ===
@@ -1001,12 +1067,25 @@ function renderFxList(filter = "") {
 
 function renderPortfolioFx() {
   const ch = activeChild(); if (!ch || !fxBody) return;
+
+  // ➜ Zachowaj wpisane ilości zanim wyczyścimy tabelę
+  const prevVals = {};
+  fxBody.querySelectorAll('input[data-fxsell-q]').forEach(inp => {
+    prevVals[inp.getAttribute('data-fxsell-q')] = inp.value;
+  });
+
   fxBody.innerHTML = "";
   Object.entries(ch.fxPortfolio).forEach(([pair, pos]) => {
     const rUsd = rateUsdFromPair(pair);
     const valueUsd = fxValueUsd(pair, pos.q || 0);
     const pnl = (rUsd - pos.b) * (pos.q || 0);
     const qMax = Math.max(1, Math.abs(pos.q || 0));
+
+    // przywróć to, co wpisał użytkownik (z klamrą)
+    let vInit = Number(prevVals[pair] ?? 1);
+    if (!isFinite(vInit) || vInit < 1) vInit = 1;
+    if (vInit > qMax) vInit = qMax;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td style="font-weight:600">${pair}</td>
@@ -1016,7 +1095,9 @@ function renderPortfolioFx() {
       <td>${PLN(valueUsd)}</td>
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
-        <input type="number" min="1" step="1" value="${qMax}" class="input" style="width:90px" data-fxsell-q="${pair}">
+        <input type="number" min="1" max="${qMax}" step="1"
+               value="${vInit}" class="input" style="width:90px"
+               data-fxsell-q="${pair}" placeholder="max ${qMax}">
         <button class="btn" data-fxsell-row="${pair}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-fxmax="${pair}">Max</button>
       </td>`;
@@ -1027,12 +1108,18 @@ function renderPortfolioFx() {
   fxEmpty && (fxEmpty.style.display = has ? 'none' : 'block');
   tableWrapFx && (tableWrapFx.style.display = has ? 'block' : 'none');
 
+  // ➜ Klik w wierszu: klamrujemy qty do [1..max]
   fxBody.onclick = (e) => {
     const btnSell = e.target.closest('[data-fxsell-row]');
     if (btnSell) {
       const pair = btnSell.getAttribute('data-fxsell-row');
+      const pos = activeChild().fxPortfolio[pair];
+      const qMax = Math.max(1, Math.abs(pos?.q || 0));
       const inp = fxBody.querySelector(`input[data-fxsell-q="${pair}"]`);
-      const qty = Math.max(1, parseFloat((inp?.value) || "1"));
+      let qty = parseFloat((inp?.value) || "1");
+      if (!isFinite(qty)) qty = 1;
+      qty = Math.max(1, Math.min(qty, qMax));
+      if (inp) inp.value = qty;          // pokaż skorygowaną wartość
       sellFx(pair, qty);
       return;
     }
@@ -1045,6 +1132,7 @@ function renderPortfolioFx() {
     }
   };
 }
+
 
 function renderLedger() {
   const ch = activeChild(); if (!ch || !ledgerEl) return;
@@ -1153,8 +1241,10 @@ function sellStock(t, qty) {
   let realized = 0;
   const proceeds = s.p * qty;
 
+  const longClose = Math.min(qty, Math.max(0, pos.s));
+  const basisOut = longClose * pos.b;
   ch.jars.spend += proceeds;
-  ch.jars.invest = 0;
+  ch.jars.invest = Math.max(0, (ch.jars.invest || 0) - basisOut);
 
   if (pos.s > 0) {
     const close = Math.min(qty, pos.s);
@@ -1183,6 +1273,7 @@ function sellStock(t, qty) {
   renderPortfolioStocks();
   renderProfits();
 }
+
 
 // ====== TRADE — FX (WERSJA USD) ======
 function updateFxTradeBox() {
@@ -1240,8 +1331,10 @@ function sellFx(pair, qty) {
   let realized = 0;
   const proceeds = rUsd * qty;
 
+  const longClose = Math.min(qty, Math.max(0, pos.q));
+  const basisOut = longClose * pos.b;
   ch.jars.spend += proceeds;
-  ch.jars.invest = 0;
+  ch.jars.invest = Math.max(0, (ch.jars.invest || 0) - basisOut);
 
   if (pos.q > 0) {
     const close = Math.min(qty, pos.q);
@@ -1270,6 +1363,7 @@ function sellFx(pair, qty) {
   renderPortfolioFx();
   renderProfits();
 }
+
 
 // ====== LEDGER / TABS / PARENT GUARD / QUICK ACTIONS / EVENTS ======
 function addLedger(type, amount, note) {
@@ -1887,23 +1981,31 @@ setInterval(() => {
     });
   });
   save(app);
-  renderStocks(stockSearch?.value || "");
-  renderPortfolioStocks();
-  renderJars();
-  renderProfits();
+  if (!__qtyTyping) {
+    renderStocks(stockSearch?.value || "");
+    renderPortfolioStocks();
+    renderJars();
+    renderProfits();
+  }
 }, 2000);
+
 
 setInterval(() => {
   if (app.liveMode) return;
-  Object.keys(baseFx).forEach(k => {
-    if (k === "PLN") return;
-    const drift = 1 + (Math.random() - 0.5) * 0.006;
-    baseFx[k] = Number((baseFx[k] * drift).toFixed(5));
+  Object.values(app.children).forEach(ch => {
+    ch.stocks = ch.stocks.map(s => {
+      const drift = 1 + (Math.random() - 0.5) * 0.01;
+      const np = clamp(s.p * drift, 1, 9999);
+      return { ...s, p: Number(np.toFixed(2)) };
+    });
   });
-  renderFxList(document.getElementById('fxSearch')?.value || "");
-  renderPortfolioFx();
-  renderJars();
-  renderProfits();
+  save(app);
+  if (!__qtyTyping) {
+    renderStocks(stockSearch?.value || "");
+    renderPortfolioStocks();
+    renderJars();
+    renderProfits();
+  }
 }, 2000);
 
 // Odświeżaj Global Trends
