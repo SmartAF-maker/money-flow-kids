@@ -1,12 +1,10 @@
-// ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+ // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 (function lockNetwork() {
   const of = window.fetch;
   const ALLOW_ORIGINS = new Set([
     location.origin,
     'https://api.exchangerate.host',
-    'https://query1.finance.yahoo.com',
-    'https://query2.finance.yahoo.com',
-    'https://r.jina.ai' // ✅ CORS/GDPR-safe fallback proxy
+       'https://r.jina.ai' // ✅ CORS/GDPR-safe fallback proxy
   ]);
   window.fetch = async function(resource, init) {
     const urlStr = resource instanceof Request ? resource.url : String(resource);
@@ -23,20 +21,21 @@ const DB_KEY = "kidmoney_multi_fx_live_i18n_v1";
 const AUTH_KEY = "kidmoney_auth_v1"; // { role: 'guest'|'parent'|'child', childId?: string }
 const LANG_KEY = "pf_lang";
 
-// Legacy formatter – zostaje dla zgodności
-const PLN = v =>
-  new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    .format(Number(v)) + " USD";
 
-// DODANE: prawidłowy formatter USD (używamy w nowych miejscach)
+// Legacy formatter – zostaje dla zgodności
+// ===== Walutowe formatery (spójne: wszystko pokazujemy w USD) =====
 const USD = v =>
   new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     .format(Number(v || 0)) + " USD";
 
-// FX-format (4 miejsca, bez sufiksu)
+// Zachowujemy starą nazwę dla kompatybilności – *PLN* aliasuje do USD
+const PLN = v => USD(v);
+
+// FX: 4 miejsca, bez sufiksu
 const FX = v =>
   new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
-    .format(Number(v));
+    .format(Number(v || 0));
+
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const nowISO = () => { const d = new Date(); return d.toISOString().slice(0, 10) + "T" + d.toTimeString().slice(0, 8); };
@@ -660,67 +659,105 @@ const gtPrevFx = {};
 const gtPrevStocks = {};
 let currentTrendsMode = 'stocks';
 
+/* KROK 4: bez mrugania — aktualizujemy elementy "w miejscu".
+   - Używamy data-key do identyfikacji kafelków
+   - Dla FX kierunek liczony z app.trends.fx (trwała mapa, nie znika między renderami)
+   - Nie czyścimy całego kontenera; dodajemy/aktualizujemy/ew. usuwamy nadmiar
+*/
 function renderGlobalTrends(mode) {
   currentTrendsMode = mode;
   const wrap = document.getElementById('globalTrendsList');
-  const sub = document.getElementById('globalTrendsSub');
+  const sub  = document.getElementById('globalTrendsSub');
   if (!wrap) return;
-  wrap.innerHTML = '';
+
+  // helper: pobierz/utwórz kafelek po kluczu
+  function getTile(key) {
+    let el = wrap.querySelector(`[data-key="${key}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'trend-item';
+      el.setAttribute('data-key', key);
+      el.innerHTML = `
+        <div class="trend-head">
+          <span class="lh">
+            <div class="code" style="font-weight:700"></div>
+            <div class="name muted" style="font-size:12px"></div>
+          </span>
+          <span class="rh" style="text-align:right">
+            <div class="px"  style="font-weight:700"></div>
+            <div class="q muted" style="font-size:11px"></div>
+          </span>
+        </div>
+        <div class="trend-sub chg"></div>`;
+      wrap.appendChild(el);
+    }
+    return el;
+  }
+
+  // zbieramy klucze, które powinny być na ekranie (by potem usunąć nadmiarowe)
+  const seen = new Set();
 
   if (mode === 'fx') {
-  if (sub) sub.textContent = 'World currency trends';
-  const bases = ISO.filter(c => c !== "USD").slice(0, 8);
-  bases.forEach(base => {
-    const pair = `${base}/USD`;
-    const rateNow = Number(fxRate(pair) || 0);
-    const prev = gtPrevFx[pair];
-    const dir = (typeof prev === 'number') ? (rateNow > prev ? 1 : rateNow < prev ? -1 : 0) : 0;
-    const chgPct = (typeof prev === 'number' && prev !== 0) ? ((rateNow - prev) / prev) * 100 : 0;
-    gtPrevFx[pair] = rateNow;
+    if (sub) sub.textContent = 'World currency trends';
+    const bases = ISO.filter(c => c !== "USD").slice(0, 8);
 
-    const el = document.createElement('div');
-    el.className = 'trend-item';
-    const baseName = CURRENCY_NAMES[base] || base;
-    el.innerHTML = `
-      <div class="trend-head">
-        <span>
-          <div style="font-weight:700">${base}</div>
-          <div class="muted" style="font-size:12px">${baseName}</div>
-        </span>
-        <span>
-          ${FX(rateNow)} ${arrowHtml(dir)}
-          <div class="muted" style="font-size:11px">vs USD</div>
-        </span>
-      </div>
-      <div class="trend-sub">${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%</div>`;
-    wrap.appendChild(el);
-  });
-} else {
-  // (reszta bez zmian)
+    // pewność, że mamy trwałą mapę trendów
+    if (!app.trends) app.trends = { stocks: {}, fx: {} };
 
+    bases.forEach(base => {
+      const pair = `${base}/USD`;
+      const rateNow = Number(fxRate(pair) || 0);
+      const prev = app.trends.fx[pair];
+      let dir = 0;
+      if (typeof prev === 'number') {
+        if (rateNow > prev) dir = 1; else if (rateNow < prev) dir = -1;
+      }
+      // zapisz nową wartość jako punkt odniesienia
+      app.trends.fx[pair] = rateNow;
+
+      const chgPct = (typeof prev === 'number' && prev !== 0)
+        ? ((rateNow - prev) / prev) * 100
+        : 0;
+
+      const el = getTile(pair);
+      seen.add(pair);
+
+      // uzupełnij pola (bez przebudowy całego HTML)
+      el.querySelector('.code').textContent = base;
+      el.querySelector('.name').textContent = CURRENCY_NAMES[base] || base;
+      el.querySelector('.px').innerHTML = `${FX(rateNow)} ${arrowHtml(dir)}`;
+      el.querySelector('.q').textContent  = 'vs USD';
+      el.querySelector('.chg').textContent = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
+    });
+
+  } else {
     if (sub) sub.textContent = 'World stock trends';
     const ch = activeChild?.();
     (ch?.stocks || []).slice(0, 6).forEach(s => {
+      const key = `STK:${s.t}`;
       const prev = gtPrevStocks[s.t];
-      const dir = (typeof prev === 'number') ? (s.p > prev ? 1 : s.p < prev ? -1 : 0) : 0;
+      const dir  = (typeof prev === 'number') ? (s.p > prev ? 1 : s.p < prev ? -1 : 0) : 0;
       const chgPct = (typeof prev === 'number' && prev !== 0) ? ((s.p - prev) / prev) * 100 : 0;
       gtPrevStocks[s.t] = s.p;
 
-      const el = document.createElement('div');
-      el.className = 'trend-item';
-      el.innerHTML = `
-        <div class="trend-head">
-          <span>
-            <div style="font-weight:700">${s.t}</div>
-            <div class="muted" style="font-size:12px">${s.n || ''}</div>
-          </span>
-          <span>${PLN(s.p)} ${arrowHtml(dir)}</span>
-        </div>
-        <div class="trend-sub">${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%</div>`;
-      wrap.appendChild(el);
+      const el = getTile(key);
+      seen.add(key);
+
+      el.querySelector('.code').textContent = s.t;
+      el.querySelector('.name').textContent = s.n || '';
+      el.querySelector('.px').innerHTML    = `${PLN(s.p)} ${arrowHtml(dir)}`;
+      el.querySelector('.q').textContent    = ''; // brak „vs …” dla akcji
+      el.querySelector('.chg').textContent  = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
     });
   }
+
+  // usuń kafelki, które nie należą do bieżącego widoku (bez czyszczenia całego wrapa → brak mrugania)
+  wrap.querySelectorAll('.trend-item').forEach(el => {
+    const key = el.getAttribute('data-key');
+    if (!seen.has(key)) el.remove();
+  });
 }
+
 function updateGlobalTrendsForTab(tabId){
   const card = document.getElementById('globalTrendsCard');
   if (!card) return;
@@ -736,6 +773,7 @@ function updateGlobalTrendsForTab(tabId){
     setHidden(card, true);
   }
 }
+
 
 // ====== RENDER ======
 function renderChildSelector() {
@@ -1581,19 +1619,21 @@ let liveStTimer = null;
 function setLiveTimers(on) {
   clearInterval(liveFxTimer);
   clearInterval(liveStTimer);
-  liveFxTimer = liveStTimer = null;
+  liveFxTimer = null;
+  liveStTimer = null;
 
   if (on) {
     // ⏱️ natychmiastowy pierwszy tick po włączeniu Live
     refreshStocksFromApi();
     refreshFxFromApi();
 
-    // potem cyklicznie
-    liveStTimer = setInterval(() => refreshStocksFromApi(), 15000);
-    liveFxTimer = setInterval(() => refreshFxFromApi(),     30000);
+    // ⏲️ potem cyklicznie (wolniej – łagodniej dla limitów)
+    liveStTimer = setInterval(() => refreshStocksFromApi(), 45_000); // 45s
+liveFxTimer = setInterval(() => refreshFxFromApi(),    70_000);  // 70s
   }
 }
-// ==== OFFLINE FX SIMULATION (dodaj) ====
+
+// ==== OFFLINE FX SIMULATION (tylko offline) ====
 function simulateFxOfflineTick() {
   if (app.liveMode) return;               // tylko offline
   const next = { ...baseFx, PLN: 1 };     // PLN zawsze 1
@@ -1623,8 +1663,7 @@ function syncLiveToggleUI() {
   if (s) s.textContent = app.liveMode ? TT().apiConn : TT().apiNot;
 }
 
-// --- Self-test łączności (statusy w #liveStatus + logi w konsoli)
-// --- Self-test łączności (proxy-first, direct tylko informacyjnie) ---
+// --- Self-test łączności: proxy (Yahoo) + FX host (bez direct, żeby nie było CORS) ---
 async function liveSelfTest() {
   const s = document.getElementById('liveStatus');
   const q = "AAPL,MSFT";
@@ -1640,30 +1679,18 @@ async function liveSelfTest() {
   }
 
   const proxyUrl = "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(q);
-  const fxUrl   = "https://api.exchangerate.host/latest?base=USD&places=6";
+  const fxUrl    = "https://api.exchangerate.host/latest?base=USD&places=6";
 
-  // proxy + fx → najważniejsze
-  const [proxy, fx] = await Promise.all([
-    ping(proxyUrl, "Proxy"),
-    ping(fxUrl, "FXhost")
-  ]);
-
-  // direct Yahoo tylko diagnostycznie, żeby nie psuło UI
-  let d1 = { ok:false, code:"-", ms:0 }, d2 = { ok:false, code:"-", ms:0 };
-  try { d1 = await ping("https://query1.finance.yahoo.com/v7/finance/quote?symbols="+encodeURIComponent(q), "Yahoo#1"); } catch {}
-  try { d2 = await ping("https://query2.finance.yahoo.com/v7/finance/quote?symbols="+encodeURIComponent(q), "Yahoo#2"); } catch {}
-
+  const [proxy, fx] = await Promise.all([ ping(proxyUrl, "Proxy"), ping(fxUrl, "FXhost") ]);
   const ok = (proxy.ok && fx.ok);
-  const line = `${proxy.ok ? "✅" : "❌"} Proxy(${proxy.code}) • ${fx.ok ? "✅" : "❌"} FXhost(${fx.code}) • direct: ${d1.code}/${d2.code}`;
-  if (s) s.textContent = "API self-test: " + line;
 
-  window.__lastSelfTest = { proxy, fx, d1, d2, ok };
+  if (s) s.textContent = `API self-test: ${proxy.ok ? "✅" : "❌"} Proxy(${proxy.code}) • ${fx.ok ? "✅" : "❌"} FXhost(${fx.code})`;
+  window.__lastSelfTest = { proxy, fx, ok, route: proxy.ok ? 'proxy' : 'offline' };
   console.log("[LIVE SELF-TEST]", window.__lastSelfTest);
   return window.__lastSelfTest;
 }
 
-
-// --- Jednorazowy refresh (FX + akcje) z self-testem + sufiks direct/proxy
+// --- Jednorazowy refresh (FX + akcje) z self-testem + sufiks „via …” i „rate-limited” ---
 async function forceLiveRefresh() {
   if (liveFetchLock) return false;
   liveFetchLock = true;
@@ -1672,31 +1699,46 @@ async function forceLiveRefresh() {
   if (s) s.textContent = TT().apiConn;
 
   try {
+    // self-test łączności (proxy + FX host)
     let st = null, okNet = false;
-    try { st = await liveSelfTest(); okNet = !!st.ok; } catch { okNet = false; }
+    try {
+      st = await liveSelfTest();
+      okNet = !!st.ok;
+    } catch {
+      okNet = false;
+    }
 
     if (!okNet) {
       if (s) s.textContent = "API: trying via proxy…";
       console.warn("[forceLiveRefresh] self-test failed; trying fetchers anyway.");
     }
 
+    // równoległy refresh FX i akcji
     const [fxRes, stRes] = await Promise.allSettled([
       refreshFxFromApi(),
       refreshStocksFromApi()
     ]);
-    const fxOk = ((fxRes.status === 'fulfilled') && fxRes.value) === true;
-    const stOk = ((stRes.status === 'fulfilled') && stRes.value) === true;
 
-    // sufiks: direct / proxy / offline
-    // sufiks: direct / proxy / offline
+    const fxOk = (fxRes.status === 'fulfilled' && fxRes.value === true);
+    const stOk = (stRes.status === 'fulfilled' && stRes.value === true);
+
+    // ustal trasę (route) na podstawie self-testu
+   // ustal trasę: direct / proxy / offline
 let route = 'offline';
 if (st) {
-  const directOk = (st.d1?.ok || st.d2?.ok); // ✅ poprawione nazwy
+  const directOk = (st.d1?.ok || st.d2?.ok);
   const proxyOk  = !!st.proxy?.ok;
   route = directOk ? 'direct' : (proxyOk ? 'proxy' : 'offline');
 }
-if (s) s.textContent =
-  `API: ${fxOk ? TT().fxOk : TT().fxFail} • ${stOk ? TT().stOk : TT().stFail} (via ${route})`;
+
+// NEW: sprawdź cooldown ustawiony po 429
+const rateLimited = window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil;
+const suffix = rateLimited ? ' • rate-limited – slowing down' : '';
+
+if (s) {
+  s.textContent =
+    `API: ${fxOk ? TT().fxOk : TT().fxFail} • ${stOk ? TT().stOk : TT().stFail}${suffix} (via ${route})`;
+}
 
 
     return (fxOk || stOk);
@@ -1705,6 +1747,7 @@ if (s) s.textContent =
     renderGlobalTrends(currentTrendsMode);
   }
 }
+
 
 // --- Odświeżenie UI + timery
 function updateLiveUI(forceFetch = false) {
@@ -1767,7 +1810,22 @@ function wireLiveToggleOnce() {
   updateLiveUI(false);
   if (app.liveMode) forceLiveRefresh();
 })();
+
+// 🔇 Pauza odświeżania, gdy zakładka niewidoczna (oszczędza limity)
+document.addEventListener('visibilitychange', () => {
+  if (!app.liveMode) return;
+  const s = document.getElementById('liveStatus');
+  if (document.hidden) {
+    setLiveTimers(false); // stop
+    if (s) s.textContent = 'API: paused (tab hidden)';
+  } else {
+    setLiveTimers(true);  // start
+    if (s) s.textContent = TT().apiConn;
+    forceLiveRefresh();
+  }
+});
 // ====== LIVE MODE (END)
+
 
 
 // ====== Tutorial (skrócone) ======
@@ -1826,54 +1884,84 @@ function mapToYahoo(sym) {
 
 // ====== LIVE DATA FETCHERS (BEGIN)
 
-// --- wspólny helper do Yahoo z chunkowaniem + fallback r.jina.ai + lepsze logi ---
-// --- YAHOO (proxy-first) + odporne parsowanie ---
+// --- YAHOO (proxy-first) + cooldown + bezpieczny parser ---
 async function yahooQuote(symbolsArr) {
-  var CHUNK = 10;
-  var chunks = [];
-  for (var i = 0; i < symbolsArr.length; i += CHUNK) chunks.push(symbolsArr.slice(i, i + CHUNK));
+ const CHUNK = 3;
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   function pickPrice(q) {
-    var cand = [ q?.regularMarketPrice, q?.postMarketPrice, q?.preMarketPrice, q?.bid, q?.ask ];
-    for (var i = 0; i < cand.length; i++) { var v = cand[i]; if (typeof v === "number" && isFinite(v)) return Number(v); }
+    const cand = [q?.regularMarketPrice, q?.postMarketPrice, q?.preMarketPrice, q?.bid, q?.ask];
+    for (let i = 0; i < cand.length; i++) {
+      const v = cand[i];
+      if (typeof v === "number" && isFinite(v)) return Number(v);
+    }
     return null;
   }
 
-  async function fetchList(symbolsCsv) {
-    var urls = [
-      "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now(),
-      "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now(),
-      "https://query2.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now()
-    ];
-    for (var k = 0; k < urls.length; k++) {
-      var url = urls[k];
-      try {
-        var r = await fetch(url, { headers: { "Accept": "application/json" } });
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        // proxy bywa z 'text/plain' – parsuj bezpiecznie
-        var j;
-        try { j = await r.json(); } catch { j = JSON.parse(await r.text()); }
-        var list = (j && j.quoteResponse && j.quoteResponse.result) || [];
-        if (Array.isArray(list) && list.length) return list;
-        console.warn("[yahooQuote] empty list from", url, j);
-      } catch (e) {
-        console.warn("[yahooQuote] fail", url, e);
-      }
-    }
-    return [];
+  // cooldown – pomiń zapytania, ale zwróć flagę
+  const now = Date.now();
+  if (window.__yahooCooldownUntil && now < window.__yahooCooldownUntil) {
+    console.warn("[yahooQuote] cooldown in effect, skipping fetch");
+    const arr = [];
+    arr._pickPrice = pickPrice;
+    arr._rateLimited = true;
+    return arr;
   }
 
-  var out = [];
-  for (var c = 0; c < chunks.length; c++) {
-    var list = await fetchList(chunks[c].join(","));
-    if (list && list.length) out.push.apply(out, list);
+  async function safeJson(r) {
+    let j;
+    try { j = await r.json(); }
+    catch { j = JSON.parse(await r.text()); }
+    if (j && j.data) {
+      try { j = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch {}
+    }
+    return j;
   }
-  out._pickPrice = pickPrice;
-  return out;
+
+  async function fetchList(symbolsCsv) {
+    const url = "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols="
+                + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now();
+    try {
+      const r = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (r.status === 429) {
+  const now = Date.now();
+  const prev = window.__yahooCooldownSecs || 60;
+  const next = Math.min(prev * 2, 300); // 60 -> 120 -> 240 -> 300s
+  window.__yahooCooldownSecs = next;
+  window.__yahooCooldownUntil = now + next * 1000;
+  console.warn(`[yahooQuote] 429 rate-limited – cooldown ${next}s`);
+  return { list: [], rateLimited: true };
 }
 
-// ===== LIVE DATA FETCHERS (BEGIN)
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await safeJson(r);
+      const list = j?.quoteResponse?.result || [];
+      return { list, rateLimited: false };
+    } catch (e) {
+      console.warn("[yahooQuote] fetch fail", e);
+      return { list: [], rateLimited: false };
+    }
+  }
 
+  const chunks = [];
+  for (let i = 0; i < symbolsArr.length; i += CHUNK) {
+    chunks.push(symbolsArr.slice(i, i + CHUNK));
+  }
+
+  const out = [];
+  let anyRateLimited = false;
+
+  for (let c = 0; c < chunks.length; c++) {
+    const { list, rateLimited } = await fetchList(chunks[c].join(","));
+    if (rateLimited) { anyRateLimited = true; break; }
+    if (list && list.length) out.push(...list);
+    await sleep(1500 + Math.random() * 800); // jitter
+  }
+
+  out._pickPrice = pickPrice;
+  out._rateLimited = anyRateLimited;
+  return out;
+}
 // ===== LIVE FX FETCHER (robust) =====
 // Buduje pełną mapę: baseFx[CODE] = PLN za 1 CODE
 // Źródła: 1) exchangerate.host (PRIMARY, base=USD), 2) Yahoo (uzupełnia braki), 3) fallbacki
@@ -1882,20 +1970,18 @@ async function refreshFxFromApi() {
     const next = { PLN: 1 };
 
     // 1) exchangerate.host — PRIMARY (base=USD)
-    async function fetchFxBaseUsd() {
-      const urls = [
-        "https://api.exchangerate.host/latest?base=USD&places=6",
-        "https://r.jina.ai/http://api.exchangerate.host/latest?base=USD&places=6"
-      ];
-      for (let k = 0; k < urls.length; k++) {
-        try {
-          const r = await fetch(urls[k], { headers: { "Accept": "application/json" } });
-          if (!r.ok) throw new Error("HTTP " + r.status);
-          try { return await r.json(); } catch { return JSON.parse(await r.text()); }
-        } catch (e) { console.warn("[FXhost] fail", urls[k], e); }
-      }
-      return null;
-    }
+  async function fetchFxBaseUsd() {
+  const symbols = ISO.join(',');
+  const url = `https://api.exchangerate.host/latest?base=USD&places=6&symbols=${encodeURIComponent(symbols)}`;
+  try {
+    const r = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    try { return await r.json(); } catch { return JSON.parse(await r.text()); }
+  } catch (e) {
+    console.warn("[FXhost] fail (direct)", e);
+    return null;
+  }
+}
 
     const fx = await fetchFxBaseUsd();
     const rates = fx?.rates || null;
@@ -1930,8 +2016,7 @@ async function refreshFxFromApi() {
       }
     }
 
-    // 3) Gwarancje i fallbacki
-    // Jeśli nadal nie mamy USD, spróbuj policzyć z base=PLN (odwrotność)
+    // 3) Fallback: jeśli nadal brak USD, próbuj base=PLN (odwrotność)
     if (!Number.isFinite(next.USD) || next.USD <= 0) {
       try {
         const urls = [
@@ -1982,6 +2067,8 @@ async function refreshFxFromApi() {
   }
 }
 
+// --- STOCKS (miękkie traktowanie cooldownu) ---
+// --- STOCKS (miękkie traktowanie cooldownu) ---
 async function refreshStocksFromApi() {
   try {
     const ch = activeChild(); if (!ch) return false;
@@ -1990,9 +2077,18 @@ async function refreshStocksFromApi() {
 
     const list = await yahooQuote(symbolsArr);
     const pickPrice = list._pickPrice || (q => q?.regularMarketPrice ?? null);
+
+    // jeśli pusto: sprawdź cooldown i potraktuj jako „ok, tylko zwolnione”
+    const onCooldown = !!(window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil);
+    const rateLimitedFlag = !!list._rateLimited;
+
     if (!Array.isArray(list) || !list.length) {
+      if (onCooldown || rateLimitedFlag) {
+        console.warn("Stocks: rate-limited – keeping previous prices");
+        return true; // miękko OK (bez „failed”)
+      }
       console.warn("Stocks: empty response – keeping previous prices");
-      return false; // nie przerywaj – UI pokaże status, ale cykl leci dalej
+      return false;
     }
 
     const bySym = Object.create(null);
@@ -2021,6 +2117,7 @@ async function refreshStocksFromApi() {
   }
 }
 
+
 // (Timery uruchamiamy/wyłączamy w LIVE MODE wg app.liveMode)
 clearInterval(window.__liveStocksTimer);
 clearInterval(window.__liveFxTimer);
@@ -2028,6 +2125,7 @@ window.__liveStocksTimer = null;
 window.__liveFxTimer = null;
 
 // ====== LIVE DATA FETCHERS (END)
+
 
 
 // ====== SIMULATIONS (offline) ======
@@ -2049,27 +2147,8 @@ setInterval(() => {
   }
 }, 2000);
 
-
-setInterval(() => {
-  if (app.liveMode) return;
-  Object.values(app.children).forEach(ch => {
-    ch.stocks = ch.stocks.map(s => {
-      const drift = 1 + (Math.random() - 0.5) * 0.01;
-      const np = clamp(s.p * drift, 1, 9999);
-      return { ...s, p: Number(np.toFixed(2)) };
-    });
-  });
-  save(app);
-  if (!__qtyTyping) {
-    renderStocks(stockSearch?.value || "");
-    renderPortfolioStocks();
-    renderJars();
-    renderProfits();
-  }
-}, 2000);
-
 // Odświeżaj Global Trends
-setInterval(() => { renderGlobalTrends(currentTrendsMode); }, app.liveMode ? 15000 : 3000);
+setInterval(() => { renderGlobalTrends(currentTrendsMode); }, app.liveMode ? 20000 : 5000);
 
 // ====== AUTH ======
 let appAuth = loadAuth();
@@ -2287,3 +2366,4 @@ const observer = new MutationObserver(() => {
     .forEach(btn => btn.remove());
 });
 observer.observe(document.body, { childList: true, subtree: true });
+

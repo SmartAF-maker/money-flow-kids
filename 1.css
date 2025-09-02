@@ -1041,3 +1041,7 @@ thead th{
   transition: opacity .25s ease;
 }
 .toast._show{ opacity: 1; }
+/* ===== price arrows ===== */
+.arrow-up   { color: #22c55e; }   /* zielony */
+.arrow-down { color: #ef4444; }   /* czerwony */
+.arrow-flat { color: #9ca3af; }   /* muted */
