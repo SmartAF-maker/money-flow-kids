@@ -1,4 +1,4 @@
- // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+  // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 (function lockNetwork() {
   const of = window.fetch;
   const ALLOW_ORIGINS = new Set([
@@ -664,6 +664,38 @@ let currentTrendsMode = 'stocks';
    - Dla FX kierunek liczony z app.trends.fx (trwała mapa, nie znika między renderami)
    - Nie czyścimy całego kontenera; dodajemy/aktualizujemy/ew. usuwamy nadmiar
 */
+// ===== Stable FX state for Global Trends (no flicker) =====
+const GT_FX_STATE = new Map(); // key: "EUR/USD" -> { last:number, dir:-1|0|1, t:number }
+const GT_FX_MIN_PCT = 0.0005;  // 0.05% — próg zmiany kierunku
+const GT_FX_MIN_MS  = 1500;    // 1.5 s — minimalny odstęp między flipami
+
+function gtStableFxDir(pair, rateNow){
+  const st = GT_FX_STATE.get(pair) || { last: rateNow, dir: 0, t: 0 };
+  const now = Date.now();
+
+  if (!Number.isFinite(rateNow) || rateNow <= 0) {
+    return st.dir; // brak danych → nie zmieniaj
+  }
+
+  const prev = st.last;
+  let nextDir = st.dir;
+
+  if (Number.isFinite(prev) && prev > 0) {
+    const pct = Math.abs((rateNow / prev) - 1);
+    const enoughChange = pct >= GT_FX_MIN_PCT;
+    const enoughTime   = (now - st.t) >= GT_FX_MIN_MS;
+
+    if (enoughChange && enoughTime) {
+      nextDir = rateNow > prev ? 1 : (rateNow < prev ? -1 : 0);
+      st.t = now;
+    }
+  }
+
+  st.last = rateNow;
+  st.dir  = nextDir;
+  GT_FX_STATE.set(pair, st);
+  return nextDir;
+}
 function renderGlobalTrends(mode) {
   currentTrendsMode = mode;
   const wrap = document.getElementById('globalTrendsList');
@@ -697,38 +729,36 @@ function renderGlobalTrends(mode) {
   // zbieramy klucze, które powinny być na ekranie (by potem usunąć nadmiarowe)
   const seen = new Set();
 
-  if (mode === 'fx') {
-    if (sub) sub.textContent = 'World currency trends';
-    const bases = ISO.filter(c => c !== "USD").slice(0, 8);
+ if (mode === 'fx') {
+  if (sub) sub.textContent = 'World currency trends';
+  const bases = ISO.filter(c => c !== "USD").slice(0, 8);
 
-    // pewność, że mamy trwałą mapę trendów
-    if (!app.trends) app.trends = { stocks: {}, fx: {} };
+  if (!app.trends) app.trends = { stocks: {}, fx: {} };
 
-    bases.forEach(base => {
-      const pair = `${base}/USD`;
-      const rateNow = Number(fxRate(pair) || 0);
-      const prev = app.trends.fx[pair];
-      let dir = 0;
-      if (typeof prev === 'number') {
-        if (rateNow > prev) dir = 1; else if (rateNow < prev) dir = -1;
-      }
-      // zapisz nową wartość jako punkt odniesienia
-      app.trends.fx[pair] = rateNow;
+  bases.forEach(base => {
+    const pair = `${base}/USD`;
+    const rateNow = Number(fxRate(pair) || 0);
+    if (!Number.isFinite(rateNow) || rateNow <= 0) return;
 
-      const chgPct = (typeof prev === 'number' && prev !== 0)
-        ? ((rateNow - prev) / prev) * 100
-        : 0;
+    // stabilny kierunek
+    const dir = gtStableFxDir(pair, rateNow);
 
-      const el = getTile(pair);
-      seen.add(pair);
+    // nadal liczmy % zmiany
+    const prev = app.trends.fx[pair];
+    const chgPct = (typeof prev === 'number' && prev !== 0)
+      ? ((rateNow - prev) / prev) * 100
+      : 0;
+    app.trends.fx[pair] = rateNow;
 
-      // uzupełnij pola (bez przebudowy całego HTML)
-      el.querySelector('.code').textContent = base;
-      el.querySelector('.name').textContent = CURRENCY_NAMES[base] || base;
-      el.querySelector('.px').innerHTML = `${FX(rateNow)} ${arrowHtml(dir)}`;
-      el.querySelector('.q').textContent  = 'vs USD';
-      el.querySelector('.chg').textContent = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
-    });
+    const el = getTile(pair);
+    seen.add(pair);
+
+    el.querySelector('.code').textContent = base;
+    el.querySelector('.name').textContent = CURRENCY_NAMES[base] || base;
+    el.querySelector('.px').innerHTML     = `${FX(rateNow)} ${arrowHtml(dir)}`;
+    el.querySelector('.q').textContent    = 'vs USD';
+    el.querySelector('.chg').textContent  = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
+  });
 
   } else {
     if (sub) sub.textContent = 'World stock trends';
@@ -2420,4 +2450,3 @@ const observer = new MutationObserver(() => {
     .forEach(btn => btn.remove());
 });
 observer.observe(document.body, { childList: true, subtree: true });
-
