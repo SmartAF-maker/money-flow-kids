@@ -504,33 +504,37 @@ td.space {
 }
 
 /* i w media query dopisz profits */
-@media (max-width: 1400px) {
-  #tab-in
-  /* ===== Profits layout (kafelki jak na screenie #2) ===== */
-#tab-profits{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:12px;
-  align-items:start;
+/* Siatka kart (4 sekcje) */
+#tab-invest,
+#tab-fx,
+#tab-profits,
+#tab-parent {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
+  gap: 12px;
+  align-items: start;
 }
 
-/* siatka z kafelkami KPI (3 w rzędzie -> 2 -> 1) */
+/* 1 kolumna gdy wąsko */
+@media (max-width: 1400px){
+  #tab-invest,
+  #tab-fx,
+  #tab-profits {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Profits – siatka KPI */
 #tab-profits .kpi-grid{
   display:grid;
   grid-template-columns:repeat(3, minmax(240px, 1fr));
   gap:12px;
 }
-@media (max-width: 1200px){
-  #tab-profits .kpi-grid{ grid-template-columns:repeat(2, 1fr); }
-}
-@media (max-width: 720px){
-  #tab-profits .kpi-grid{ grid-template-columns:1fr; }
-}
-
-/* wizualnie jak card; możesz korzystać z istniejącego .card  */
+@media (max-width: 1200px){ #tab-profits .kpi-grid{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width: 720px){  #tab-profits .kpi-grid{ grid-template-columns:1fr; } }
 #tab-profits .kpi-card .muted{ font-size:14px; }
-#tab-profits .kpi-card .value{ font-size:26px; font-weight:700; }vest, #tab-fx, #tab-profits { grid-template-columns: 1fr; }
-}
+#tab-profits .kpi-card .value{ font-size:26px; font-weight:700; }
+
 /* KPI prefixes */
 #kpiTotal::before { content: "+ "; font-weight: 700; }
 #kpiTotalLoss::before { content: "− "; font-weight: 700; }
