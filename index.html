@@ -114,35 +114,55 @@
   </head>
 
   <body>
-    <header class="topbar">
-      <h1 id="t-appTitle">Money Flow Kids</h1>
+    <header class="topbar mfk-topbar" role="banner">
+  <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
+  <h1 id="t-appTitle">Money Flow Kids</h1>
 
-      <div class="role-switch">
-        <select id="langSelect" title="Language">
-          <option value="pl">PL</option>
-          <option value="en" selected>EN</option>
-          <option value="es">ES</option>
-        </select>
+  <div class="role-switch" id="mfkTopNav">
+    <select id="langSelect" title="Language">
+      <option value="pl">PL</option>
+      <option value="en" selected>EN</option>
+      <option value="es">ES</option>
+    </select>
 
-        <div class="role-parent-only" style="display:inline-flex;align-items:center;gap:6px">
-          <label class="muted" for="childSelector"></label>
-          <select id="childSelector" class="input" style="min-width:160px"></select>
-        </div>
+    <div class="role-parent-only" style="display:inline-flex;align-items:center;gap:6px">
+      <label class="muted" for="childSelector"></label>
+      <select id="childSelector" class="input" style="min-width:160px"></select>
+    </div>
 
-        <button id="addChildBtn" class="tab role-parent-only" data-i18n="addChild">+ Add child</button>
-        <button class="tab active" data-tab="invest" data-i18n="tabStocks">Stocks</button>
-        <button class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
-        <button class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
-        <button class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
-        <button id="tutorialBtn" class="tab">📘 <span data-i18n="tutorial">Tutorial</span></button>
-      </div>
+    <button id="addChildBtn" type="button" class="tab role-parent-only" data-i18n="addChild">+ Add child</button>
+    <button type="button" class="tab active" data-tab="invest" data-i18n="tabStocks">Stocks</button>
+    <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
+    <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
+    <button type="button" class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
+    <button id="tutorialBtn" type="button" class="tab">📘 <span data-i18n="tutorial">Tutorial</span></button>
+  </div>
 
-      <div class="authwrap">
-        <span id="authBadge" class="muted" aria-live="polite">Guest</span>
-        <button id="loginBtn" class="tab"><span id="t-btnLoginTop">Login</span></button>
-        <button id="logoutBtn" class="tab hidden"><span id="t-btnLogout">Logout</span></button>
-      </div>
-    </header>
+  <div class="authwrap">
+    <span id="authBadge" class="muted" aria-live="polite">Guest</span>
+    <button id="loginBtn" type="button" class="tab"><span id="t-btnLoginTop">Login</span></button>
+    <button id="logoutBtn" type="button" class="tab hidden"><span id="t-btnLogout">Logout</span></button>
+  </div>
+</header>
+<!-- Mobile drawer (appears on small screens) -->
+<aside id="mfkMobileDrawer" class="mfk-drawer" aria-hidden="true">
+  <nav class="mfk-drawer-nav">
+    <div class="row">
+      <label class="muted" for="childSelectorDrawer">Child</label>
+      <select id="childSelectorDrawer" class="input"></select>
+    </div>
+
+    <button type="button" class="tab" data-tab="invest" data-i18n="tabStocks">Stocks</button>
+    <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
+    <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
+    <button type="button" class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
+
+    <hr />
+    <button id="drawerLogin" type="button" class="tab">Login</button>
+    <button id="drawerLogout" type="button" class="tab hidden">Logout</button>
+  </nav>
+</aside>
+<div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
 
     <!-- Sticky mini jars (below top buttons) -->
     <section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
@@ -714,6 +734,95 @@
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
+
+      // 4a) Otwieranie / zamykanie drawer (hamburger menu)
+      (function(){
+        const btn = document.getElementById('mfkNavToggle');
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        if(!btn || !drawer || !backdrop) return;
+
+        function open(){
+          drawer.classList.add('open');
+          backdrop.hidden = false;
+          btn.setAttribute('aria-expanded','true');
+          document.body.style.overflow = 'hidden';
+        }
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
+        }
+
+        btn.addEventListener('click', () =>
+          drawer.classList.contains('open') ? close() : open()
+        );
+        backdrop.addEventListener('click', close);
+        document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+      })();
+
+      // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
+      (function(){
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        const btn = document.getElementById('mfkNavToggle');
+        if(!drawer || !backdrop || !btn) return;
+
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
+        }
+
+        drawer.addEventListener('click', (e) => {
+          if (e.target.closest('.tab')) close();
+        });
+      })();
+
+      // 4b) Synchronizacja child selector (topbar <-> drawer)
+      (function(){
+        const mainSel = document.getElementById('childSelector');
+        const drawSel = document.getElementById('childSelectorDrawer');
+        if(!mainSel || !drawSel) return;
+
+        function copyOptions(){
+          drawSel.innerHTML = mainSel.innerHTML;
+          drawSel.value = mainSel.value;
+        }
+        copyOptions();
+
+        mainSel.addEventListener('change', ()=>{
+          drawSel.value = mainSel.value;
+          drawSel.dispatchEvent(new Event('change'));
+        });
+        drawSel.addEventListener('change', ()=>{
+          mainSel.value = drawSel.value;
+          mainSel.dispatchEvent(new Event('change'));
+        });
+
+        new MutationObserver(copyOptions).observe(mainSel, { childList:true, subtree:true });
+      })();
+
+      // 4c) Logowanie w drawerze – przekieruj kliknięcia
+      document.getElementById('drawerLogin')?.addEventListener('click', ()=>{
+        document.getElementById('loginBtn')?.click();
+      });
+      document.getElementById('drawerLogout')?.addEventListener('click', ()=>{
+        document.getElementById('logoutBtn')?.click();
+      });
+
+      // 4d) Dynamiczny padding-top względem realnej wysokości topbara
+      (function(){
+        function apply(){
+          const h = document.querySelector('.mfk-topbar') || document.querySelector('.topbar');
+          if(h) document.documentElement.style.setProperty('--header-h', h.getBoundingClientRect().height + 'px');
+        }
+        document.addEventListener('DOMContentLoaded', apply);
+        window.addEventListener('resize', apply, {passive:true});
+        window.addEventListener('orientationchange', apply, {passive:true});
+      })();
     </script>
   </body>
 </html>
