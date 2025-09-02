@@ -1215,3 +1215,25 @@ main, .page, .content, #app {
 .section, .panel {
   overflow: hidden; /* cienie i zaokrąglenia wyglądają lepiej, nic nie wystaje */
 }
+:root { --header-h: 64px; }
+
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+
+header.mfk-topbar, .topbar, .navbar, header.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Główna zawartość nie chowa się pod topbarem */
+main, .page, .content, #app {
+  padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+}
+
+/* Na iOS/Android z notchem nie ucinaj brzegów */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
