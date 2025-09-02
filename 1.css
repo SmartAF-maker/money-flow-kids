@@ -1055,3 +1055,57 @@ body[data-role="child"] .jar-card {
   gap: 4px; 
 }
 body[data-role="child"] .jar-card .jar-actions { display:none !important; }
+/* Profits → obszar przewijany dla historii, żeby sticky działał lokalnie */
+#tab-profits .tableWrap{
+  max-height: 260px;       /* możesz zmienić na swoją wysokość */
+  overflow: auto;
+  position: relative;
+}
+
+/* Sticky nagłówek – zawsze nad wierszami i z tłem */
+#tab-profits .table thead th{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card, #0b1220); /* solidne tło, żeby nic nie prześwitywało */
+}
+
+/* Drobne wygładzenie przewijania i wysokości wierszy (opcjonalnie) */
+#tab-profits .table tbody tr{ height: 36px; }
+/* === PATCH: stabilne nagłówki i brak „zjadania” wierszy === */
+
+/* 1) Domyślnie NIGDZIE nie rób globalnych sticky nagłówków */
+.tableWrap thead th{
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+  backdrop-filter: none !important;
+}
+
+/* 2) PROFITs – lokalny scroll tylko dla historii + sticky w obrębie pudełka */
+#tab-profits .tableWrap{
+  max-height: 320px;        /* możesz zwiększyć/zmniejszyć */
+  overflow: auto;           /* przewijane tylko w historii */
+  position: relative;
+}
+
+#tab-profits .tableWrap thead th{
+  position: sticky !important;
+  top: 0 !important;        /* bo scrolluje .tableWrap, nie okno */
+  z-index: 5;
+  background: #0f172acc;    /* nieprzezroczyste tło pod topbarem */
+  pointer-events: auto;     /* klik w sort/filtry jeśli masz */
+}
+
+/* 3) Market/Portfolio – zwykłe tabele, bez sticky (na wszelki wypadek) */
+#tab-fx .tableWrap thead th,
+#tab-invest .tableWrap thead th{
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+  background: transparent !important;
+}
+
+/* 4) Jedna definicja odsunięcia treści spod fixed topbar + mini-jars */
+:root{ --topbar-h:56px; --minijars-h:64px; }
+body{ padding-top: calc(var(--topbar-h) + var(--minijars-h)) !important; }

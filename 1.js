@@ -696,6 +696,32 @@ function gtStableFxDir(pair, rateNow){
   GT_FX_STATE.set(pair, st);
   return nextDir;
 }
+
+// --- % change cache + format with min display ---
+const GT_CHG_LAST = new Map(); // pair -> last value used for % change
+
+function fxChangePctStable(pair, nowVal) {
+  const prev = GT_CHG_LAST.get(pair);
+  let pct = 0;
+  if (Number.isFinite(prev) && prev > 0 && Number.isFinite(nowVal) && nowVal > 0) {
+    pct = ((nowVal - prev) / prev) * 100;
+  }
+  GT_CHG_LAST.set(pair, nowVal);
+  return pct;
+}
+
+// Wyświetlaj min. ±0.005% zamiast +0.00% / -0.00%
+function fmtPctWithFloor(pct, dir) {
+  const abs = Math.abs(pct);
+  const FLOOR = 0.005; // 0.005%
+  if (dir !== 0 && abs < FLOOR) {
+    // gdy jest ruch, ale < 0.005% – pokaż 0.005% z odpowiednim znakiem
+    return (dir > 0 ? `+${FLOOR.toFixed(3)}%` : `-${FLOOR.toFixed(3)}%`);
+  }
+  const sign = pct >= 0 ? '+' : '';
+  return `${sign}${pct.toFixed(2)}%`;
+}
+
 function renderGlobalTrends(mode) {
   currentTrendsMode = mode;
   const wrap = document.getElementById('globalTrendsList');
@@ -726,39 +752,34 @@ function renderGlobalTrends(mode) {
     return el;
   }
 
-  // zbieramy klucze, które powinny być na ekranie (by potem usunąć nadmiarowe)
   const seen = new Set();
 
- if (mode === 'fx') {
-  if (sub) sub.textContent = 'World currency trends';
-  const bases = ISO.filter(c => c !== "USD").slice(0, 8);
+  if (mode === 'fx') {
+    if (sub) sub.textContent = 'World currency trends';
+    const bases = ISO.filter(c => c !== "USD").slice(0, 8);
+    if (!app.trends) app.trends = { stocks: {}, fx: {} };
 
-  if (!app.trends) app.trends = { stocks: {}, fx: {} };
+    bases.forEach(base => {
+      const pair = `${base}/USD`;
+      const rateNow = Number(fxRate(pair) || 0);
+      if (!Number.isFinite(rateNow) || rateNow <= 0) return;
 
-  bases.forEach(base => {
-    const pair = `${base}/USD`;
-    const rateNow = Number(fxRate(pair) || 0);
-    if (!Number.isFinite(rateNow) || rateNow <= 0) return;
+      // stabilny kierunek
+      const dir = gtStableFxDir(pair, rateNow);
 
-    // stabilny kierunek
-    const dir = gtStableFxDir(pair, rateNow);
+      // stabilny % zmiany
+      const chgPct = fxChangePctStable(pair, rateNow);
 
-    // nadal liczmy % zmiany
-    const prev = app.trends.fx[pair];
-    const chgPct = (typeof prev === 'number' && prev !== 0)
-      ? ((rateNow - prev) / prev) * 100
-      : 0;
-    app.trends.fx[pair] = rateNow;
+      app.trends.fx[pair] = rateNow;
+      const el = getTile(pair);
+      seen.add(pair);
 
-    const el = getTile(pair);
-    seen.add(pair);
-
-    el.querySelector('.code').textContent = base;
-    el.querySelector('.name').textContent = CURRENCY_NAMES[base] || base;
-    el.querySelector('.px').innerHTML     = `${FX(rateNow)} ${arrowHtml(dir)}`;
-    el.querySelector('.q').textContent    = 'vs USD';
-    el.querySelector('.chg').textContent  = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
-  });
+      el.querySelector('.code').textContent = base;
+      el.querySelector('.name').textContent = CURRENCY_NAMES[base] || base;
+      el.querySelector('.px').innerHTML     = `${FX(rateNow)} ${arrowHtml(dir)}`;
+      el.querySelector('.q').textContent    = 'vs USD';
+      el.querySelector('.chg').textContent  = fmtPctWithFloor(chgPct, dir);
+    });
 
   } else {
     if (sub) sub.textContent = 'World stock trends';
@@ -781,12 +802,13 @@ function renderGlobalTrends(mode) {
     });
   }
 
-  // usuń kafelki, które nie należą do bieżącego widoku (bez czyszczenia całego wrapa → brak mrugania)
+  // usuń kafelki, których nie było w tym renderze
   wrap.querySelectorAll('.trend-item').forEach(el => {
     const key = el.getAttribute('data-key');
     if (!seen.has(key)) el.remove();
   });
 }
+
 
 function updateGlobalTrendsForTab(tabId){
   const card = document.getElementById('globalTrendsCard');
