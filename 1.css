@@ -1109,3 +1109,109 @@ body[data-role="child"] .jar-card .jar-actions { display:none !important; }
 /* 4) Jedna definicja odsunięcia treści spod fixed topbar + mini-jars */
 :root{ --topbar-h:56px; --minijars-h:64px; }
 body{ padding-top: calc(var(--topbar-h) + var(--minijars-h)) !important; }
+/* ===== Mobile baseline fixes (Money Flow Kids) ===== */
+
+/* iOS/Android: brak poziomego przewijania i prawidłowe wypełnienie szerokości */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Bezpieczne strefy + wygodna poduszka dołem (żeby CTA nie wpadały pod paski systemowe) */
+:root{
+  --header-h: 64px;             /* wysokość top baru – dopasuj jeśli inna */
+  --page-pad: clamp(12px, 4vw, 20px);
+}
+
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  /* U góry damy pad w mainie – patrz niżej */
+}
+
+/* Top bar: trzymaj nad treścią i pozwól mu „przyklejać się” */
+.topbar, .navbar, header.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+}
+
+/* Główna zawartość niech zaczyna się poniżej top baru */
+main, .page, .content, #app {
+  display: block;
+  padding: calc(var(--header-h) + env(safe-area-inset-top)) var(--page-pad) calc(16px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+/* KPIs – pasek 'Available cash / Savings / Earnings' – elastycznie i bez łamania */
+.kpis, .summary-strip, .top-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 720px) {
+  .kpis, .summary-strip, .top-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .kpis, .summary-strip, .top-metrics { grid-template-columns: 1fr; }
+}
+
+/* Karty: pilnujemy pełnej szerokości i przewiewów po bokach */
+.card, .panel, .box {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Siatki kart – bez wymuszania zbyt szerokich kolumn */
+.grid, .cards, .sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 1024px){ .grid, .cards, .sections { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .grid, .cards, .sections { grid-template-columns: 1fr; } }
+
+/* Słoiki – SVG/obrazki muszą się skalować do kontenera */
+.jar-svg, .jar-img, .jar canvas, .jar img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 360px; /* opcjonalnie: niech nie rośnie ponad tę szerokość */
+  margin-inline: auto;
+}
+
+/* Quick Actions – żeby przyciski nie wychodziły poza ekran */
+.quick-actions, .actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 480px) { .quick-actions, .actions { grid-template-columns: 1fr; } }
+
+/* Global Trends – tabela przewijalna horyzontalnie na wąskich ekranach */
+.global-trends, .stocks-table, .fx-table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Teksty w KPI – bez „rozpychania” */
+.kpi .value, .kpi .title {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Upewnij się, że żadne „container” nie mają sztywnego width > 100% */
+.container, .wrap, .inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Częsty winowajca: margin/padding kolidujący z zaokrągleniami – ograniczamy overflow */
+.section, .panel {
+  overflow: hidden; /* cienie i zaokrąglenia wyglądają lepiej, nic nie wystaje */
+}
