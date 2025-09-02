@@ -147,30 +147,6 @@
 <!-- Mobile drawer (appears on small screens) -->
 </header>
 
-<!-- MOBILE ONLY summary toolbar -->
-<section id="mobileSummaryBar" class="mobile-summary" aria-label="Financial summary (mobile)">
-  <div class="ms-item">
-    <span class="ms-label">Available Cash</span>
-    <span class="ms-value" id="ms-cash">0.00 USD</span>
-  </div>
-  <div class="ms-item">
-    <span class="ms-label">Savings</span>
-    <span class="ms-value" id="ms-save">0.00 USD</span>
-  </div>
-  <div class="ms-item">
-    <span class="ms-label">Earnings</span>
-    <span class="ms-value" id="ms-spend">0.00 USD</span>
-  </div>
-  <div class="ms-item">
-    <span class="ms-label">Gifts</span>
-    <span class="ms-value" id="ms-give">0.00 USD</span>
-  </div>
-  <div class="ms-item">
-    <span class="ms-label">Investments</span>
-    <span class="ms-value" id="ms-invest">0.00 USD</span>
-  </div>
-</section>
-
 <!-- Mobile drawer (appears on small screens) -->
 <aside id="mfkMobileDrawer" class="mfk-drawer" aria-hidden="true">
   <nav class="mfk-drawer-nav">
@@ -762,171 +738,100 @@
     <div id="toast" class="toast" style="display:none"></div>
 
     <script src="1.js"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      }
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
 
-      // 4a) Otwieranie / zamykanie drawer (hamburger menu)
-      (function(){
-        const btn = document.getElementById('mfkNavToggle');
-        const drawer = document.getElementById('mfkMobileDrawer');
-        const backdrop = document.getElementById('mfkBackdrop');
-        if(!btn || !drawer || !backdrop) return;
+  // 4a) Otwieranie / zamykanie drawer (hamburger menu)
+  (function(){
+    const btn = document.getElementById('mfkNavToggle');
+    const drawer = document.getElementById('mfkMobileDrawer');
+    const backdrop = document.getElementById('mfkBackdrop');
+    if(!btn || !drawer || !backdrop) return;
 
-        function open(){
-          drawer.classList.add('open');
-          backdrop.hidden = false;
-          btn.setAttribute('aria-expanded','true');
-          document.body.style.overflow = 'hidden';
-        }
-        function close(){
-          drawer.classList.remove('open');
-          backdrop.hidden = true;
-          btn.setAttribute('aria-expanded','false');
-          document.body.style.overflow = '';
-        }
+    function open(){
+      drawer.classList.add('open');
+      backdrop.hidden = false;
+      btn.setAttribute('aria-expanded','true');
+      document.body.style.overflow = 'hidden';
+    }
+    function close(){
+      drawer.classList.remove('open');
+      backdrop.hidden = true;
+      btn.setAttribute('aria-expanded','false');
+      document.body.style.overflow = '';
+    }
 
-        btn.addEventListener('click', () =>
-          drawer.classList.contains('open') ? close() : open()
-        );
-        backdrop.addEventListener('click', close);
-        document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
-      })();
+    btn.addEventListener('click', () =>
+      drawer.classList.contains('open') ? close() : open()
+    );
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  })();
 
-      // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
-      (function(){
-        const drawer = document.getElementById('mfkMobileDrawer');
-        const backdrop = document.getElementById('mfkBackdrop');
-        const btn = document.getElementById('mfkNavToggle');
-        if(!drawer || !backdrop || !btn) return;
+  // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
+  (function(){
+    const drawer = document.getElementById('mfkMobileDrawer');
+    const backdrop = document.getElementById('mfkBackdrop');
+    const btn = document.getElementById('mfkNavToggle');
+    if(!drawer || !backdrop || !btn) return;
 
-        function close(){
-          drawer.classList.remove('open');
-          backdrop.hidden = true;
-          btn.setAttribute('aria-expanded','false');
-          document.body.style.overflow = '';
-        }
+    function close(){
+      drawer.classList.remove('open');
+      backdrop.hidden = true;
+      btn.setAttribute('aria-expanded','false');
+      document.body.style.overflow = '';
+    }
 
-        drawer.addEventListener('click', (e) => {
-          if (e.target.closest('.tab')) close();
-        });
-      })();
+    drawer.addEventListener('click', (e) => {
+      if (e.target.closest('.tab')) close();
+    });
+  })();
 
-      // 4b) Synchronizacja child selector (topbar <-> drawer)
-      (function(){
-        const mainSel = document.getElementById('childSelector');
-        const drawSel = document.getElementById('childSelectorDrawer');
-        if(!mainSel || !drawSel) return;
+  // 4b) Synchronizacja child selector (topbar <-> drawer)
+  (function(){
+    const mainSel = document.getElementById('childSelector');
+    const drawSel = document.getElementById('childSelectorDrawer');
+    if(!mainSel || !drawSel) return;
 
-        function copyOptions(){
-          drawSel.innerHTML = mainSel.innerHTML;
-          drawSel.value = mainSel.value;
-        }
-        copyOptions();
+    function copyOptions(){
+      drawSel.innerHTML = mainSel.innerHTML;
+      drawSel.value = mainSel.value;
+    }
+    copyOptions();
 
-        mainSel.addEventListener('change', ()=>{
-          drawSel.value = mainSel.value;
-          drawSel.dispatchEvent(new Event('change'));
-        });
-        drawSel.addEventListener('change', ()=>{
-          mainSel.value = drawSel.value;
-          mainSel.dispatchEvent(new Event('change'));
-        });
+    mainSel.addEventListener('change', ()=>{
+      drawSel.value = mainSel.value;
+      drawSel.dispatchEvent(new Event('change'));
+    });
+    drawSel.addEventListener('change', ()=>{
+      mainSel.value = drawSel.value;
+      mainSel.dispatchEvent(new Event('change'));
+    });
 
-        new MutationObserver(copyOptions).observe(mainSel, { childList:true, subtree:true });
-      })();
+    new MutationObserver(copyOptions).observe(mainSel, { childList:true, subtree:true });
+  })();
 
-           // 4c) Logowanie w drawerze – przekieruj kliknięcia
-      document.getElementById('drawerLogin')?.addEventListener('click', ()=>{
-        document.getElementById('loginBtn')?.click();
-      });
-      document.getElementById('drawerLogout')?.addEventListener('click', ()=>{
-        document.getElementById('logoutBtn')?.click();
-      });
+  // 4c) Logowanie w drawerze – przekieruj kliknięcia
+  document.getElementById('drawerLogin')?.addEventListener('click', ()=>{
+    document.getElementById('loginBtn')?.click();
+  });
+  document.getElementById('drawerLogout')?.addEventListener('click', ()=>{
+    document.getElementById('logoutBtn')?.click();
+  });
 
-      // 4d) Dynamiczny padding-top względem realnej wysokości topbara
-      (function(){
-        function apply(){
-          const h = document.querySelector('.mfk-topbar') || document.querySelector('.topbar');
-          if(h) document.documentElement.style.setProperty('--header-h', h.getBoundingClientRect().height + 'px');
-        }
-        document.addEventListener('DOMContentLoaded', apply);
-        window.addEventListener('resize', apply, {passive:true});
-        window.addEventListener('orientationchange', apply, {passive:true});
-      })();
+  // 4d) Dynamiczny padding-top względem realnej wysokości topbara
+  (function(){
+    function apply(){
+      const h = document.querySelector('.mfk-topbar') || document.querySelector('.topbar');
+      if(h) document.documentElement.style.setProperty('--header-h', h.getBoundingClientRect().height + 'px');
+    }
+    document.addEventListener('DOMContentLoaded', apply);
+    window.addEventListener('resize', apply, {passive:true});
+    window.addEventListener('orientationchange', apply, {passive:true});
+  })();
+</script>
 
-      /* === KROK 3.A — Mobile summary toolbar: automatyczne zasilanie wartościami === */
-      (function(){
-        const bar = document.getElementById('mobileSummaryBar');
-        if(!bar) return;
-
-        const out = {
-          cash:  document.getElementById('ms-cash'),
-          save:  document.getElementById('ms-save'),
-          spend: document.getElementById('ms-spend'),
-          give:  document.getElementById('ms-give'),
-          invest:document.getElementById('ms-invest'),
-        };
-
-        // źródła: używamy istniejących elementów na stronie (mini KPI lub wartości w słoikach)
-        const src = {
-          cash:   document.getElementById('miniCash')   || document.getElementById('availableCash'),
-          save:   document.getElementById('miniSave')   || document.getElementById('saveAmt'),
-          spend:  document.getElementById('miniSpend')  || document.getElementById('spendAmt'),
-          give:   document.getElementById('miniGive')   || document.getElementById('giveAmt'),
-          invest: document.getElementById('miniInvest') || document.getElementById('investAmt'),
-        };
-
-        function sync(){
-          if(src.cash  && out.cash )  out.cash.textContent   = src.cash.textContent.trim();
-          if(src.save  && out.save )  out.save.textContent   = src.save.textContent.trim();
-          if(src.spend && out.spend)  out.spend.textContent  = src.spend.textContent.trim();
-          if(src.give  && out.give )  out.give.textContent   = src.give.textContent.trim();
-          if(src.invest&& out.invest) out.invest.textContent = src.invest.textContent.trim();
-        }
-        // pierwsze wypełnienie
-        sync();
-
-        // aktualizacja na żywo przy zmianach w źródłach
-        const mo = new MutationObserver(sync);
-        Object.values(src).forEach(el => el && mo.observe(el, {childList:true, subtree:true, characterData:true}));
-
-        // zachowaj poprawny offset przy zmianie wysokości topbara / orientacji
-        function recalTop(){
-          const h = getComputedStyle(document.documentElement).getPropertyValue('--header-h').trim() || '64px';
-          bar.style.top = `calc(${h} + env(safe-area-inset-top, 0px))`;
-        }
-        window.addEventListener('resize', recalTop, {passive:true});
-        window.addEventListener('orientationchange', recalTop, {passive:true});
-        document.addEventListener('DOMContentLoaded', recalTop);
-        recalTop();
-      })();
-
-      /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal od razu === */
-      (function(){
-        const btn = document.getElementById('drawerTutorial');
-        if(!btn) return;
-        btn.addEventListener('click', () => {
-          // zamknij drawer
-          const drawer = document.getElementById('mfkMobileDrawer');
-          const backdrop = document.getElementById('mfkBackdrop');
-          const navBtn = document.getElementById('mfkNavToggle');
-          if(drawer && backdrop && navBtn){
-            drawer.classList.remove('open');
-            backdrop.hidden = true;
-            navBtn.setAttribute('aria-expanded','false');
-            document.body.style.overflow = '';
-          }
-          // otwórz tutorial (korzystamy z istniejącego przycisku z topbara, jeśli jest)
-          const topBtn = document.getElementById('tutorialBtn');
-          if (topBtn) { topBtn.click(); }
-          else {
-            document.getElementById('tutorialModal')?.classList?.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'instant' });
-          }
-        });
-      })();
-    </script>
   </body>
 </html>
