@@ -1313,3 +1313,30 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 /* Zapobieganie klik-blokadzie przez pseudo-elementy */
 .mfk-topbar::before, .mfk-topbar::after{ pointer-events:none; }
 .mfk-topbar, .mfk-topbar *{ pointer-events:auto; }
+/* Mini jars sticky bar fix */
+.mini-jars.sticky{
+  position: sticky;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  z-index: 150;
+  display: flex;
+  justify-content: space-around;
+  padding: 6px 10px;
+  background: rgba(7,11,22,0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.mini-jars .mini-jar-label{ font-size: 0.75rem; }
+.mini-jars .mini-jar-value{ font-weight: 700; font-size: 0.9rem; }
+/* Net Worth + Available Cash + Quick Actions responsive */
+.grid.g-3{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 1024px){
+  .grid.g-3{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px){
+  .grid.g-3{ grid-template-columns: 1fr; }
+}
