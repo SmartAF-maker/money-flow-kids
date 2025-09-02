@@ -145,6 +145,33 @@
   </div>
 </header>
 <!-- Mobile drawer (appears on small screens) -->
+</header>
+
+<!-- MOBILE ONLY summary toolbar -->
+<section id="mobileSummaryBar" class="mobile-summary" aria-label="Financial summary (mobile)">
+  <div class="ms-item">
+    <span class="ms-label">Available Cash</span>
+    <span class="ms-value" id="ms-cash">0.00 USD</span>
+  </div>
+  <div class="ms-item">
+    <span class="ms-label">Savings</span>
+    <span class="ms-value" id="ms-save">0.00 USD</span>
+  </div>
+  <div class="ms-item">
+    <span class="ms-label">Earnings</span>
+    <span class="ms-value" id="ms-spend">0.00 USD</span>
+  </div>
+  <div class="ms-item">
+    <span class="ms-label">Gifts</span>
+    <span class="ms-value" id="ms-give">0.00 USD</span>
+  </div>
+  <div class="ms-item">
+    <span class="ms-label">Investments</span>
+    <span class="ms-value" id="ms-invest">0.00 USD</span>
+  </div>
+</section>
+
+<!-- Mobile drawer (appears on small screens) -->
 <aside id="mfkMobileDrawer" class="mfk-drawer" aria-hidden="true">
   <nav class="mfk-drawer-nav">
     <div class="row">
@@ -156,14 +183,18 @@
     <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
     <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
     <button type="button" class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
-    <button type="button" class="tab" data-tab="tutorial" data-i18n="tutorial">Tutorial</button>
+    <!-- ważne: ID poniżej -->
+    <button id="drawerTutorial" type="button" class="tab" data-tab="tutorial" data-i18n="tutorial">Tutorial</button>
 
     <hr />
     <button id="drawerLogin" type="button" class="tab">Login</button>
     <button id="drawerLogout" type="button" class="tab hidden">Logout</button>
   </nav>
 </aside>
+
+<!-- Backdrop musi być POZA <aside> -->
 <div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
+
 
     <!-- Sticky mini jars (below top buttons) -->
     <section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
@@ -806,7 +837,7 @@
         new MutationObserver(copyOptions).observe(mainSel, { childList:true, subtree:true });
       })();
 
-      // 4c) Logowanie w drawerze – przekieruj kliknięcia
+           // 4c) Logowanie w drawerze – przekieruj kliknięcia
       document.getElementById('drawerLogin')?.addEventListener('click', ()=>{
         document.getElementById('loginBtn')?.click();
       });
@@ -823,6 +854,78 @@
         document.addEventListener('DOMContentLoaded', apply);
         window.addEventListener('resize', apply, {passive:true});
         window.addEventListener('orientationchange', apply, {passive:true});
+      })();
+
+      /* === KROK 3.A — Mobile summary toolbar: automatyczne zasilanie wartościami === */
+      (function(){
+        const bar = document.getElementById('mobileSummaryBar');
+        if(!bar) return;
+
+        const out = {
+          cash:  document.getElementById('ms-cash'),
+          save:  document.getElementById('ms-save'),
+          spend: document.getElementById('ms-spend'),
+          give:  document.getElementById('ms-give'),
+          invest:document.getElementById('ms-invest'),
+        };
+
+        // źródła: używamy istniejących elementów na stronie (mini KPI lub wartości w słoikach)
+        const src = {
+          cash:   document.getElementById('miniCash')   || document.getElementById('availableCash'),
+          save:   document.getElementById('miniSave')   || document.getElementById('saveAmt'),
+          spend:  document.getElementById('miniSpend')  || document.getElementById('spendAmt'),
+          give:   document.getElementById('miniGive')   || document.getElementById('giveAmt'),
+          invest: document.getElementById('miniInvest') || document.getElementById('investAmt'),
+        };
+
+        function sync(){
+          if(src.cash  && out.cash )  out.cash.textContent   = src.cash.textContent.trim();
+          if(src.save  && out.save )  out.save.textContent   = src.save.textContent.trim();
+          if(src.spend && out.spend)  out.spend.textContent  = src.spend.textContent.trim();
+          if(src.give  && out.give )  out.give.textContent   = src.give.textContent.trim();
+          if(src.invest&& out.invest) out.invest.textContent = src.invest.textContent.trim();
+        }
+        // pierwsze wypełnienie
+        sync();
+
+        // aktualizacja na żywo przy zmianach w źródłach
+        const mo = new MutationObserver(sync);
+        Object.values(src).forEach(el => el && mo.observe(el, {childList:true, subtree:true, characterData:true}));
+
+        // zachowaj poprawny offset przy zmianie wysokości topbara / orientacji
+        function recalTop(){
+          const h = getComputedStyle(document.documentElement).getPropertyValue('--header-h').trim() || '64px';
+          bar.style.top = `calc(${h} + env(safe-area-inset-top, 0px))`;
+        }
+        window.addEventListener('resize', recalTop, {passive:true});
+        window.addEventListener('orientationchange', recalTop, {passive:true});
+        document.addEventListener('DOMContentLoaded', recalTop);
+        recalTop();
+      })();
+
+      /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal od razu === */
+      (function(){
+        const btn = document.getElementById('drawerTutorial');
+        if(!btn) return;
+        btn.addEventListener('click', () => {
+          // zamknij drawer
+          const drawer = document.getElementById('mfkMobileDrawer');
+          const backdrop = document.getElementById('mfkBackdrop');
+          const navBtn = document.getElementById('mfkNavToggle');
+          if(drawer && backdrop && navBtn){
+            drawer.classList.remove('open');
+            backdrop.hidden = true;
+            navBtn.setAttribute('aria-expanded','false');
+            document.body.style.overflow = '';
+          }
+          // otwórz tutorial (korzystamy z istniejącego przycisku z topbara, jeśli jest)
+          const topBtn = document.getElementById('tutorialBtn');
+          if (topBtn) { topBtn.click(); }
+          else {
+            document.getElementById('tutorialModal')?.classList?.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'instant' });
+          }
+        });
       })();
     </script>
   </body>
