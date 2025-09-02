@@ -18,7 +18,7 @@
 
 // ====== UTIL ======
 const DB_KEY = "kidmoney_multi_fx_live_i18n_v1";
-const AUTH_KEY = "kidmoney_auth_v1"; // { role: 'guest'|'parent'|'child', childId?: string }
+const AUTH_KEY = window.AUTH_KEY || 'mfk-auth-v1';// { role: 'guest'|'parent'|'child', childId?: string }
 const LANG_KEY = "pf_lang";
 
 
@@ -1826,8 +1826,6 @@ document.addEventListener('visibilitychange', () => {
 });
 // ====== LIVE MODE (END)
 
-
-
 // ====== Tutorial (skrócone) ======
 let TUTORIAL_STEPS = makeSteps();
 function refreshTutorialTexts() { TUTORIAL_STEPS = makeSteps(); if (tutorialTitle) tutShowStep(tutorialIndex); }
@@ -2209,10 +2207,16 @@ function applyAuthUI() {
     loginBtn && loginBtn.classList.add('hidden');
     logoutBtn && logoutBtn.classList.remove('hidden');
   } else if (isChild()) {
-    const ch = activeChild();
-    authBadge && (authBadge.textContent = (tr.badgeChild ? tr.badgeChild(ch?.name) : `Child: ${ch?.name || ""}`));
-    loginBtn && loginBtn.classList.add('hidden');
-    logoutBtn && logoutBtn.classList.remove('hidden');
+  const ch = activeChild();
+  // czytelny badge: "Child: Imię"
+  const tr = TT();
+  const label = (tr.badgeChild ? tr.badgeChild(ch?.name || "") : `Child: ${ch?.name || ""}`);
+  if (authBadge) authBadge.textContent = label;
+
+  // w trybie dziecka nie pokazujemy "Login" (to myli)
+  if (loginBtn)  loginBtn.classList.add('hidden');
+  if (logoutBtn) logoutBtn.classList.remove('hidden');
+
   } else {
     authBadge && (authBadge.textContent = tr.badgeGuest || "Guest");
     loginBtn && loginBtn.classList.remove('hidden');
@@ -2280,8 +2284,54 @@ loginSubmit?.addEventListener('click', () => {
 });
 
 logoutBtn?.addEventListener('click', () => {
-  appAuth = { role: 'guest' }; saveAuth(appAuth); applyAuthUI(); toast('Logged out');
+  if (isParent()) {
+    // Rodzic -> przełącz na aktywne dziecko (jak było)
+    const kidId = app.activeChildId || (app.childrenOrder?.[0] || null);
+    if (kidId) {
+      app.activeChildId = kidId;
+      save(app);
+      appAuth = { role: 'child', childId: kidId };
+      saveAuth(appAuth);
+      if (document.querySelector('.tab.active')?.dataset.tab === 'parent') {
+        document.querySelector('button[data-tab="invest"]')?.click();
+      }
+      renderAll();
+      const name = app.children?.[kidId]?.name || '';
+      toast(TT().badgeChild ? TT().badgeChild(name) : `Child: ${name}`);
+    } else {
+      appAuth = { role: 'guest' };
+      saveAuth(appAuth);
+      applyAuthUI();
+      toast('Logged out');
+    }
+  } else if (isChild()) {
+    // Dziecko -> pokaż modala logowania z rolą Parent (nie przechodź do Guest)
+    try {
+      // ustaw radio „parent” i pola PIN
+      roleRadios.forEach(r => (r.checked = r.value === 'parent'));
+      childFields && childFields.classList.add('hidden');
+      parentFields && parentFields.classList.remove('hidden');
+      loginPin && (loginPin.value = '');
+      fillLoginChildSelector(); // dla porządku – choć Parent nie używa listy
+      loginModal && loginModal.classList.remove('hidden');
+      refreshAuthI18n();
+      // Uwaga: rola zostaje „child”, dopóki użytkownik nie poda poprawnego PINu w submit
+    } catch {
+      // awaryjnie, gdyby czegoś brakło w DOM – zostaw stare zachowanie
+      appAuth = { role: 'guest' };
+      saveAuth(appAuth);
+      applyAuthUI();
+      toast('Logged out');
+    }
+  } else {
+    // Guest -> bez zmian
+    appAuth = { role: 'guest' };
+    saveAuth(appAuth);
+    applyAuthUI();
+    toast('Logged out');
+  }
 });
+
 
 document.getElementById('addChildBtn')?.addEventListener('click', () => setTimeout(fillLoginChildSelector, 200));
 document.getElementById('langSelect')?.addEventListener('change', () => setTimeout(refreshAuthI18n, 0));
@@ -2352,13 +2402,10 @@ setTimeout(() => {
 
   const lb = document.getElementById("loginBtn");
   if (lb && !lb._wired) { lb.addEventListener("click", openLogin); lb._wired = true; }
+ 
+}
 
-  const lob = document.getElementById("logoutBtn");
-  if (lob && !lob._wired) {
-    lob.addEventListener("click", () => { appAuth = { role:'guest' }; saveAuth(appAuth); applyAuthUI(); toast('Logged out'); });
-    lob._wired = true;
-  }
-}, 0);
+, 0);
 // ==== REMOVE "Max" buttons from Stock & FX tables ====
 document.addEventListener('DOMContentLoaded', () => {
   document
