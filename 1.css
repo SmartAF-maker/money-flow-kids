@@ -1045,3 +1045,13 @@ thead th{
 .arrow-up   { color: #22c55e; }   /* zielony */
 .arrow-down { color: #ef4444; }   /* czerwony */
 .arrow-flat { color: #9ca3af; }   /* muted */
+/* CHILD: ukryj slot (input + Add) pod słoikami */
+body[data-role="child"] .jar-card .jar-actions { 
+  display: none !important; 
+}
+
+/* (opcjonalnie) zlikwiduj nadmiar odstępu pod słoikami w child */
+body[data-role="child"] .jar-card { 
+  gap: 4px; 
+}
+body[data-role="child"] .jar-card .jar-actions { display:none !important; }

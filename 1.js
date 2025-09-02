@@ -2200,6 +2200,9 @@ function openLogin() {
 function closeLogin() { loginModal && loginModal.classList.add('hidden'); }
 
 function applyAuthUI() {
+  // --- NEW: ustaw body[data-role] dla CSS (child: ukrycie placeholderów pod słoikami) ---
+  document.body.dataset.role = appAuth?.role || 'guest';
+
   const tr = TT();
   if (isParent()) {
     authBadge && (authBadge.textContent = tr.badgeParent || "Parent");
@@ -2235,6 +2238,9 @@ function applyAuthUI() {
   document.querySelectorAll('.role-parent-only').forEach(el => setHidden(el, hideForNonParent));
 }
 function refreshAuthI18n() { applyAuthUI(); }
+
+// --- NEW: jednorazowe wywołanie, by data-role było ustawione od startu ---
+applyAuthUI();
 
 loginBtn?.addEventListener('click', openLogin);
 loginCancel?.addEventListener('click', closeLogin);
@@ -2295,6 +2301,7 @@ function renderAll() {
   applyAuthUI();
   updateGlobalTrendsForTab(document.querySelector('.tab.active')?.dataset.tab || 'invest');
 }
+
 
 
 // ===== Parent PIN – storage key =====
