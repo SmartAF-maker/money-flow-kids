@@ -145,9 +145,6 @@
   </div>
 </header>
 <!-- Mobile drawer (appears on small screens) -->
-</header>
-
-<!-- Mobile drawer (appears on small screens) -->
 <aside id="mfkMobileDrawer" class="mfk-drawer" aria-hidden="true">
   <nav class="mfk-drawer-nav">
     <div class="row">
@@ -170,7 +167,6 @@
 
 <!-- Backdrop musi być POZA <aside> -->
 <div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
-
 
     <!-- Sticky mini jars (below top buttons) -->
     <section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
@@ -738,100 +734,133 @@
     <div id="toast" class="toast" style="display:none"></div>
 
     <script src="1.js"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+
+      // 4a) Otwieranie / zamykanie drawer (hamburger menu)
+      (function(){
+        const btn = document.getElementById('mfkNavToggle');
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        if(!btn || !drawer || !backdrop) return;
+
+        function open(){
+          drawer.classList.add('open');
+          backdrop.hidden = false;
+          btn.setAttribute('aria-expanded','true');
+          document.body.style.overflow = 'hidden';
+        }
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
+        }
+
+        btn.addEventListener('click', () =>
+          drawer.classList.contains('open') ? close() : open()
+        );
+        backdrop.addEventListener('click', close);
+        document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+      })();
+
+      // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
+      (function(){
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        const btn = document.getElementById('mfkNavToggle');
+        if(!drawer || !backdrop || !btn) return;
+
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
+        }
+
+        drawer.addEventListener('click', (e) => {
+          if (e.target.closest('.tab')) close();
+        });
+      })();
+
+      // 4b) Synchronizacja child selector (topbar <-> drawer)
+      (function(){
+        const mainSel = document.getElementById('childSelector');
+        const drawSel = document.getElementById('childSelectorDrawer');
+        if(!mainSel || !drawSel) return;
+
+        function copyOptions(){
+          drawSel.innerHTML = mainSel.innerHTML;
+          drawSel.value = mainSel.value;
+        }
+        copyOptions();
+
+        mainSel.addEventListener('change', ()=>{
+          drawSel.value = mainSel.value;
+          drawSel.dispatchEvent(new Event('change'));
+        });
+        drawSel.addEventListener('change', ()=>{
+          mainSel.value = drawSel.value;
+          mainSel.dispatchEvent(new Event('change'));
+        });
+
+        new MutationObserver(copyOptions).observe(mainSel, { childList:true, subtree:true });
+      })();
+
+           // 4c) Logowanie w drawerze – przekieruj kliknięcia
+      document.getElementById('drawerLogin')?.addEventListener('click', ()=>{
+        document.getElementById('loginBtn')?.click();
+      });
+      document.getElementById('drawerLogout')?.addEventListener('click', ()=>{
+        document.getElementById('logoutBtn')?.click();
+      });
+
+      // 4d) Dynamiczny padding-top względem realnej wysokości topbara
+      (function(){
+        function apply(){
+          const h = document.querySelector('.mfk-topbar') || document.querySelector('.topbar');
+          if(h) document.documentElement.style.setProperty('--header-h', h.getBoundingClientRect().height + 'px');
+        }
+        document.addEventListener('DOMContentLoaded', apply);
+        window.addEventListener('resize', apply, {passive:true});
+        window.addEventListener('orientationchange', apply, {passive:true});
+      })();
+     
+      /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
+(function () {
+  const drawerTut  = document.getElementById('drawerTutorial');
+  if (!drawerTut) return;
+
+  const drawer     = document.getElementById('mfkMobileDrawer');
+  const backdrop   = document.getElementById('mfkBackdrop');
+  const navBtn     = document.getElementById('mfkNavToggle');
+  const topBtn     = document.getElementById('tutorialBtn');
+  const modal      = document.getElementById('tutorialModal');
+
+  function closeDrawer() {
+    if (drawer)   drawer.classList.remove('open');
+    if (backdrop) backdrop.hidden = true;
+    if (navBtn)   navBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
   }
 
-  // 4a) Otwieranie / zamykanie drawer (hamburger menu)
-  (function(){
-    const btn = document.getElementById('mfkNavToggle');
-    const drawer = document.getElementById('mfkMobileDrawer');
-    const backdrop = document.getElementById('mfkBackdrop');
-    if(!btn || !drawer || !backdrop) return;
-
-    function open(){
-      drawer.classList.add('open');
-      backdrop.hidden = false;
-      btn.setAttribute('aria-expanded','true');
-      document.body.style.overflow = 'hidden';
+  function openTutorial() {
+    if (topBtn) {
+      topBtn.click();               // użyj istniejącej logiki otwierania
+    } else if (modal) {
+      modal.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
-    function close(){
-      drawer.classList.remove('open');
-      backdrop.hidden = true;
-      btn.setAttribute('aria-expanded','false');
-      document.body.style.overflow = '';
-    }
+  }
 
-    btn.addEventListener('click', () =>
-      drawer.classList.contains('open') ? close() : open()
-    );
-    backdrop.addEventListener('click', close);
-    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
-  })();
-
-  // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
-  (function(){
-    const drawer = document.getElementById('mfkMobileDrawer');
-    const backdrop = document.getElementById('mfkBackdrop');
-    const btn = document.getElementById('mfkNavToggle');
-    if(!drawer || !backdrop || !btn) return;
-
-    function close(){
-      drawer.classList.remove('open');
-      backdrop.hidden = true;
-      btn.setAttribute('aria-expanded','false');
-      document.body.style.overflow = '';
-    }
-
-    drawer.addEventListener('click', (e) => {
-      if (e.target.closest('.tab')) close();
-    });
-  })();
-
-  // 4b) Synchronizacja child selector (topbar <-> drawer)
-  (function(){
-    const mainSel = document.getElementById('childSelector');
-    const drawSel = document.getElementById('childSelectorDrawer');
-    if(!mainSel || !drawSel) return;
-
-    function copyOptions(){
-      drawSel.innerHTML = mainSel.innerHTML;
-      drawSel.value = mainSel.value;
-    }
-    copyOptions();
-
-    mainSel.addEventListener('change', ()=>{
-      drawSel.value = mainSel.value;
-      drawSel.dispatchEvent(new Event('change'));
-    });
-    drawSel.addEventListener('change', ()=>{
-      mainSel.value = drawSel.value;
-      mainSel.dispatchEvent(new Event('change'));
-    });
-
-    new MutationObserver(copyOptions).observe(mainSel, { childList:true, subtree:true });
-  })();
-
-  // 4c) Logowanie w drawerze – przekieruj kliknięcia
-  document.getElementById('drawerLogin')?.addEventListener('click', ()=>{
-    document.getElementById('loginBtn')?.click();
+  drawerTut.addEventListener('click', function () {
+    closeDrawer();
+    // pozwól DOM-owi się odmalować po zamknięciu szuflady
+    setTimeout(openTutorial, 0);
   });
-  document.getElementById('drawerLogout')?.addEventListener('click', ()=>{
-    document.getElementById('logoutBtn')?.click();
-  });
-
-  // 4d) Dynamiczny padding-top względem realnej wysokości topbara
-  (function(){
-    function apply(){
-      const h = document.querySelector('.mfk-topbar') || document.querySelector('.topbar');
-      if(h) document.documentElement.style.setProperty('--header-h', h.getBoundingClientRect().height + 'px');
-    }
-    document.addEventListener('DOMContentLoaded', apply);
-    window.addEventListener('resize', apply, {passive:true});
-    window.addEventListener('orientationchange', apply, {passive:true});
-  })();
-</script>
-
+})();
+    </script>
   </body>
 </html>

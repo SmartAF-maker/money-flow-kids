@@ -1339,38 +1339,31 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 }
 @media (max-width: 640px){
   .grid.g-3{ grid-template-columns: 1fr; }
-}/* ===== Mobile summary toolbar (phones only) ===== */
-.mobile-summary{
-  position: sticky;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  z-index: 160;
-  display: grid;
-  grid-template-columns: 1fr 1fr;          /* 2 kolumny jak na szkicu */
-  gap: 12px 18px;
-  padding: 10px 14px;
-  background: rgba(7,11,22,.86);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255,255,255,.06);
 }
-.mobile-summary .ms-item{ display:flex; flex-direction:column; min-width:0; }
-.mobile-summary .ms-label{ font-size:.86rem; opacity:.9; }
-.mobile-summary .ms-value{ font-size:1.05rem; font-weight:800; letter-spacing:.2px; }
-
-/* Na bardzo wąskich telefonach przełącz w 1 kolumnę */
-@media (max-width: 380px){
-  .mobile-summary{ grid-template-columns: 1fr; }
+/* Sticky mini jars – optymalizacja na telefonie */
+#stickyMiniJars {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(0,0,0,0.3); /* lekki kontrast, jak masz już to usuń */
 }
 
-/* Pokaż toolbar tylko na telefonach, ukryj stary mini-jars (jeśli był) */
-@media (max-width: 640px){
-  #mobileSummaryBar{ display:grid; }
-  #stickyMiniJars{ display:none !important; }
-}
-/* Desktop/tablet: ukryj toolbar */
-@media (min-width: 641px){
-  #mobileSummaryBar{ display:none; }
+#stickyMiniJars .mini-jar {
+  flex: 1; /* wszystkie dzielą równą szerokość */
+  min-width: 0; /* pozwala się ścisnąć */
+  text-align: center;
+  font-size: 0.75rem; /* zmniejszona czcionka */
+  line-height: 1.2;
 }
 
-/* Upewnij się, że sticky nie jest „ucięte” przez overflow rodzica */
-.container{ overflow: visible; }
+#stickyMiniJars .mini-jar-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted, #aaa);
+}
+
+#stickyMiniJars .mini-jar-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
