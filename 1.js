@@ -957,9 +957,8 @@ function renderPortfolioStocks() {
     const qMax = Math.max(1, Math.abs(p.s || 0));
 
     // przywróć to, co wpisał użytkownik (z klamrą)
-    let vInit = Number(prevVals[t] ?? 1);
-    if (!isFinite(vInit) || vInit < 1) vInit = 1;
-    if (vInit > qMax) vInit = qMax;
+       // ➜ pole startuje puste, jeśli user nic nie wpisał
+    const userVal = (prevVals[t] !== undefined ? String(prevVals[t]) : "");
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -971,11 +970,12 @@ function renderPortfolioStocks() {
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
         <input type="number" min="1" max="${qMax}" step="1"
-               value="${vInit}" class="input" style="width:90px"
-               data-sell-q="${t}" placeholder="max ${qMax}">
+               value="${userVal}" class="input" style="width:90px"
+               data-sell-q="${t}" placeholder="enter 1–${qMax}">
         <button class="btn" data-sell-row="${t}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-sell-max="${t}">Max</button>
       </td>`;
+
     portfolioBody.appendChild(tr);
   });
 
@@ -1191,9 +1191,8 @@ function renderPortfolioFx() {
     const qMax = Math.max(1, Math.abs(pos.q || 0));
 
     // przywróć to, co wpisał użytkownik (z klamrą)
-    let vInit = Number(prevVals[pair] ?? 1);
-    if (!isFinite(vInit) || vInit < 1) vInit = 1;
-    if (vInit > qMax) vInit = qMax;
+       // ➜ pole startuje puste, jeśli user nic nie wpisał
+    const userVal = (prevVals[pair] !== undefined ? String(prevVals[pair]) : "");
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -1205,11 +1204,12 @@ function renderPortfolioFx() {
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
         <input type="number" min="1" max="${qMax}" step="1"
-               value="${vInit}" class="input" style="width:90px"
-               data-fxsell-q="${pair}" placeholder="max ${qMax}">
+               value="${userVal}" class="input" style="width:90px"
+               data-fxsell-q="${pair}" placeholder="enter 1–${qMax}">
         <button class="btn" data-fxsell-row="${pair}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-fxmax="${pair}">Max</button>
       </td>`;
+
     fxBody.appendChild(tr);
   });
 
