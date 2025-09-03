@@ -1674,12 +1674,12 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
   .btn,
   .role-switch .tab,
   .authwrap .tab {
-    background-color: #111827 !important;
-    border: 1px solid #22c55e !important;   /* neonowa zieleń */
-    color: #22c55e !important;
+    background-color: #f0f9ff !important;   /* pastelowy błękit */
+    border: 1px solid #bae6fd !important;
+    color: #0369a1 !important;              /* morski tekst */
   }
-  .btn.primary { background-color:#3b82f6 !important; color:#fff !important; }
-  .btn.danger  { background-color:#ef4444 !important; color:#fff !important; }
+  .btn.primary { background-color:#d9f99d !important; color:#365314 !important; }
+  .btn.danger  { background-color:#fecaca !important; color:#7f1d1d !important; }
 
   /* 2) Drawer – takie same kapsułki jak w topbarze */
   #mfkMobileDrawer .tab,
