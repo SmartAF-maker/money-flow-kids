@@ -1432,3 +1432,48 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   /* Fallback: gdy brak data-action – zwykle "Clean demo" ma klasę danger */
   #tab-parent .btn-danger{ order: 3; }
 }
+/* ==== MOBILE-ONLY (≤640px) – first screen + Parent layout ==== */
+@media (max-width: 640px){
+
+  /* 1) Ekran 1: Net Worth, Available Cash, Quick Actions jeden pod drugim */
+  .grid.g-3{
+    grid-template-columns: 1fr !important;
+  }
+  .grid.g-3 > *{ min-width: 0 !important; }
+
+  /* 2) Parent: wszystko w jednej kolumnie i bez "znikania" obok Settings */
+  #tab-parent{
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  /* wiersze/sekcje w Parent pionowo i na pełną szerokość */
+  #tab-parent .row,
+  #tab-parent .actions,
+  #tab-parent .space{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  #tab-parent .row > *,
+  #tab-parent .actions > *,
+  #tab-parent .space > *{
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* jawna kolejność sekcji w Parent (dopasuj do swoich ID/atrybutów) */
+  #parentSettings,        [data-action="settings"]      { order: 1; }
+  #parentHistory,         [data-section="history"]      { order: 2; }
+  #parentAllowance,       [data-action="allowance"]     { order: 3; }
+  #parentClearDemo,       [data-action="clean-demo"],
+  #cleanDemoBtn                                          { order: 4; }
+
+  /* przyciski na całą szerokość */
+  #tab-parent .btn,
+  #tab-parent button{ width: 100% !important; }
+
+  /* nic nie przycina zawartości kart */
+  #tab-parent .card{ overflow: visible !important; }
+}
