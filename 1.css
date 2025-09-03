@@ -1595,5 +1595,29 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     color:#0b1220 !important;
   }
 }
+/* === FIX 1: pokaż przyciski pod słoikami na mobile === */
+body[data-role="child"] .jar-card .jar-actions{
+  display:flex !important;
+}
+
+/* === FIX 2: spójne kolory guzików z desktopem (bez stylowania <button>) === */
+button:not(.btn){
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 1px solid var(--panel-b) !important;
+  color: var(--ink) !important;
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+.btn{ 
+  background: var(--grad-btn-2) !important;
+  color: #081225 !important;
+  font-weight: 700;
+}
+.btn.danger{
+  background: var(--grad-danger) !important;
+  color: #0b1220 !important;
+}
+.jar-actions .btn{ min-width:88px; white-space:nowrap; }
 
 
