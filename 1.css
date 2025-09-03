@@ -1706,6 +1706,18 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     border-color:#3a4f77 !important;
     transform:none !important;
   }
+}/* === Remove "Sell" ONLY in trade boxes (Stocks + FX) === */
+#tradeBox .space button:not(#buyBtn):not(#cancelTrade){
+  display: none !important;
+}
+#fxTradeBox .space button:not(#fxBuyBtn):not(#fxCancelTrade){
+  display: none !important;
 }
 
+/* (opcjonalne – gdyby JS dodał inne klasy/atrybuty) */
+#tradeBox [data-sell],       #fxTradeBox [data-sell],
+#tradeBox .btn-sell,         #fxTradeBox .btn-sell,
+#tradeBox button[id*="sell"],#fxTradeBox button[id*="sell"]{
+  display: none !important;
+}
 
