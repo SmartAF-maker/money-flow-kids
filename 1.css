@@ -1561,5 +1561,39 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   box-shadow: none !important;
   background-image: none !important;
 }
+/* === MOBILE BUTTON COLOR LOCK (≤640px) === */
+@media (max-width: 640px){
+  :root{
+    /* stałe, nieprzezroczyste kolory guzików */
+    --btn-a:#3b82f6;   /* blue-500 */
+    --btn-b:#22c55e;   /* green-500 */
+    --btn-danger-a:#ef4444; /* red-500 */
+    --btn-danger-b:#f97316; /* orange-500 */
+  }
+
+  /* wszystkie guziki i kapsułki */
+  button,
+  .btn,
+  .role-switch .tab,
+  .authwrap .tab{
+    /* brak przezroczystości w tle = zero mieszania z kartą */
+    background-image: linear-gradient(135deg, var(--btn-a), var(--btn-b)) !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;             /* gdyby gdzieś był saturate() */
+    box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.15) !important;
+    isolation: isolate;                   /* zabezpiecza przed blendowaniem */
+  }
+
+  /* warianty */
+  .btn.primary{
+    background-image: linear-gradient(135deg, var(--btn-a), #60a5fa) !important;
+  }
+  .btn.danger{
+    background-image: linear-gradient(135deg, var(--btn-danger-a), var(--btn-danger-b)) !important;
+    color:#0b1220 !important;
+  }
+}
 
 
