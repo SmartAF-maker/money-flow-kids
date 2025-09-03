@@ -1726,7 +1726,7 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
   /* wszystkie guziki i kapsułki */
   :is(button, .btn, .role-switch .tab, .authwrap .tab){
     background: none !important;                /* zabija gradient z bazowej reguły */
-    background-color: #6cf9eb !important;       /* jasny błękit */
+    background-color: #05f6c6 !important;       /* jasny błękit */
     color: #0b3b66 !important;                   /* ciemny morski tekst */
     border: 1px solid #b7dbff !important;
     box-shadow: 0 4px 10px rgba(0,0,0,.25) !important;
