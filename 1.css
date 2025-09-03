@@ -1595,52 +1595,100 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     color:#0b1220 !important;
   }
 }
-/* ===== PATCH 2025-09-03 ===== */
+/* === MF Kids – FINAL PATCH (mobile + drawer + jars + tutorial) === */
 
-/* jaśniejsza, jaskrawa zieleń + ujednolicenie gradientu guzików */
-:root{
-  --green-bright:#4ade80; /* emerald-400 */
-  --grad-btn-2:linear-gradient(135deg,#60a5fa 0%,#3b82f6 55%, var(--green-bright) 100%);
+/* 1) Jars: pokaż slot „Add” (input + button) NA KAŻDYM profilu */
+.jar-card .jar-actions{
+  display:flex !important;
+  flex-wrap:nowrap;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.jar-card .jar-actions .jar-input{ width:100px; flex:0 0 auto; }
+.jar-card .jar-actions .btn{ flex:0 0 auto; white-space:nowrap; }
+
+/* 2) Drawer: zakres opcji wg roli */
+/* Dziecko: tylko Stocks, FX, Profits, Tutorial, Login */
+body[data-role="child"] .mfk-drawer-nav > *{ display:none !important; }
+body[data-role="child"] .mfk-drawer-nav [data-tab="stocks"],
+body[data-role="child"] .mfk-drawer-nav [data-tab="fx"],
+body[data-role="child"] .mfk-drawer-nav [data-tab="profits"],
+body[data-role="child"] .mfk-drawer-nav [data-tab="tutorial"],
+body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
+  display:block !important;
 }
 
-/* CHILD: schowaj pole kwoty i Add+ pod słoikami */
-body[data-role="child"] .jar-card .jar-actions .jar-input,
-body[data-role="child"] .jar-card .jar-actions input,
-body[data-role="child"] .jar-card .jar-actions .btn-add,
-body[data-role="child"] .jar-card .jar-actions [data-action="add"]{
-  display:none !important;
+/* Porządek/odstępy w drawerze */
+.mfk-drawer-nav{
+  display:flex !important;
+  flex-direction:column;
+  gap:12px !important;
 }
-/* minimalny odstęp gdy zniknie input/Add */
-body[data-role="child"] .jar-card .jar-actions{
-  gap:6px !important; margin-top:0 !important;
+.mfk-drawer-nav > *{
+  margin:0 !important;
+  border:0 !important;
+  box-shadow:none !important;
 }
+.mfk-drawer-nav hr,
+.mfk-drawer-nav > *::before,
+.mfk-drawer-nav > *::after{ display:none !important; }
 
-/* PARENT: History zawsze POD spodem i na całą szerokość */
-body[data-role="parent"] .jar-actions [data-action="history"],
-body[data-role="parent"] .jar-actions .btn-history{
-  flex:1 0 100% !important;
-  order:99 !important;
-}
-
-/* Hamburger menu → Tutorial z kolorem jak w appce */
-.mfk-drawer-nav [data-tab="tutorial"],
-.mfk-drawer-nav .tab-tutorial,
-.mfk-drawer-nav a[href*="tutorial"],
-.mfk-drawer-nav button[data-action="tutorial"]{
-  background: var(--grad-btn-2) !important;
-  color:#081225 !important;
-  font-weight:700 !important;
+/* 3) Tutorial button – turkus z prawej (#2ef6b6) */
+/* Topbar */
+#tutorialBtn,
+#tutorialBtn.btn,
+.mfk-drawer-nav [data-tab="tutorial"]{
+  background: linear-gradient(135deg, #3b82f6 0%, #2ef6b6 100%) !important;
+  color:#081225 !important;         /* czytelny tekst jak w innych primary */
   border:0 !important;
 }
-.mfk-drawer-nav [data-tab="tutorial"]:hover,
-.mfk-drawer-nav .tab-tutorial:hover,
-.mfk-drawer-nav a[href*="tutorial"]:hover,
-.mfk-drawer-nav button[data-action="tutorial"]:hover{
-  filter:brightness(1.05);
+/* hover/active subtelnie jaśniej */
+#tutorialBtn:hover,
+.mfk-drawer-nav [data-tab="tutorial"]:hover{
+  filter: brightness(1.05);
+}
+#tutorialBtn:active,
+.mfk-drawer-nav [data-tab="tutorial"]:active{
+  filter: brightness(0.95);
 }
 
-/* bezpieczeństwo: standardowe .btn też łapią jaśniejszą zieleń */
-.btn,
-.btn.primary{ background: var(--grad-btn-2) !important; color:#081225 !important; }
+/* 4) Parent panel – historia POD spodem, nie obok (mobile) */
+@media (max-width: 900px){
+  /* jedna kolumna w całej sekcji parent */
+  #tab-parent:not(.hidden){
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:12px !important;
+  }
+  /* rozciągaj karty i wiersze na 100% szerokości */
+  #tab-parent .card,
+  #tab-parent .row,
+  #tab-parent .space,
+  #tab-parent .actions{ 
+    display:flex !important; 
+    flex-direction:column !important; 
+    align-items:stretch !important; 
+    gap:8px !important; 
+    width:100% !important; 
+    min-width:0 !important;
+  }
+  /* jeżeli masz blok historii – wymuś pozycję POD spodem */
+  #tab-parent [data-section="history"],
+  #parentHistory{
+    order: 99 !important;
+    width:100% !important;
+  }
+}
+
+/* 5) Małe doprecyzowanie: napraw kolory innych przycisków na mobile,
+      żeby nie „brzydły” (ten sam gradient co na desktopie) */
+button, .btn{
+  background: linear-gradient(135deg, rgba(59,130,246,.75), rgba(34,197,94,.75)) !important;
+  color: var(--ink) !important;
+  border: 0 !important;
+}
+.btn.primary{ background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 55%, #22c55e 100%) !important; color:#081225 !important; }
+.btn.danger { background: linear-gradient(135deg, #ef4444, #f97316) !important; color:#0b1220 !important; }
 
 
