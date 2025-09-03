@@ -1721,31 +1721,24 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 #tradeBox button[id*="sell"],#fxTradeBox button[id*="sell"]{
   display: none !important;
 }
-/* === MOBILE-ONLY BUTTON FIX (bez zieleni, nie rusza desktopu) === */
+/* === MOBILE-ONLY: Ice Blue gradient buttons === */
 @media (max-width: 640px){
-  /* wszystkie guziki i kapsułki */
   :is(button, .btn, .role-switch .tab, .authwrap .tab){
-    background: none !important;                /* zabija gradient z bazowej reguły */
-    background-color: #e6f2ff !important;       /* jasny błękit */
-    color: #0b3b66 !important;                   /* ciemny morski tekst */
-    border: 1px solid #b7dbff !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,.25) !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    filter: none !important;
+    background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 50%, #bae6fd 100%) !important;
+    color: #0b3b66 !important;   /* ciemny morski tekst */
+    border: 1px solid #93c5fd !important; 
+    box-shadow: 0 4px 10px rgba(0,0,0,.2) !important;
   }
 
-  /* warianty, też bez zieleni */
   .btn.primary{
-    background: none !important;
-    background-color: #e6f2ff !important;       /* ten sam jasny błękit */
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
     color: #0b3b66 !important;
   }
+
   .btn.danger{
-    background: none !important;
-    background-color: #ffe5e5 !important;       /* jasny czerwony */
+    background: linear-gradient(135deg, #fecaca 0%, #fee2e2 100%) !important;
     color: #7f1d1d !important;
-    border-color: #ffc9c9 !important;
+    border: 1px solid #fca5a5 !important;
   }
 }
 
