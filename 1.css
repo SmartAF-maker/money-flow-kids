@@ -1612,6 +1612,7 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 /* Dziecko: tylko Stocks, FX, Profits, Tutorial, Login */
 body[data-role="child"] .mfk-drawer-nav > *{ display:none !important; }
 body[data-role="child"] .mfk-drawer-nav [data-tab="stocks"],
+body[data-role="child"] .mfk-drawer-nav [data-tab="currencies"],
 body[data-role="child"] .mfk-drawer-nav [data-tab="fx"],
 body[data-role="child"] .mfk-drawer-nav [data-tab="profits"],
 body[data-role="child"] .mfk-drawer-nav [data-tab="tutorial"],
@@ -1635,33 +1636,27 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 .mfk-drawer-nav > *::after{ display:none !important; }
 
 /* 3) Tutorial button – turkus z prawej (#2ef6b6) */
-/* Topbar */
+/* Topbar i drawer */
 #tutorialBtn,
 #tutorialBtn.btn,
 .mfk-drawer-nav [data-tab="tutorial"]{
   background: linear-gradient(135deg, #3b82f6 0%, #2ef6b6 100%) !important;
-  color:#081225 !important;         /* czytelny tekst jak w innych primary */
+  color:#081225 !important;
   border:0 !important;
 }
 /* hover/active subtelnie jaśniej */
 #tutorialBtn:hover,
-.mfk-drawer-nav [data-tab="tutorial"]:hover{
-  filter: brightness(1.05);
-}
+.mfk-drawer-nav [data-tab="tutorial"]:hover{ filter: brightness(1.05); }
 #tutorialBtn:active,
-.mfk-drawer-nav [data-tab="tutorial"]:active{
-  filter: brightness(0.95);
-}
+.mfk-drawer-nav [data-tab="tutorial"]:active{ filter: brightness(0.95); }
 
 /* 4) Parent panel – historia POD spodem, nie obok (mobile) */
 @media (max-width: 900px){
-  /* jedna kolumna w całej sekcji parent */
   #tab-parent:not(.hidden){
     display:grid !important;
     grid-template-columns:1fr !important;
     gap:12px !important;
   }
-  /* rozciągaj karty i wiersze na 100% szerokości */
   #tab-parent .card,
   #tab-parent .row,
   #tab-parent .space,
@@ -1673,7 +1668,6 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     width:100% !important; 
     min-width:0 !important;
   }
-  /* jeżeli masz blok historii – wymuś pozycję POD spodem */
   #tab-parent [data-section="history"],
   #parentHistory{
     order: 99 !important;
@@ -1681,8 +1675,7 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
   }
 }
 
-/* 5) Małe doprecyzowanie: napraw kolory innych przycisków na mobile,
-      żeby nie „brzydły” (ten sam gradient co na desktopie) */
+/* 5) Spójne kolory przycisków na mobile i desktopie */
 button, .btn{
   background: linear-gradient(135deg, rgba(59,130,246,.75), rgba(34,197,94,.75)) !important;
   color: var(--ink) !important;
