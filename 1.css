@@ -1561,60 +1561,39 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   box-shadow: none !important;
   background-image: none !important;
 }
-
-/* === 1) PRZYCISKI "Add" POD SŁOIKAMI — WYMUSŹ POKAZYWANIE === */
-/* Masz w CSS dwie reguły, które je ukrywają:
-   body[data-role="child"] .jar-card .jar-actions { display:none !important; }
-   Nadpisujemy je na końcu pliku mocniejszą regułą. */
-.jar-card .jar-actions{
-  display:flex !important;
-  flex-wrap:nowrap;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-}
-.jar-card .jar-actions .jar-input{ width:100px; flex:0 0 auto; }
-.jar-card .jar-actions .btn{ flex:0 0 auto; white-space:nowrap; }
-
-/* Jeśli chcesz: na widoku Child znowu ukryj (usuń poniższy blok, jeśli ma być widoczne dla wszystkich) */
-/*
-body[data-role="child"] .jar-card .jar-actions{ display:none !important; }
-*/
-
-/* === 2) KOLORY PRZYCISKÓW NA TELEFONIE — IDENTYCZNE JAK DESKTOP === */
-/* Źródłem różnic jest półprzezroczyste tło + backdrop-filter na mobile.
-   Na tel. wyłączamy szkło i bierzemy ten sam gradient co desktop. */
+/* === MOBILE BUTTON COLOR LOCK (≤640px) === */
 @media (max-width: 640px){
+  :root{
+    /* stałe, nieprzezroczyste kolory guzików */
+    --btn-a:#3b82f6;   /* blue-500 */
+    --btn-b:#22c55e;   /* green-500 */
+    --btn-danger-a:#ef4444; /* red-500 */
+    --btn-danger-b:#f97316; /* orange-500 */
+  }
+
+  /* wszystkie guziki i kapsułki */
   button,
   .btn,
   .role-switch .tab,
   .authwrap .tab{
-    background: var(--grad-btn-2) !important;
-    color:#081225 !important;
+    /* brak przezroczystości w tle = zero mieszania z kartą */
+    background-image: linear-gradient(135deg, var(--btn-a), var(--btn-b)) !important;
+    background-color: transparent !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    filter: none !important;
-    isolation: isolate;
-    border: 0 !important;
+    filter: none !important;             /* gdyby gdzieś był saturate() */
     box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.15) !important;
+    isolation: isolate;                   /* zabezpiecza przed blendowaniem */
   }
-  /* Zachowaj te same kolory także w :hover / :active (bez przyciemniania) */
-  button:hover,  .btn:hover,  .role-switch .tab:hover,  .authwrap .tab:hover,
-  button:active, .btn:active, .role-switch .tab:active, .authwrap .tab:active{
-    background: var(--grad-btn-2) !important;
-    color:#081225 !important;
-    filter:none !important;
-    transform:none !important;
+
+  /* warianty */
+  .btn.primary{
+    background-image: linear-gradient(135deg, var(--btn-a), #60a5fa) !important;
   }
-  /* Wariant danger */
-  .btn.danger,
-  .btn.danger:hover,
-  .btn.danger:active{
-    background: var(--grad-danger) !important;
+  .btn.danger{
+    background-image: linear-gradient(135deg, var(--btn-danger-a), var(--btn-danger-b)) !important;
     color:#0b1220 !important;
   }
 }
 
-/* (opcjonalnie) Available Cash w jednej linii z innymi kartami */
-.available-cash{ margin:0 !important; }
 
