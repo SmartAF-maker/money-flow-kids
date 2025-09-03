@@ -1562,4 +1562,59 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   background-image: none !important;
 }
 
+/* === 1) PRZYCISKI "Add" POD SŁOIKAMI — WYMUSŹ POKAZYWANIE === */
+/* Masz w CSS dwie reguły, które je ukrywają:
+   body[data-role="child"] .jar-card .jar-actions { display:none !important; }
+   Nadpisujemy je na końcu pliku mocniejszą regułą. */
+.jar-card .jar-actions{
+  display:flex !important;
+  flex-wrap:nowrap;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.jar-card .jar-actions .jar-input{ width:100px; flex:0 0 auto; }
+.jar-card .jar-actions .btn{ flex:0 0 auto; white-space:nowrap; }
+
+/* Jeśli chcesz: na widoku Child znowu ukryj (usuń poniższy blok, jeśli ma być widoczne dla wszystkich) */
+/*
+body[data-role="child"] .jar-card .jar-actions{ display:none !important; }
+*/
+
+/* === 2) KOLORY PRZYCISKÓW NA TELEFONIE — IDENTYCZNE JAK DESKTOP === */
+/* Źródłem różnic jest półprzezroczyste tło + backdrop-filter na mobile.
+   Na tel. wyłączamy szkło i bierzemy ten sam gradient co desktop. */
+@media (max-width: 640px){
+  button,
+  .btn,
+  .role-switch .tab,
+  .authwrap .tab{
+    background: var(--grad-btn-2) !important;
+    color:#081225 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    isolation: isolate;
+    border: 0 !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.15) !important;
+  }
+  /* Zachowaj te same kolory także w :hover / :active (bez przyciemniania) */
+  button:hover,  .btn:hover,  .role-switch .tab:hover,  .authwrap .tab:hover,
+  button:active, .btn:active, .role-switch .tab:active, .authwrap .tab:active{
+    background: var(--grad-btn-2) !important;
+    color:#081225 !important;
+    filter:none !important;
+    transform:none !important;
+  }
+  /* Wariant danger */
+  .btn.danger,
+  .btn.danger:hover,
+  .btn.danger:active{
+    background: var(--grad-danger) !important;
+    color:#0b1220 !important;
+  }
+}
+
+/* (opcjonalnie) Available Cash w jednej linii z innymi kartami */
+.available-cash{ margin:0 !important; }
 
