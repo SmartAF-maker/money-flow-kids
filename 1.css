@@ -1609,23 +1609,74 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 .jar-card .jar-actions .btn{ flex:0 0 auto; white-space:nowrap; }
 
 /* 2) Drawer: zakres opcji wg roli */
-/* Dziecko: tylko Stocks, FX, Profits, Tutorial, Login */
-body[data-role="child"] .mfk-drawer-nav > *{ display:none !important; }
+/* Najpierw ukryj wszystko dla dziecka... */
+body[data-role="child"] .mfk-drawer-nav > *{
+  display:none !important;
+}
+
+/* ...a potem jawnie pokaż TYLKO: Stocks, Currencies/FX, Profits, Tutorial, Login */
+
+/* === Stocks (obsługa różnych znaczników) === */
 body[data-role="child"] .mfk-drawer-nav [data-tab="stocks"],
-body[data-role="child"] .mfk-drawer-nav [data-tab="currencies"],
-body[data-role="child"] .mfk-drawer-nav [data-tab="fx"],
-body[data-role="child"] .mfk-drawer-nav [data-tab="profits"],
-body[data-role="child"] .mfk-drawer-nav [data-tab="tutorial"],
-body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
+body[data-role="child"] .mfk-drawer-nav [data-tab="stock"],
+body[data-role="child"] .mfk-drawer-nav .tab-stocks,
+body[data-role="child"] .mfk-drawer-nav a[href*="stocks"],
+body[data-role="child"] .mfk-drawer-nav button[name="stocks"],
+body[data-role="child"] .mfk-drawer-nav [aria-label="Stocks"],
+body[data-role="child"] .mfk-drawer-nav [data-link="stocks"]{
   display:block !important;
 }
 
-/* Porządek/odstępy w drawerze */
-.mfk-drawer-nav{
+/* Currencies (FX) – kilka możliwych aliasów */
+body[data-role="child"] .mfk-drawer-nav [data-tab="currencies"],
+body[data-role="child"] .mfk-drawer-nav [data-tab="fx"],
+body[data-role="child"] .mfk-drawer-nav .tab-fx,
+body[data-role="child"] .mfk-drawer-nav a[href*="currenc"],
+body[data-role="child"] .mfk-drawer-nav a[href*="fx"]{
+  display:block !important;
+}
+
+/* Profits */
+body[data-role="child"] .mfk-drawer-nav [data-tab="profits"],
+body[data-role="child"] .mfk-drawer-nav .tab-profits,
+body[data-role="child"] .mfk-drawer-nav a[href*="profit"]{
+  display:block !important;
+}
+
+/* Tutorial */
+body[data-role="child"] .mfk-drawer-nav [data-tab="tutorial"],
+body[data-role="child"] .mfk-drawer-nav .tab-tutorial,
+body[data-role="child"] .mfk-drawer-nav a[href*="tutor"]{
+  display:block !important;
+}
+
+/* Login */
+body[data-role="child"] .mfk-drawer-nav [data-tab="login"],
+body[data-role="child"] .mfk-drawer-nav .tab-login,
+body[data-role="child"] .mfk-drawer-nav a[href*="login"]{
+  display:block !important;
+}
+
+/* (Opcjonalnie) stała kolejność pozycji w drawerze dziecka */
+body[data-role="child"] .mfk-drawer-nav{
   display:flex !important;
   flex-direction:column;
   gap:12px !important;
 }
+body[data-role="child"] .mfk-drawer-nav [data-tab="stocks"],
+body[data-role="child"] .mfk-drawer-nav [data-tab="stock"],
+body[data-role="child"] .mfk-drawer-nav .tab-stocks{ order:1; }
+body[data-role="child"] .mfk-drawer-nav [data-tab="currencies"],
+body[data-role="child"] .mfk-drawer-nav [data-tab="fx"],
+body[data-role="child"] .mfk-drawer-nav .tab-fx{ order:2; }
+body[data-role="child"] .mfk-drawer-nav [data-tab="profits"],
+body[data-role="child"] .mfk-drawer-nav .tab-profits{ order:3; }
+body[data-role="child"] .mfk-drawer-nav [data-tab="tutorial"],
+body[data-role="child"] .mfk-drawer-nav .tab-tutorial{ order:4; }
+body[data-role="child"] .mfk-drawer-nav [data-tab="login"],
+body[data-role="child"] .mfk-drawer-nav .tab-login{ order:5; }
+
+/* Porządek/odstępy + brak separatorów */
 .mfk-drawer-nav > *{
   margin:0 !important;
   border:0 !important;
@@ -1635,22 +1686,21 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 .mfk-drawer-nav > *::before,
 .mfk-drawer-nav > *::after{ display:none !important; }
 
-/* 3) Tutorial button – turkus z prawej (#2ef6b6) */
-/* Topbar i drawer */
+/* 3) Tutorial button – gradient z turkusem po prawej (#2ef6b6) */
 #tutorialBtn,
 #tutorialBtn.btn,
-.mfk-drawer-nav [data-tab="tutorial"]{
+.mfk-drawer-nav [data-tab="tutorial"],
+.mfk-drawer-nav .tab-tutorial{
   background: linear-gradient(135deg, #3b82f6 0%, #2ef6b6 100%) !important;
   color:#081225 !important;
   border:0 !important;
 }
-/* hover/active subtelnie jaśniej */
 #tutorialBtn:hover,
-.mfk-drawer-nav [data-tab="tutorial"]:hover{ filter: brightness(1.05); }
+.mfk-drawer-nav [data-tab="tutorial"]:hover{ filter:brightness(1.05); }
 #tutorialBtn:active,
-.mfk-drawer-nav [data-tab="tutorial"]:active{ filter: brightness(0.95); }
+.mfk-drawer-nav [data-tab="tutorial"]:active{ filter:brightness(0.95); }
 
-/* 4) Parent panel – historia POD spodem, nie obok (mobile) */
+/* 4) Parent panel – historia POD spodem (mobile) */
 @media (max-width: 900px){
   #tab-parent:not(.hidden){
     display:grid !important;
@@ -1660,22 +1710,19 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
   #tab-parent .card,
   #tab-parent .row,
   #tab-parent .space,
-  #tab-parent .actions{ 
-    display:flex !important; 
-    flex-direction:column !important; 
-    align-items:stretch !important; 
-    gap:8px !important; 
-    width:100% !important; 
+  #tab-parent .actions{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    width:100% !important;
     min-width:0 !important;
   }
   #tab-parent [data-section="history"],
-  #parentHistory{
-    order: 99 !important;
-    width:100% !important;
-  }
+  #parentHistory{ order:99 !important; width:100% !important; }
 }
 
-/* 5) Spójne kolory przycisków na mobile i desktopie */
+/* 5) Spójne kolory wszystkich przycisków (mobile=desktop) */
 button, .btn{
   background: linear-gradient(135deg, rgba(59,130,246,.75), rgba(34,197,94,.75)) !important;
   color: var(--ink) !important;
