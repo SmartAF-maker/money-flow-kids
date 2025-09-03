@@ -1721,5 +1721,12 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 #tradeBox button[id*="sell"],#fxTradeBox button[id*="sell"]{
   display: none !important;
 }
+/* === MOBILE FIX: zmiana koloru tła primary button (Allowance) === */
+@media (max-width: 640px){
+  .btn.primary {
+    background-color: #3b82f6 !important; /* błękitne tło */
+    color: #ffffff !important;            /* biały tekst dla kontrastu */
+  }
+}
 
 
