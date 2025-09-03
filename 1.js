@@ -399,7 +399,7 @@ function makeSteps() {
     },
      {
       icon: "🛡️",
-      title: "How to start trading",
+      title: "How to start",
       text: " 🟢1 Choose Stocks from the top bar. 🟢2 Check global trends to see what moves. 🟢3 Use the search bar to find a company. 🟢4 Press Add more to explore new shares. 🟢5 Pick one you like. 🟢6 Set a quantity and buy. 🟢7 Watch your trade, manage profits, and sell when ready. Each step is safe, simple, and helps you grow skills with confidence!.",
       img: IMG_TUTORIAL_STOCKS,
     },
