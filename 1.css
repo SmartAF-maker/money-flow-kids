@@ -1672,37 +1672,50 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     width:100% !important;
   }
 }
-/* === MOBILE (hamburger) — żywe kolory jak na desktopie === */
-/* wklej NA SAM KONIEC pliku */
-@media (max-width: 991px){
-  /* wszystkie pozycje w drawerze */
-  .mfk-drawer-nav .tab,
-  .mfk-drawer-nav button.tab,
-  .mfk-drawer-nav a.tab{
-    background-image: linear-gradient(135deg, #2f6fe4 0%, #2ef6b6 100%) !important;
-    background-color: transparent !important;
-    color: #ffffff !important;
-    border: 0 !important;
-    border-radius: 14px !important;
-    box-shadow: 0 6px 16px rgba(0,0,0,.35) !important;
+/* === MOBILE: wyłącz twardy gradient/cienie i ujednolić wygląd tabów === */
+@media (max-width: 640px){
+  /* 1) Wyłączenie „MOBILE BUTTON COLOR LOCK” (gradientów i blurów) */
+  button,
+  .btn,
+  .role-switch .tab,
+  .authwrap .tab {
+    background-image: none !important;
+    background-color: #111827 !important;     /* lekko matowe tło */
+    border: 1px solid #334155 !important;
+    color: var(--ink) !important;
+    box-shadow: none !important;
+    filter: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    filter: none !important;
-    padding: 14px 16px !important;
+    transform: none !important;
   }
-  .mfk-drawer-nav .tab:hover{ filter: brightness(1.06) !important; }
-  .mfk-drawer-nav .tab:active{ filter: brightness(.96) !important; }
+  .btn.primary{ background-color:#1f2937 !important; }
+  .btn.danger { background-color:#3b1f1f !important; color:#fff !important; }
 
-  /* Tutorial z turkusem po prawej (#2ef6b6) */
-  .mfk-drawer-nav [data-tab="tutorial"]{
-    background-image: linear-gradient(135deg, #3b82f6 0%, #2ef6b6 100%) !important;
-    color:#081225 !important;
+  /* 2) Drawer – takie same kapsułki jak w topbarze */
+  #mfkMobileDrawer .tab,
+  .mfk-drawer-nav .tab{
+    background-image: none !important;
+    background-color: #111827 !important;
+    border: 1px solid #334155 !important;
+    color: var(--ink) !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
   }
 
-  /* na wszelki wypadek – wyłącz ewentualne pseudo-linie */
-  .mfk-drawer-nav .tab::before,
-  .mfk-drawer-nav .tab::after{
-    content:none !important;
+  /* 3) Stan aktywny/hover – subtelny, bez „ciężkiego” połysku */
+  .role-switch .tab.active,
+  #mfkMobileDrawer .tab.active{
+    background-color:#1f2937 !important;
+    border-color:#3b82f6 !important;
+    color:#fff !important;
+  }
+  .role-switch .tab:hover,
+  #mfkMobileDrawer .tab:hover{
+    background-color:#162033 !important;
+    border-color:#3a4f77 !important;
+    transform:none !important;
   }
 }
 
