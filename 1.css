@@ -1595,78 +1595,52 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     color:#0b1220 !important;
   }
 }
-/* === JARS: widoczne akcje na mobile + układ w 2 rzędach === */
+/* ===== PATCH 2025-09-03 ===== */
 
-/* 1) na Child NIGDY nie ukrywamy .jar-actions */
+/* jaśniejsza, jaskrawa zieleń + ujednolicenie gradientu guzików */
+:root{
+  --green-bright:#4ade80; /* emerald-400 */
+  --grad-btn-2:linear-gradient(135deg,#60a5fa 0%,#3b82f6 55%, var(--green-bright) 100%);
+}
+
+/* CHILD: schowaj pole kwoty i Add+ pod słoikami */
+body[data-role="child"] .jar-card .jar-actions .jar-input,
+body[data-role="child"] .jar-card .jar-actions input,
+body[data-role="child"] .jar-card .jar-actions .btn-add,
+body[data-role="child"] .jar-card .jar-actions [data-action="add"]{
+  display:none !important;
+}
+/* minimalny odstęp gdy zniknie input/Add */
 body[data-role="child"] .jar-card .jar-actions{
-  display:flex !important;
-  flex-wrap:wrap;               /* pozwól złamać linię */
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  margin-top:6px;
+  gap:6px !important; margin-top:0 !important;
 }
 
-/* 2) input pod słoikiem — kontrast i stała szerokość */
-.jar-actions .jar-input,
-.jar-actions input[type="number"],
-.jar-actions input[type="text"]{
-  width:110px !important;
-  min-width:110px !important;
-  background:#0c1528 !important;
-  color:var(--ink) !important;
-  border:1px solid var(--panel-b) !important;
-  border-radius:10px !important;
-  padding:8px 10px !important;
+/* PARENT: History zawsze POD spodem i na całą szerokość */
+body[data-role="parent"] .jar-actions [data-action="history"],
+body[data-role="parent"] .jar-actions .btn-history{
+  flex:1 0 100% !important;
+  order:99 !important;
 }
 
-/* 3) guziki jak na desktopie (koniec z pół-transparentnym tłem na tel.) */
-.jar-actions .btn{
+/* Hamburger menu → Tutorial z kolorem jak w appce */
+.mfk-drawer-nav [data-tab="tutorial"],
+.mfk-drawer-nav .tab-tutorial,
+.mfk-drawer-nav a[href*="tutorial"],
+.mfk-drawer-nav button[data-action="tutorial"]{
   background: var(--grad-btn-2) !important;
   color:#081225 !important;
   font-weight:700 !important;
   border:0 !important;
-  min-width:88px;
-  white-space:nowrap;
 }
-.jar-actions .btn.danger{ background: var(--grad-danger) !important; color:#0b1220 !important; }
-
-/* 4) „History” zawsze POD spodem (pełna szerokość) */
-.jar-actions .btn-history,
-.jar-actions [data-action="history"],
-.jar-actions button[data-action="history"]{
-  flex:1 0 100% !important;     /* nowa linia, szerokość 100% */
-  order: 99;                    /* zawsze po input + Add */
+.mfk-drawer-nav [data-tab="tutorial"]:hover,
+.mfk-drawer-nav .tab-tutorial:hover,
+.mfk-drawer-nav a[href*="tutorial"]:hover,
+.mfk-drawer-nav button[data-action="tutorial"]:hover{
+  filter:brightness(1.05);
 }
 
-/* 5) jeżeli przez globalne reguły <button> nadal mają ramkę/transparent — wyłącz */
-.jar-actions button:not(.btn){
-  background: transparent !important;
-  border: 1px solid var(--panel-b) !important;
-  color: var(--ink) !important;
-  border-radius:12px;
-  padding:10px 16px;
-}
-
-/* 6) awaryjnie wyłącz wcześniejsze „ukrywanie” (gdyby coś jeszcze zostało) */
-body[data-role="child"] .jar-card .jar-actions *{ visibility: visible !important; opacity: 1 !important; }
-
-/* === PARENT: History / Allowance / Expenses w kolumnie na mobile === */
-@media (max-width: 640px){
-  #tab-parent .row,
-  #tab-parent .actions,
-  #tab-parent .space{
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:stretch !important;
-    gap:8px !important;
-  }
-  #tab-parent .row > *,
-  #tab-parent .actions > *,
-  #tab-parent .space > *{
-    width:100% !important;
-    min-width:0 !important;
-  }
-}
+/* bezpieczeństwo: standardowe .btn też łapią jaśniejszą zieleń */
+.btn,
+.btn.primary{ background: var(--grad-btn-2) !important; color:#081225 !important; }
 
 
