@@ -300,6 +300,7 @@ const IMG_PROFITS = new URL("./profits.png", document.baseURI).href;
 const IMG_SAFETY = new URL("./safety.png", document.baseURI).href;
 const IMG_READY = new URL("./awesome.png", document.baseURI).href;
 const IMG_ACCOUNTING    = new URL("./accounting.png",  document.baseURI).href;
+const IMG_TUTORIAL_STOCKS = new URL("./tuto.png", document.baseURI).href;
 
 // 4a) Wbudowany SVG do FX
 const IMG_FX = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
@@ -395,6 +396,12 @@ function makeSteps() {
       title: "Safety first",
       text: "This app is 100% safe—no real money is at risk. Parent PINs and spending limits protect every action. You can test ideas, undo mistakes, and try again freely. When you’re ready, you can even notify your parent to mirror choices in real life. Safety here means freedom to learn, grow, and explore.",
       img: IMG_SAFETY,
+    },
+     {
+      icon: "🛡️",
+      title: "How to start trading",
+      text: " 🟢1 Choose Stocks from the top bar. 🟢2 Check global trends to see what moves. 🟢3 Use the search bar to find a company. 🟢4 Press Add more to explore new shares. 🟢5 Pick one you like. 🟢6 Set a quantity and buy. 🟢7 Watch your trade, manage profits, and sell when ready. Each step is safe, simple, and helps you grow skills with confidence!.",
+      img: IMG_TUTORIAL_STOCKS,
     },
     {
       icon: "🎉",
