@@ -1608,11 +1608,7 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 .jar-card .jar-actions .jar-input{ width:100px; flex:0 0 auto; }
 .jar-card .jar-actions .btn{ flex:0 0 auto; white-space:nowrap; }
 
-/* Nadpisz wcześniejsze ukrywanie na child */
-body[data-role="child"] .jar-card .jar-actions{
-  display:flex !important;
-}
-
+ 
 /* 1) HAMBURGER – lista dla dziecka:
       Stocks, Currencies (FX), Profits, Tutorial, Login
       (uwzględnij obie nazwy: "stocks" i "invest") */
@@ -1718,17 +1714,5 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     transform:none !important;
   }
 }
-@media (max-width: 991px){
-  .mfk-drawer-nav .tab {
-    background-image: linear-gradient(135deg, #3b82f6 0%, #2ef6b6 100%) !important;
-    color: #ffffff !important;
-    border: 0 !important;
-    border-radius: 14px !important;
-    box-shadow: 0 6px 16px rgba(0,0,0,.35) !important;
-  }
 
-  /* hover/active subtelnie */
-  .mfk-drawer-nav .tab:hover { filter: brightness(1.06); }
-  .mfk-drawer-nav .tab:active { filter: brightness(.96); }
-}
 
