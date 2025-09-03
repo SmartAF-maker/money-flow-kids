@@ -1518,5 +1518,48 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   margin-top:0 !important;
   align-self:stretch;
 }
+/* ==== Drawer: wyłącz separator między Tutorial a Login ==== */
+
+/* 1) Jeśli to <hr> wewnątrz draweru */
+.mfk-drawer hr,
+.mfk-drawer-nav hr { display: none !important; }
+
+/* 2) Jeśli separator jest borderem na elemencie Login */
+.mfk-drawer-nav [data-tab="login"],
+.mfk-drawer-nav .tab-login,
+.mfk-drawer-nav a[href*="login"],
+.mfk-drawer-nav button[data-action="login"]{
+  border: 0 !important;
+  border-top: 0 !important;
+  box-shadow: none !important;        /* bywa, że „linia” to inset shadow */
+  background-image: none !important;  /* bywa gradientem 1px */
+}
+
+/* 3) Jeśli separator jest na elemencie powyżej (Tutorial) */
+.mfk-drawer-nav [data-tab="tutorial"],
+.mfk-drawer-nav .tab-tutorial,
+.mfk-drawer-nav a[href*="tutorial"],
+.mfk-drawer-nav button[data-action="tutorial"]{
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+/* 4) Jeśli to pseudo-element kreski na dowolnej pozycji */
+.mfk-drawer-nav > *::before,
+.mfk-drawer-nav > *::after{
+  content: none !important;
+  display: none !important;
+}
+
+/* 5) Gdy separator jest na kontenerze listy */
+.mfk-drawer,
+.mfk-drawer-nav{
+  border: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
 
 
