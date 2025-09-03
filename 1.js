@@ -232,9 +232,12 @@ function load() {
     return s;
   }
   const parsed = JSON.parse(raw);
-  if (!parsed.trends) parsed.trends = { stocks: {}, fx: {} };
-  Object.values(parsed.children || {}).forEach(ch => ensureExpandedStocks(ch));
-  return parsed;
+if (!parsed.trends) parsed.trends = { stocks: {}, fx: {} };
+Object.values(parsed.children || {}).forEach(ch => {
+  ensureExpandedStocks(ch);
+  sanitizePositions(ch); // ⬅️ ważne
+});
+return parsed;
 }
 
 function save(s) { localStorage.setItem(DB_KEY, JSON.stringify(s)); }
@@ -279,6 +282,22 @@ function ensureExpandedStocks(ch) {
     }
   }
 }
+// --- Long-only: usuń ujemne/zerowe pozycje z portfeli (migracja starych danych)
+function sanitizePositions(ch){
+  // Stocks
+  if (ch.portfolio) {
+    Object.entries(ch.portfolio).forEach(([t, p]) => {
+      if (!p || typeof p.s !== 'number' || p.s <= 0) delete ch.portfolio[t];
+    });
+  }
+  // FX
+  if (ch.fxPortfolio) {
+    Object.entries(ch.fxPortfolio).forEach(([pair, pos]) => {
+      if (!pos || typeof pos.q !== 'number' || pos.q <= 0) delete ch.fxPortfolio[pair];
+    });
+  }
+}
+
 
 // ====== TUTORIAL (assets + steps) ======
 // 1) Obrazek na slajd powitalny (Twoje PNG)
@@ -399,7 +418,7 @@ function makeSteps() {
     },
      {
       icon: "🛡️",
-      title: "How to start",
+      title: "How to start trading",
       text: " 🟢1 Choose Stocks from the top bar. 🟢2 Check global trends to see what moves. 🟢3 Use the search bar to find a company. 🟢4 Press Add more to explore new shares. 🟢5 Pick one you like. 🟢6 Set a quantity and buy. 🟢7 Watch your trade, manage profits, and sell when ready. Each step is safe, simple, and helps you grow skills with confidence!.",
       img: IMG_TUTORIAL_STOCKS,
     },
@@ -1305,6 +1324,13 @@ function updateTradeBox() {
   if (costEl) costEl.textContent = PLN(qty * s.p);
   tradeBox.style.display = "block";
 }
+ const sellBtn = document.getElementById('sellBtn');
+  if (sellBtn) {
+    const pos = ch.portfolio?.[s.t];
+    const canSell = !!(pos && pos.s > 0);
+    sellBtn.disabled = !canSell;
+    sellBtn.title = canSell ? "" : "You have 0 shares to sell";
+  }
 function buyStock() {
   const ch = activeChild(); if (!ch || !selectedStock) return;
   const s = ch.stocks.find(x => x.t === selectedStock);
@@ -1344,36 +1370,33 @@ function buyStock() {
 }
 function sellStock(t, qty) {
   qty = Math.max(1, parseInt(qty || "1", 10));
-  const ch = activeChild(); if (!ch) return;
-  let pos = ch.portfolio[t] || { s: 0, b: (activeChild().stocks.find(x => x.t === t) || { p: 0 }).p };
-  const s = ch.stocks.find(x => x.t === t) || { p: pos.b || 0 };
-  let realized = 0;
-  const proceeds = s.p * qty;
 
-  const longClose = Math.min(qty, Math.max(0, pos.s));
-  const basisOut = longClose * pos.b;
+  const ch = activeChild(); 
+  if (!ch) return;
+
+  const pos = ch.portfolio?.[t];
+  if (!pos || pos.s <= 0) {
+    return toast(`You don't own ${t} yet.`);
+  }
+
+  // nie pozwalaj sprzedać więcej niż posiadane
+  qty = Math.min(qty, pos.s);
+
+  const s = ch.stocks.find(x => x.t === t) || { p: pos.b || 0 };
+  const proceeds = s.p * qty;
+  const basisOut = pos.b * qty;
+
+  // wpływy do Earnings/Spend, baza schodzi z Investments
   ch.jars.spend += proceeds;
   ch.jars.invest = Math.max(0, (ch.jars.invest || 0) - basisOut);
 
-  if (pos.s > 0) {
-    const close = Math.min(qty, pos.s);
-    realized += (s.p - pos.b) * close;
-    ch.tradeLedgerStocks.unshift({ ts: nowISO(), t, qty: close, price: s.p, basis: pos.b, pnl: (s.p - pos.b) * close });
-    pos.s -= close;
-    const remaining = qty - close;
-    if (remaining > 0) {
-      if (pos.s === 0) { pos.b = s.p; pos.s = -remaining; }
-      else { pos.b = s.p; pos.s = -remaining; }
-    }
-  } else {
-    const oldAbs = Math.abs(pos.s);
-    const totalAbs = oldAbs + qty;
-    pos.b = totalAbs ? (((oldAbs * pos.b) + (qty * s.p)) / totalAbs) : s.p;
-    pos.s -= qty;
-  }
-
+  const realized = (s.p - pos.b) * qty;
   ch.realizedStocks += realized;
-  if (pos.s === 0) delete ch.portfolio[t];
+  ch.tradeLedgerStocks.unshift({ ts: nowISO(), t, qty, price: s.p, basis: pos.b, pnl: realized });
+
+  pos.s -= qty;
+
+  if (pos.s <= 0) delete ch.portfolio[t];
   else ch.portfolio[t] = { s: Number(pos.s), b: Number(pos.b.toFixed(5)) };
 
   save(app);
@@ -1395,6 +1418,14 @@ function updateFxTradeBox() {
   if (fxCost) fxCost.textContent = PLN(rUsd * qty); // koszt w USD
   fxTradeBox.style.display = "block";
 }
+  const fxSellBtn = document.getElementById('fxSellBtn');
+  if (fxSellBtn) {
+    const pos = activeChild()?.fxPortfolio?.[selectedFxPair];
+    const canSell = !!(pos && pos.q > 0);
+    fxSellBtn.disabled = !canSell;
+    fxSellBtn.title = canSell ? "" : "You have 0 units to sell";
+  }
+
 function buyFx() {
   const ch = activeChild(); if (!ch || !selectedFxPair) return;
   const rUsd = (lastFxUiPrice ?? rateUsdFromPair(selectedFxPair));
@@ -1434,36 +1465,32 @@ function buyFx() {
 }
 function sellFx(pair, qty) {
   qty = Math.max(1, parseFloat(qty || "1"));
-  const ch = activeChild(); if (!ch) return;
-  let pos = ch.fxPortfolio[pair] || { q: 0, b: rateUsdFromPair(pair) };
-  const rUsd = rateUsdFromPair(pair);
-  let realized = 0;
-  const proceeds = rUsd * qty;
 
-  const longClose = Math.min(qty, Math.max(0, pos.q));
-  const basisOut = longClose * pos.b;
+  const ch = activeChild(); 
+  if (!ch) return;
+
+  const pos = ch.fxPortfolio?.[pair];
+  if (!pos || pos.q <= 0) {
+    return toast(`You don't own ${pair} yet.`);
+  }
+
+  // nie pozwalaj sprzedać więcej niż posiadane
+  qty = Math.min(qty, pos.q);
+
+  const rUsd = rateUsdFromPair(pair);
+  const proceeds = rUsd * qty;
+  const basisOut = pos.b * qty;
+
   ch.jars.spend += proceeds;
   ch.jars.invest = Math.max(0, (ch.jars.invest || 0) - basisOut);
 
-  if (pos.q > 0) {
-    const close = Math.min(qty, pos.q);
-    realized += (rUsd - pos.b) * close;
-    ch.tradeLedgerFx.unshift({ ts: nowISO(), pair, qty: close, price: rUsd, basis: pos.b, pnl: (rUsd - pos.b) * close });
-    pos.q -= close;
-    const remaining = qty - close;
-    if (remaining > 0) {
-      if (pos.q === 0) { pos.b = rUsd; pos.q = -remaining; }
-      else { pos.b = rUsd; pos.q = -remaining; }
-    }
-  } else {
-    const oldAbs = Math.abs(pos.q);
-    const totalAbs = oldAbs + qty;
-    pos.b = totalAbs ? (((oldAbs * pos.b) + (qty * rUsd)) / totalAbs) : rUsd;
-    pos.q -= qty;
-  }
-
+  const realized = (rUsd - pos.b) * qty;
   ch.realizedFx += realized;
-  if (pos.q === 0) delete ch.fxPortfolio[pair];
+  ch.tradeLedgerFx.unshift({ ts: nowISO(), pair, qty, price: rUsd, basis: pos.b, pnl: realized });
+
+  pos.q -= qty;
+
+  if (pos.q <= 0) delete ch.fxPortfolio[pair];
   else ch.fxPortfolio[pair] = { q: Number(pos.q), b: Number(pos.b.toFixed(5)) };
 
   save(app);
@@ -1472,6 +1499,7 @@ function sellFx(pair, qty) {
   renderPortfolioFx();
   renderProfits();
 }
+
 
 
 // ====== LEDGER / TABS / PARENT GUARD / QUICK ACTIONS / EVENTS ======
