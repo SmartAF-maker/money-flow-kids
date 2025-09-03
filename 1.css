@@ -1566,7 +1566,7 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   :root{
     /* stałe, nieprzezroczyste kolory guzików */
     --btn-a:#3b82f6;   /* blue-500 */
-    --btn-b:#22c55e;   /* green-500 */
+    --btn-b:hsl(142, 71%, 45%);   /* green-500 */
     --btn-danger-a:#ef4444; /* red-500 */
     --btn-danger-b:#f97316; /* orange-500 */
   }
@@ -1721,10 +1721,33 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 #tradeBox button[id*="sell"],#fxTradeBox button[id*="sell"]{
   display: none !important;
 }
-/* === OVERRIDE: guziki i karty bez zielonego, tylko niebieskie/błękitne === */
+/* === OVERRIDE: usuwamy zieleń z guzików (desktop + mobile) === */
 :root{
-  --grad-btn:   linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%) !important;
-  --grad-btn-2: linear-gradient(135deg,#60a5fa 0%,#3b82f6 100%) !important;
+  --grad-btn:   linear-gradient(135deg,#3b82f6 0%, #60a5fa 100%) !important;
+  --grad-btn-2: linear-gradient(135deg,#3b82f6 0%, #60a5fa 100%) !important;
+}
+
+/* Guziki i kapsułki – tylko błękity */
+button, .btn, .role-switch .tab, .authwrap .tab{
+  background: linear-gradient(135deg,#3b82f6,#60a5fa) !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+}
+button:hover, .btn:hover, .role-switch .tab:hover, .authwrap .tab:hover{
+  background: linear-gradient(135deg,#3b82f6,#60a5fa) !important;
+  filter: brightness(1.05) !important;
+}
+button:active, .btn:active, .role-switch .tab:active, .authwrap .tab:active{
+  background: linear-gradient(135deg,#3b82f6,#60a5fa) !important;
+  filter: brightness(.95) !important;
+}
+
+/* Primary/danger – bez zieleni */
+.btn.primary{ background: linear-gradient(135deg,#3b82f6,#60a5fa) !important; color:#ffffff !important; }
+.btn.danger { background: linear-gradient(135deg,#ef4444,#f97316) !important; color:#0b1220 !important; }
+
+/* MOBILE: usuń wcześniejszy zielony override */
+@media (max-width:640px){
+  .btn.primary{ background: linear-gradient(135deg,#3b82f6,#60a5fa) !important; color:#ffffff !important; }
 }
 
 
