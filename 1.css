@@ -1678,7 +1678,7 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     border: 1px solid #bae6fd !important;
     color: #0369a1 !important;              /* morski tekst */
   }
-  .btn.primary { background-color:#d9f99d !important; color:#16dda1 !important; }
+  .btn.primary { background-color:#d9f99d !important; color:#365314 !important; }
   .btn.danger  { background-color:#fecaca !important; color:#7f1d1d !important; }
 
   /* 2) Drawer – takie same kapsułki jak w topbarze */
@@ -1706,7 +1706,8 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     border-color:#3a4f77 !important;
     transform:none !important;
   }
-}/* === Remove "Sell" ONLY in trade boxes (Stocks + FX) === */
+}
+/* === Remove "Sell" ONLY in trade boxes (Stocks + FX) === */
 #tradeBox .space button:not(#buyBtn):not(#cancelTrade){
   display: none !important;
 }
@@ -1720,4 +1721,5 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 #tradeBox button[id*="sell"],#fxTradeBox button[id*="sell"]{
   display: none !important;
 }
+
 
