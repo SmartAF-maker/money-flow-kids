@@ -1595,29 +1595,78 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     color:#0b1220 !important;
   }
 }
-/* === FIX 1: pokaż przyciski pod słoikami na mobile === */
+/* === JARS: widoczne akcje na mobile + układ w 2 rzędach === */
+
+/* 1) na Child NIGDY nie ukrywamy .jar-actions */
 body[data-role="child"] .jar-card .jar-actions{
   display:flex !important;
+  flex-wrap:wrap;               /* pozwól złamać linię */
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin-top:6px;
 }
 
-/* === FIX 2: spójne kolory guzików z desktopem (bez stylowania <button>) === */
-button:not(.btn){
+/* 2) input pod słoikiem — kontrast i stała szerokość */
+.jar-actions .jar-input,
+.jar-actions input[type="number"],
+.jar-actions input[type="text"]{
+  width:110px !important;
+  min-width:110px !important;
+  background:#0c1528 !important;
+  color:var(--ink) !important;
+  border:1px solid var(--panel-b) !important;
+  border-radius:10px !important;
+  padding:8px 10px !important;
+}
+
+/* 3) guziki jak na desktopie (koniec z pół-transparentnym tłem na tel.) */
+.jar-actions .btn{
+  background: var(--grad-btn-2) !important;
+  color:#081225 !important;
+  font-weight:700 !important;
+  border:0 !important;
+  min-width:88px;
+  white-space:nowrap;
+}
+.jar-actions .btn.danger{ background: var(--grad-danger) !important; color:#0b1220 !important; }
+
+/* 4) „History” zawsze POD spodem (pełna szerokość) */
+.jar-actions .btn-history,
+.jar-actions [data-action="history"],
+.jar-actions button[data-action="history"]{
+  flex:1 0 100% !important;     /* nowa linia, szerokość 100% */
+  order: 99;                    /* zawsze po input + Add */
+}
+
+/* 5) jeżeli przez globalne reguły <button> nadal mają ramkę/transparent — wyłącz */
+.jar-actions button:not(.btn){
   background: transparent !important;
-  box-shadow: none !important;
   border: 1px solid var(--panel-b) !important;
   color: var(--ink) !important;
-  border-radius: 12px;
-  padding: 10px 16px;
+  border-radius:12px;
+  padding:10px 16px;
 }
-.btn{ 
-  background: var(--grad-btn-2) !important;
-  color: #081225 !important;
-  font-weight: 700;
+
+/* 6) awaryjnie wyłącz wcześniejsze „ukrywanie” (gdyby coś jeszcze zostało) */
+body[data-role="child"] .jar-card .jar-actions *{ visibility: visible !important; opacity: 1 !important; }
+
+/* === PARENT: History / Allowance / Expenses w kolumnie na mobile === */
+@media (max-width: 640px){
+  #tab-parent .row,
+  #tab-parent .actions,
+  #tab-parent .space{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+  }
+  #tab-parent .row > *,
+  #tab-parent .actions > *,
+  #tab-parent .space > *{
+    width:100% !important;
+    min-width:0 !important;
+  }
 }
-.btn.danger{
-  background: var(--grad-danger) !important;
-  color: #0b1220 !important;
-}
-.jar-actions .btn{ min-width:88px; white-space:nowrap; }
 
 
