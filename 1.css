@@ -1668,30 +1668,44 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     width:100% !important;
   }
 }
-/* === MOBILE BUTTONS = desktop look on mobile === */
+/* === MOBILE: wyłącz twardy gradient/cienie i ujednolić wygląd tabów === */
 @media (max-width: 640px){
   button,
   .btn,
   .role-switch .tab,
-  .authwrap .tab{
-    background: var(--grad-btn-2) !important; /* jak na desktopie */
-    border: 0 !important;
-    box-shadow: 0 4px 12px rgba(255,255,255,.15), inset 0 1px 0 rgba(255,255,255,.25) !important;
-    backdrop-filter: blur(6px) saturate(140%) !important;
-    -webkit-backdrop-filter: blur(6px) saturate(140%) !important;
+  .authwrap .tab {
+    background-color: #f0f9ff !important;   /* pastelowy błękit */
+    border: 1px solid #bae6fd !important;
+    color: #0369a1 !important;              /* morski tekst */
   }
-  .btn.primary{ background: var(--grad-btn-2) !important; color:#081225 !important; }
-  .btn.danger { background: var(--grad-danger) !important; color:#0b1220 !important; }
+  .btn.primary { background-color:#d9f99d !important; color:#365314 !important; }
+  .btn.danger  { background-color:#fecaca !important; color:#7f1d1d !important; }
 
-  /* hover/active jak na desktopie (opcjonalnie) */
-  button:hover, .btn:hover, .role-switch .tab:hover, .authwrap .tab:hover{
-    background: linear-gradient(135deg, rgba(59,130,246,.75), rgba(34,197,94,.75)) !important;
-    box-shadow: 0 6px 18px rgba(255,255,255,.25), inset 0 1px 0 rgba(255,255,255,.3) !important;
+  /* 2) Drawer – takie same kapsułki jak w topbarze */
+  #mfkMobileDrawer .tab,
+  .mfk-drawer-nav .tab{
+    background-image: none !important;
+    background-color: #111827 !important;
+    border: 1px solid #00ede9 !important;
+    color: var(--ink) !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
   }
-  button:active, .btn:active, .role-switch .tab:active, .authwrap .tab:active{
-    background: linear-gradient(135deg, rgba(59,130,246,.55), rgba(34,197,94,.55)) !important;
+
+  /* 3) Stan aktywny/hover – subtelny, bez „ciężkiego” połysku */
+  .role-switch .tab.active,
+  #mfkMobileDrawer .tab.active{
+    background-color:#1f2937 !important;
+    border-color:#3b82f6 !important;
+    color:#fff !important;
+  }
+  .role-switch .tab:hover,
+  #mfkMobileDrawer .tab:hover{
+    background-color:#162033 !important;
+    border-color:#3a4f77 !important;
+    transform:none !important;
   }
 }
-
 
 
