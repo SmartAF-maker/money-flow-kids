@@ -1489,3 +1489,32 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 
 /* 6) Na wszelki wypadek: nic nie chowa elementów w Parent przez overflow */
 #tab-parent .card{ overflow:visible !important; }
+/* === Align Available Cash z innymi kartami === */
+.available-cash{ margin:0 !important; }                  /* desktop+mobile */
+@media (max-width:640px){
+  .available-cash{ margin:0 !important; }                /* na wszelki wypadek */
+}
+/* === Drawer (hamburger): równe odstępy i brak przyklejenia "Login" do dołu === */
+.mfk-drawer-nav{
+  display:flex !important;
+  flex-direction:column;
+  gap:12px !important;            /* równa odległość między wszystkimi pozycjami */
+}
+.mfk-drawer-nav > *{
+  margin:0 !important;            /* skasuj indywidualne marginesy pozycji */
+  width:100%;
+}
+/* Pozycje menu (jeśli masz inne klasy/atrybuty, zostawiłem kilka wariantów) */
+.mfk-drawer-nav .tab,
+.mfk-drawer-nav button,
+.mfk-drawer-nav a{
+  display:block;
+  padding:12px 14px;
+}
+/* "Login" nie ma prawa mieć auto-marginesu na górze */
+.mfk-drawer-nav [data-tab="login"],
+.mfk-drawer-nav .tab-login,
+.mfk-drawer-nav button[data-action="login"]{
+  margin-top:0 !important;
+  align-self:stretch;
+}
