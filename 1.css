@@ -1672,63 +1672,37 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     width:100% !important;
   }
 }
-/* === MOBILE LOOK MATCH (≤ 991px) — jasne, „desktopowe” przyciski === */
+/* === MOBILE (hamburger) — żywe kolory jak na desktopie === */
+/* wklej NA SAM KONIEC pliku */
 @media (max-width: 991px){
-
-  /* Kolory do łatwej zmiany */
-  :root{
-    --m-btn-start:#2f6fe2;  /* niebieski */
-    --m-btn-end:#2ef6b6;    /* turkus (po prawej) */
-    --m-btn-start-2:#60a5fa;/* jaśniejszy niebieski (wariant) */
-    --m-danger-a:#ef4444;   /* czerwony */
-    --m-danger-b:#f97316;   /* pomarańczowy */
-  }
-
-  /* Drawer (hamburger) – każda pozycja jako ładny, pełny gradient */
-  .mfk-drawer-nav .tab{
-    background-image: linear-gradient(135deg,var(--m-btn-start),var(--m-btn-end)) !important;
+  /* wszystkie pozycje w drawerze */
+  .mfk-drawer-nav .tab,
+  .mfk-drawer-nav button.tab,
+  .mfk-drawer-nav a.tab{
+    background-image: linear-gradient(135deg, #2f6fe4 0%, #2ef6b6 100%) !important;
     background-color: transparent !important;
-    color:#fff !important;
-    border:0 !important;
+    color: #ffffff !important;
+    border: 0 !important;
     border-radius: 14px !important;
-    box-shadow: 0 8px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.18) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,.35) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    padding: 14px 16px !important;
   }
-  .mfk-drawer-nav .tab:hover{ filter:brightness(1.06); }
-  .mfk-drawer-nav .tab:active{ transform:translateY(1px); }
+  .mfk-drawer-nav .tab:hover{ filter: brightness(1.06) !important; }
+  .mfk-drawer-nav .tab:active{ filter: brightness(.96) !important; }
 
-  /* Globalnie: buttony/kapsułki też bez przezroczystości */
-  button,
-  .btn,
-  .role-switch .tab,
-  .authwrap .tab{
-    background-image: linear-gradient(135deg,var(--m-btn-start),var(--m-btn-end)) !important;
-    background-color: transparent !important;
-    color:#fff !important;
-    border:0 !important;
-    backdrop-filter:none !important;
-    -webkit-backdrop-filter:none !important;
-    box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.15) !important;
-    isolation:isolate; /* żadnego blendowania z tłem */
-  }
-
-  /* Warianty */
-  .btn.primary{
-    background-image: linear-gradient(135deg,var(--m-btn-start-2),var(--m-btn-start)) !important;
-    color:#081225 !important;
-  }
-  .btn.danger{
-    background-image: linear-gradient(135deg,var(--m-danger-a),var(--m-danger-b)) !important;
-    color:#0b1220 !important;
-  }
-
-  /* Tutorial zawsze z turkusem po prawej (#2ef6b6) */
-  #tutorialBtn,
-  #tutorialBtn.btn,
+  /* Tutorial z turkusem po prawej (#2ef6b6) */
   .mfk-drawer-nav [data-tab="tutorial"]{
-    background-image: linear-gradient(135deg,#3b82f6,#2ef6b6) !important;
+    background-image: linear-gradient(135deg, #3b82f6 0%, #2ef6b6 100%) !important;
     color:#081225 !important;
+  }
+
+  /* na wszelki wypadek – wyłącz ewentualne pseudo-linie */
+  .mfk-drawer-nav .tab::before,
+  .mfk-drawer-nav .tab::after{
+    content:none !important;
   }
 }
 
