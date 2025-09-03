@@ -1721,37 +1721,10 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 #tradeBox button[id*="sell"],#fxTradeBox button[id*="sell"]{
   display: none !important;
 }
-/* === MOBILE (≤640px): wygląd przycisków w boxach Trade === */
-@media (max-width: 640px){
-
-  /* wspólna „szklistość” i cień – tylko w boxach transakcyjnych */
-  #tradeBox .space .btn,
-  #fxTradeBox .space .btn{
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.18);
-    box-shadow: 0 6px 16px rgba(2,8,23,.35), inset 0 1px 0 rgba(255,255,255,.22);
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    color: #eaf2ff;               /* czytelny, lekko niebieskawy */
-  }
-
-  /* BUY – bardziej niebieski z przejściem w zieleń na prawym brzegu */
-  #tradeBox .btn.primary,
-  #fxTradeBox .btn.primary{
-    background-image: linear-gradient(135deg, #3b82f6 0%, #60a5fa 55%, #22c55e 100%) !important;
-  }
-
-  /* SELL i CANCEL – bardziej zielone (jak na screenie) */
-  #tradeBox .space .btn:not(.primary),
-  #fxTradeBox .space .btn:not(.primary){
-    background-image: linear-gradient(135deg, #1e40af 0%, #22c55e 100%) !important;
-  }
-
-  /* małe zachowanie na hover/active – subtelne, żeby nie zmieniać kolorystyki */
-  #tradeBox .space .btn:hover,
-  #fxTradeBox .space .btn:hover{ filter: brightness(1.06); }
-  #tradeBox .space .btn:active,
-  #fxTradeBox .space .btn:active{ filter: brightness(0.96); }
+/* === OVERRIDE: guziki i karty bez zielonego, tylko niebieskie/błękitne === */
+:root{
+  --grad-btn:   linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%) !important;
+  --grad-btn-2: linear-gradient(135deg,#60a5fa 0%,#3b82f6 100%) !important;
 }
 
 
