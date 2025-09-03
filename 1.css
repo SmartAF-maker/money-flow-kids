@@ -1721,12 +1721,29 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 #tradeBox button[id*="sell"],#fxTradeBox button[id*="sell"]{
   display: none !important;
 }
-/* === MOBILE FIX: zmiana koloru tła primary button (Allowance) === */
-@media (max-width: 640px){
-  .btn.primary {
-    background-color: #3b82f6 !important; /* błękitne tło */
-    color: #ffffff !important;            /* biały tekst dla kontrastu */
-  }
+/* === NO-GREEN BUTTONS (override) === */
+
+/* 1) Podmień zmienne gradientów na niebieskie */
+:root{
+  --grad-btn:   linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%) !important;
+  --grad-btn-2: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
+}
+
+/* 2) Nadpisz globalny styl guzików/tabsów (ma najwyższy priorytet) */
+button, .btn, .role-switch .tab, .authwrap .tab{
+  background: linear-gradient(135deg, #3b82f6, #60a5fa) !important;
+}
+
+/* 3) Primary już bez zielonego */
+.btn.primary{
+  background: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+  color: #ffffff !important; /* czytelny tekst */
+}
+
+/* (opcjonalnie) Zakaz miksowania starych filtrów/blurów, gdyby coś przebijało */
+button, .btn, .role-switch .tab, .authwrap .tab{
+  filter: none !important;
+  backdrop-filter: none !important;
 }
 
 
