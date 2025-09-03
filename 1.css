@@ -1672,26 +1672,64 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     width:100% !important;
   }
 }
-/* ===== MOBILE-ONLY BUTTON COLORS (≤640px) ===== */
-@media (max-width: 640px) {
- @media (max-width: 640px) {
-  .mfk-drawer-nav .tab, button, .btn {
-    background: linear-gradient(135deg, #3b82f6, #2ef6b6) !important; /* niebieski → neon-turkus */
-    color: #fff !important;
-    text-shadow: 0 0 6px rgba(0,0,0,.4);
-    border: 0 !important;
-    box-shadow: 0 0 12px rgba(46,246,182,.4) !important;
-  }
-}
+/* === MOBILE LOOK MATCH (≤ 991px) — jasne, „desktopowe” przyciski === */
+@media (max-width: 991px){
 
-  .btn.primary {
-    background: linear-gradient(135deg, #2ef6b6 0%, #3b82f6 100%) !important;
+  /* Kolory do łatwej zmiany */
+  :root{
+    --m-btn-start:#2f6fe2;  /* niebieski */
+    --m-btn-end:#2ef6b6;    /* turkus (po prawej) */
+    --m-btn-start-2:#60a5fa;/* jaśniejszy niebieski (wariant) */
+    --m-danger-a:#ef4444;   /* czerwony */
+    --m-danger-b:#f97316;   /* pomarańczowy */
+  }
+
+  /* Drawer (hamburger) – każda pozycja jako ładny, pełny gradient */
+  .mfk-drawer-nav .tab{
+    background-image: linear-gradient(135deg,var(--m-btn-start),var(--m-btn-end)) !important;
+    background-color: transparent !important;
+    color:#fff !important;
+    border:0 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.18) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .mfk-drawer-nav .tab:hover{ filter:brightness(1.06); }
+  .mfk-drawer-nav .tab:active{ transform:translateY(1px); }
+
+  /* Globalnie: buttony/kapsułki też bez przezroczystości */
+  button,
+  .btn,
+  .role-switch .tab,
+  .authwrap .tab{
+    background-image: linear-gradient(135deg,var(--m-btn-start),var(--m-btn-end)) !important;
+    background-color: transparent !important;
+    color:#fff !important;
+    border:0 !important;
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.15) !important;
+    isolation:isolate; /* żadnego blendowania z tłem */
+  }
+
+  /* Warianty */
+  .btn.primary{
+    background-image: linear-gradient(135deg,var(--m-btn-start-2),var(--m-btn-start)) !important;
     color:#081225 !important;
   }
+  .btn.danger{
+    background-image: linear-gradient(135deg,var(--m-danger-a),var(--m-danger-b)) !important;
+    color:#0b1220 !important;
+  }
 
-  .btn.danger {
-    background: linear-gradient(135deg, #ef4444, #f97316) !important;
-    color:#fff !important;
+  /* Tutorial zawsze z turkusem po prawej (#2ef6b6) */
+  #tutorialBtn,
+  #tutorialBtn.btn,
+  .mfk-drawer-nav [data-tab="tutorial"]{
+    background-image: linear-gradient(135deg,#3b82f6,#2ef6b6) !important;
+    color:#081225 !important;
   }
 }
+
 
