@@ -1,1401 +1,166 @@
-/* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
+/* ==== Money Flow Kids — CLEAN BASELINE (stabilny) ==== */
 
-/* Palette */
+/* Palette / tokens */
 :root{
-  --bg:#0f172a; --card:#111827; --ink:#e5e7eb; --muted:#9ca3af;
-  --ok:#22c55e; --warn:#ef4444; --accent:#3b82f6;
-  --bg-2:#0b1220; --ring:#93c5fd; --border-c:#1f2937; --panel-b:#2b3a55; --accent-2:#60a5fa;
-  --grad-btn:linear-gradient(135deg,#3b82f6 0%,#22c55e 100%);
-  --grad-btn-2:linear-gradient(135deg,#60a5fa 0%,#3b82f6 55%,#22c55e 100%);
-  --grad-danger:linear-gradient(135deg,#ef4444,#f97316);
-  --r-lg:14px; --r-md:10px; --shadow-1:0 1px 0 rgba(0,0,0,.18); --shadow-2:0 10px 30px rgba(2,8,23,.35);
+  --bg:#0f172a; --bg-2:#0b1220; --card:#111827;
+  --ink:#e5e7eb; --muted:#9ca3af; --border:#1f2937; --ring:#93c5fd;
+  --ok:#22c55e; --warn:#ef4444; --accent:#3b82f6; --accent-2:#60a5fa;
+  --r-lg:14px; --r-md:10px; --shadow:0 10px 30px rgba(2,8,23,.35);
 }
 
 /* Reset / base */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,Helvetica,"Apple Color Emoji","Segoe UI Emoji";
-  background:var(--bg); color:var(--ink); line-height:1.45;
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,Helvetica;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
 
-/* Cinematic bg */
-body::before,body::after{
-  content:""; position:fixed; inset:-20vmax; z-index:-2;
-  background:
-    radial-gradient(40vmax 40vmax at 12% 18%, rgba(59,130,246,.18), transparent 60%),
-    radial-gradient(36vmax 36vmax at 80% 10%, rgba(34,197,94,.14), transparent 60%),
-    radial-gradient(46vmax 46vmax at 70% 80%, rgba(59,130,246,.12), transparent 60%),
-    radial-gradient(30vmax 30vmax at 10% 85%, rgba(34,197,94,.10), transparent 60%);
-  filter:blur(30px) saturate(120%); pointer-events:none;
-}
-body::after{inset:0; z-index:-1; background-image:linear-gradient(180deg, rgba(16,24,40,0), rgba(2,8,23,.35));}
-
-/* Topbar */
-.topbar{
-  position:sticky; top:0; z-index:50; display:flex; justify-content:space-between; align-items:center; gap:10px;
-  padding:14px 20px; background:color-mix(in srgb, var(--bg-2) 82%, transparent);
-  border-bottom:1px solid var(--border-c);
-  backdrop-filter:saturate(140%) blur(8px); -webkit-backdrop-filter:saturate(140%) blur(8px);
-  flex-wrap:nowrap;
-}
-h1{margin:0; font-size:22px; letter-spacing:.2px}
-#t-appTitle{background:var(--grad-btn); -webkit-background-clip:text; background-clip:text; color:transparent}
+/* App container */
 .container{max-width:1120px; margin:20px auto; padding:0 16px}
 
-/* Pills / tabs / selects in role-switch */
-.role-switch{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
-.role-switch .tab, .role-switch select{
+/* Topbar – lekki sticky, BEZ fixed */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 16px;
+  background:color-mix(in srgb, var(--bg-2) 82%, transparent);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:saturate(140%) blur(8px);
+}
+.topbar h1{margin:0; font-size:22px}
+#t-appTitle{background:linear-gradient(135deg,#3b82f6,#22c55e); -webkit-background-clip:text; background-clip:text; color:transparent}
+.role-switch{display:flex; gap:8px; flex-wrap:wrap}
+
+/* Buttons / pills */
+button,.btn,.role-switch .tab{
+  border:1px solid rgba(255,255,255,.18);
   background:linear-gradient(180deg,#0e162a,#0a1223);
-  border:1px solid var(--panel-b); color:var(--ink); padding:8px 12px; border-radius:var(--r-md);
-  cursor:pointer; box-shadow:var(--shadow-1);
-  transition:transform .15s ease, border-color .2s ease, box-shadow .2s ease, filter .2s ease;
+  color:var(--ink); padding:8px 12px; border-radius:10px; cursor:pointer;
+  transition:transform .15s ease, border-color .2s ease;
 }
-.role-switch .tab:hover, .role-switch select:hover{transform:translateY(-1px); border-color:#3a4f77}
-.role-switch .active{background:var(--grad-btn-2); border-color:transparent; color:#0b1220; font-weight:700}
+button:hover,.btn:hover,.role-switch .tab:hover{transform:translateY(-1px); border-color:#3a4f77}
+.btn.primary{background:linear-gradient(135deg,#60a5fa,#3b82f6 55%,#22c55e); color:#081225}
+.btn.danger{background:linear-gradient(135deg,#ef4444,#f97316); color:#0b1220}
 
-/* Auth mini-bar */
-.authwrap{display:inline-flex; align-items:center; gap:8px; margin-left:8px}
-.authwrap .tab{background:linear-gradient(180deg,#0e162a,#0a1223); border:1px solid var(--panel-b)}
-
-/* Generic buttons (unified, no dups) */
-button, .btn, .role-switch .tab, .authwrap .tab{
-  position:relative; transform:translateY(0); color:var(--ink); font-weight:600;
-  padding:10px 16px; border:1px solid rgba(255,255,255,.25); border-radius:12px;
-  background:linear-gradient(135deg, rgba(59,130,246,.6), rgba(34,197,94,.6));
-  backdrop-filter:blur(6px) saturate(140%); -webkit-backdrop-filter:blur(6px) saturate(140%);
-  box-shadow:0 4px 12px rgba(255,255,255,.15), inset 0 1px 0 rgba(255,255,255,.25);
-  cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, background .15s ease, filter .2s ease;
-  border:0;
-}
-button:hover, .btn:hover, .role-switch .tab:hover, .authwrap .tab:hover{
-  transform:translateY(-2px);
-  background:linear-gradient(135deg, rgba(59,130,246,.75), rgba(34,197,94,.75));
-  box-shadow:0 6px 18px rgba(255,255,255,.25), inset 0 1px 0 rgba(255,255,255,.3);
-}
-button:active, .btn:active, .role-switch .tab:active, .authwrap .tab:active{
-  transform:translateY(2px);
-  background:linear-gradient(135deg, rgba(59,130,246,.55), rgba(34,197,94,.55));
-  box-shadow:0 2px 6px rgba(255,255,255,.15), inset 0 1px 0 rgba(255,255,255,.2);
-}
-.btn{padding:10px 14px; border-radius:var(--r-md)}
-.btn.primary{background:var(--grad-btn-2); color:#081225}
-.btn.danger{background:var(--grad-danger); color:#0b1220}
-
-/* Inputs / selects */
-input, select, button{font:inherit; color:inherit}
-input, select{
-  padding:10px 12px; border-radius:var(--r-md); border:1px solid var(--panel-b);
+/* Inputs */
+input,select,button{font:inherit; color:inherit}
+input,select{
+  padding:10px 12px; border-radius:10px; border:1px solid var(--border);
   background:#0c1528; color:var(--ink);
-  transition:border-color .2s ease, box-shadow .2s ease;
 }
-input:focus-visible, select:focus-visible{
+input:focus-visible,select:focus-visible{
   outline:none; border-color:var(--ring);
   box-shadow:0 0 0 3px color-mix(in srgb, var(--ring) 35%, transparent);
 }
-select, .role-switch select{
-  background:rgba(15,23,42,.8); border:1px solid rgba(255,255,255,.2);
-  border-radius:10px; padding:8px 12px; appearance:none; cursor:pointer;
-  backdrop-filter:blur(6px) saturate(130%); -webkit-backdrop-filter:blur(6px) saturate(130%);
-}
-select option{background:var(--card); color:var(--ink)}
-.input{width:140px}
-
-/* Grids */
-.grid.g-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-@media (max-width: 1000px) {
-  .grid.g-3 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
-  .grid.g-3 {
-    grid-template-columns: 1fr;
-  }
-}
-
 
 /* Cards */
 .card{
-  background:color-mix(in srgb, var(--card) 86%, transparent);
-  border:1px solid var(--border-c); border-radius:var(--r-lg); box-shadow:var(--shadow-2);
-  padding:16px; backdrop-filter:blur(8px) saturate(140%); -webkit-backdrop-filter:blur(8px) saturate(140%);
-  transition:box-shadow .25s ease;
+  background:color-mix(in srgb, var(--card) 90%, transparent);
+  border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:16px; box-shadow:var(--shadow); backdrop-filter:blur(8px) saturate(140%);
 }
-.card:hover{box-shadow:0 0 0 1px rgba(147,197,253,.10), var(--shadow-2)}
-.jars .card{background:linear-gradient(180deg, rgba(15,23,42,.9), rgba(11,18,32,.9))}
-
-.title{font-weight:800; margin:0 0 8px; letter-spacing:.2px}
+.title{margin:0 0 8px; font-weight:800}
 .muted{color:var(--muted)}
-.big{font-size:30px; font-weight:900; letter-spacing:.2px}
+.big{font-size:30px; font-weight:900}
 
 /* Helpers */
-.space,.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.space,.row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .right{margin-left:auto}
 .hidden{display:none !important}
 
-/* Table */
-.tableWrap{border:1px solid var(--border-c); border-radius:10px; overflow:hidden}
-.tableWrap table{min-width:480px}
-.tableWrap{overflow-x:auto}
-table{width:100%; border-collapse:separate; border-spacing:0; font-size:14px}
-th,td{padding:10px; text-align:left; border-top:1px solid var(--border-c)}
-thead th{position:sticky; top:0; background:#0f172acc; backdrop-filter:blur(6px)}
+/* Tables – bez globalnego sticky */
+.tableWrap{border:1px solid var(--border); border-radius:10px; overflow:auto}
+.tableWrap table{min-width:480px; width:100%; border-collapse:separate; border-spacing:0; font-size:14px}
+th,td{padding:10px; text-align:left; border-top:1px solid var(--border)}
 tbody tr:nth-child(odd) td{background:rgba(255,255,255,.02)}
 .pnl-pos{color:var(--ok)} .pnl-neg{color:var(--warn)}
 
 /* Toast */
 .toast{
-  position:fixed; inset:72px auto auto 50%; transform:translateX(-50%);
-  background:var(--bg-2); color:#fff; padding:10px 14px; border-radius:var(--r-lg);
-  box-shadow:var(--shadow-2); z-index:60;
+  position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+  background:rgba(11,18,32,.95); color:#fff; padding:12px 16px; border-radius:12px;
+  border:1px solid rgba(255,255,255,.12); box-shadow:var(--shadow); z-index:1000;
 }
 
-/* KPIs */
-.kpis .kpi{background:color-mix(in srgb, var(--bg-2) 92%, transparent); border:1px solid var(--border-c); border-radius:10px; padding:12px}
+/* Switch */
+.switch{position:relative; display:inline-block; width:56px; height:30px}
+.switch input{opacity:0; width:0; height:0}
+.slider{position:absolute; inset:0; background:#334155; border-radius:40px; transition:.2s}
+.slider::before{
+  content:""; position:absolute; height:24px; width:24px; left:3px; top:3px; border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, #fff, #d1d5db); box-shadow:0 1px 2px rgba(0,0,0,.2); transition:.2s
+}
+input:checked + .slider{background:linear-gradient(135deg,#22c55e,#16a34a)}
+input:checked + .slider::before{transform:translateX(26px)}
 
-/* Stock / FX list cards */
+/* ===== Layout sekcji (tylko gdy widoczna) ===== */
+section#tab-invest:not(.hidden),
+section#tab-fx:not(.hidden),
+section#tab-profits:not(.hidden),
+section#tab-parent:not(.hidden){
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(560px, 1fr));
+  gap:12px; align-items:start;
+}
+@media (max-width:900px){
+  section#tab-invest:not(.hidden),
+  section#tab-fx:not(.hidden),
+  section#tab-profits:not(.hidden),
+  section#tab-parent:not(.hidden){
+    grid-template-columns:1fr;
+  }
+}
+
+/* Listy / karty listowe */
 .stock,.fxpair{
-  display:block; width:100%; text-align:left; border:1px solid var(--panel-b); border-radius:12px;
-  padding:10px 12px; background:#0c1528; cursor:pointer; color:var(--ink); font-weight:500;
+  display:block; width:100%; text-align:left; border:1px solid var(--border);
+  border-radius:12px; padding:10px 12px; background:#0c1528; cursor:pointer;
   transition:border-color .2s ease, transform .15s ease;
 }
 .stock:hover,.fxpair:hover{transform:translateY(-1px); border-color:#3a4f77}
 .stock .muted,.fxpair .muted{color:var(--muted)}
 .stock.active,.fxpair.active{outline:2px solid var(--accent-2); outline-offset:0}
 
-/* Switch */
-.switch{position:relative; display:inline-block; width:56px; height:30px; margin-left:10px}
-.switch input{opacity:0; width:0; height:0}
-.slider{position:absolute; inset:0; cursor:pointer; background:#334155; border-radius:40px; transition:.2s}
-.slider::before{
-  content:""; position:absolute; height:24px; width:24px; left:3px; top:3px;
-  border-radius:50%; background:radial-gradient(circle at 30% 30%, #fff, #d1d5db); box-shadow:0 1px 2px rgba(0,0,0,.2); transition:.2s
+/* Jars (4 kolumny → 2 → 1) */
+.jars{
+  display:grid; grid-template-columns:repeat(4, minmax(200px,1fr)); gap:16px; align-items:start;
 }
-input:checked + .slider{background:linear-gradient(135deg,#22c55e,#16a34a)}
-input:checked + .slider::before{transform:translateX(26px)}
+@media (max-width:1200px){ .jars{ grid-template-columns:repeat(2, minmax(200px,1fr)); } }
+@media (max-width:640px){  .jars{ grid-template-columns:1fr; } }
+.jar-card{display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center}
+.jar-card .title{font-variant-numeric:tabular-nums}
+.jar-actions{display:flex; gap:8px; align-items:center; justify-content:center}
+.jar-actions .jar-input{width:100px}
 
-/* Modal */
-.modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; justify-content:center; align-items:center; z-index:999; padding:16px}
-.modal.hidden{display:none !important}
-.modal-content{
-  background:color-mix(in srgb, var(--card) 90%, transparent); color:var(--ink);
-  padding:20px; border-radius:var(--r-lg); width:min(900px,92vw); max-height:min(92vh,900px); overflow:auto;
-  box-shadow:var(--shadow-2); backdrop-filter:blur(8px) saturate(140%)
+/* Mini-jars – prosty pasek pod topbarem (sticky, nie fixed) */
+#stickyMiniJars{
+  position:sticky; top:48px; z-index:30; /* pod topbarem */
+  display:flex; justify-content:space-around; align-items:center; gap:12px;
+  padding:8px 12px;
+  background:color-mix(in srgb, var(--bg-2) 92%, transparent);
+  border-bottom:1px solid var(--border);
 }
-@media (max-height:700px){ .modal-content{max-height:88vh} }
-.tut-head{display:flex; gap:12px; align-items:flex-start; margin-bottom:12px}
-.tut-icon{width:44px; height:44px; border-radius:10px; display:grid; place-items:center; font-size:24px; background:var(--bg-2); border:1px solid var(--border-c)}
-.tut-image-wrap{margin:12px 0 6px; padding:10px; background:var(--bg-2); border:1px solid var(--border-c); border-radius:10px}
-.tut-image-wrap img{display:block; width:100%; height:auto; border-radius:8px; max-height:56vh; object-fit:contain}
-.tutorial-controls{margin-top:14px; display:flex; gap:8px; justify-content:flex-end}
+#stickyMiniJars .mini-jar{ text-align:center; min-width:110px }
+#stickyMiniJars .mini-jar-label{ font-size:.75rem; color:var(--muted) }
+#stickyMiniJars .mini-jar-value{ font-weight:700; white-space:nowrap }
+#miniSave{color:#22c55e} #miniSpend{color:#f59e0b} #miniGive{color:#ec4899} #miniInvest{color:#60a5fa}
 
-/* Tutorial controls pinned top-right inside modal */
-#tutorialModal .tutorial-controls{position:absolute; top:12px; right:12px; display:flex; gap:8px; z-index:10}
-#tutorialModal .tutorial-controls button{
-  background:#1f2937; border:1px solid #334155; border-radius:6px; padding:6px 10px; color:#fff; font-size:16px; cursor:pointer; transition:background .2s ease
-}
-#tutorialModal .tutorial-controls button:hover{background:#334155}
-#tutorialText{white-space:pre-line}
-.tut-big{font-size:18px; line-height:1.6}
+/* Profits – lokalny scroll historii (sticky nagłówek tylko TU) */
+#tab-profits .tableWrap{max-height:320px; overflow:auto; position:relative}
+#tab-profits thead th{position:sticky; top:0; z-index:1; background:#0f172acc}
 
-/* Trends */
-.trend-list{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:8px; margin-top:8px}
-.trend-item{background:#0b1220aa; border:1px solid var(--border-c); border-radius:10px; padding:10px; backdrop-filter:blur(6px)}
-.trend-head{display:flex; justify-content:space-between; align-items:center; font-weight:700}
-.trend-sub{margin-top:4px; font-size:12px; color:var(--muted)}
+/* Parent: date input kontrast */
+#tab-parent input[type="date"]{color:var(--ink); background-color:#0c1528}
+#tab-parent input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1); cursor:pointer}
 
-/* Scrollbar (Chromium/WebKit) */
+/* A11y */
+:focus-visible{outline:3px solid color-mix(in srgb, var(--ring) 55%, transparent); outline-offset:2px}
+[aria-disabled="true"], .disabled{opacity:.6; pointer-events:none}
+
+/* Scrollbar (webkit) */
 *::-webkit-scrollbar{height:10px; width:10px}
 *::-webkit-scrollbar-track{background:var(--bg-2)}
 *::-webkit-scrollbar-thumb{background:#1f2a44; border-radius:10px}
 *::-webkit-scrollbar-thumb:hover{background:#2c3a5e}
-
-/* A11y / motion */
-:focus-visible{outline:3px solid color-mix(in srgb, var(--ring) 55%, transparent); outline-offset:2px}
-[aria-disabled="true"], .disabled{opacity:.6; pointer-events:none}
-@media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{transition-duration:.01ms !important; animation-duration:.01ms !important; animation-iteration-count:1 !important}
-}
-
-/* Topbar text color for tabs/buttons */
-.topbar .tab, .authwrap .tab{color:var(--ink) !important}
-
-/* --- Jar cards (layout only; SVG animacje masz inline w HTML) --- */
-.jar-card{display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center}
-.jar-card .title{font-variant-numeric:tabular-nums}
-
-/* CSS+SVG background (optional fallback) */
-:root{ --jar-stroke:%23000; --jar-glass:%23ffffff; --jar-liquid:%2300c853; --jar-lid:%23222; }
-.jar-visual{
-  width:110px; height:140px; background-size:contain; background-repeat:no-repeat; background-position:center;
-  filter:drop-shadow(0 2px 6px rgba(0,0,0,.18)); transition:transform .15s ease;
-}
-.jar-visual:active{transform:scale(.98)}
-@supports (background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'></svg>")){
-  .jar-visual{
-    background-image:url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 200'>\
-  <defs><clipPath id='c'><path d='M45,40 h70 a15,15 0 0 1 15,15 v95 a20,20 0 0 1 -20,20 h-60 a20,20 0 0 1 -20,-20 v-95 a15,15 0 0 1 15,-15 z'/></clipPath></defs>\
-  <rect x='40' y='18' width='80' height='16' rx='5' fill='%23222' stroke='%23000' stroke-width='3'/>\
-  <path d='M45,40 h70 a15,15 0 0 1 15,15 v95 a20,20 0 0 1 -20,20 h-60 a20,20 0 0 1 -20,-20 v-95 a15,15 0 0 1 15,-15 z' fill='%23ffffff' stroke='%23000' stroke-width='3'/>\
-  <g clip-path='url(%23c)'><rect x='30' y='95' width='100' height='80' fill='%2300c853'/></g>\
-</svg>");
-  }
-}
-.jar-savings{--jar-liquid:%2300c853; --jar-lid:%2327ae60}
-.jar-earnings{--jar-liquid:%23ff9800; --jar-lid:%23ef6c00}
-.jar-donations{--jar-liquid:%23e91e63; --jar-lid:%23ad1457}
-.jar-invest{--jar-liquid:%233f51b5; --jar-lid:%23283989}
-@media (max-width:520px){ .jar-visual{width:90px; height:120px} }
-
-/* Photo jars (PNG mask) */
-.jar2{position:relative; width:160px; aspect-ratio:1/1.25; filter:drop-shadow(0 6px 12px rgba(0,0,0,.35)); transition:transform .2s ease, filter .2s ease}
-.jar2:hover{transform:translateY(-1px); filter:drop-shadow(0 10px 20px rgba(0,0,0,.4))}
-.jar2 .jar-img{position:relative; width:100%; height:100%; display:block; pointer-events:none}
-.jar2 .liquid{
-  position:absolute; inset:0;
-  -webkit-mask:url("./jar-empty.png") center/contain no-repeat; mask:url("./jar-empty.png") center/contain no-repeat;
-  display:flex; align-items:flex-end; overflow:hidden;
-}
-.jar2 .liquid::before{
-  content:""; width:100%; height:var(--fill,0%);
-  background:linear-gradient(180deg, var(--liq-top,#41d98a), var(--liq-bottom,#00c853));
-  opacity:.95; border-radius:8% 8% 16% 16% / 20% 20% 30% 30%;
-}
-.jar2.savings{--liq-top:#53d941; --liq-bottom:#00c853}
-.jar2.earnings{--liq-top:#eef131; --liq-bottom:#ff9800}
-.jar2.donations{--liq-top:#c03065; --liq-bottom:#e91e63}
-.jar2.invest{--liq-top:#152a70; --liq-bottom:#3f51b5}
-@media (max-width:520px){ .jar2{width:130px} }
-
-/* Parent Panel: date input fix */
-#tab-parent input[type="date"]{color:var(--ink); background-color:#0c1528}
-#tab-parent input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1); cursor:pointer}
-
-/* FX list collapsed hint gradient */
-#fxList.is-collapsed{position:relative}
-#fxList.is-collapsed::after{
-  content:""; position:absolute; left:0; right:0; bottom:0; height:48px; pointer-events:none;
-  background:linear-gradient(to bottom, rgba(15,23,42,0) 0%, rgba(15,23,42,.9) 60%, rgba(15,23,42,1) 100%);
-  border-bottom-left-radius:inherit; border-bottom-right-radius:inherit;
-}
-
-/* ===== Responsive layout for market/portfolio tabs (clean, no conflicts) ===== */
-#tab-invest, #tab-fx{
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(560px, 1fr));
-  gap:12px; align-items:start;
-}
-#tab-invest > .card, #tab-fx > .card{min-width:0}
-#stockList, #fxList, #tab-invest .row, #tab-fx .row{min-width:0; overflow:hidden}
-#tab-invest .tableWrap, #tab-fx .tableWrap{overflow-x:auto}
-@media (max-width:1400px){
-  #tab-invest, #tab-fx{grid-template-columns:1fr}
-}
-
-/* Laptop-tight topbar */
-@media (max-width:1440px) and (min-width:900px){
-  .topbar{padding:10px 14px; gap:8px}
-  .topbar h1, #t-appTitle{font-size:18px}
-  .topbar .tab, .topbar button, .topbar select{padding:8px 12px}
-  #tutorialBtn{padding:8px 12px; min-width:auto}
-  .topbar .roleLabel{display:none}
-}
-/* === STOCK & FX: 2 kolumny tylko gdy sekcja jest widoczna === */
-section#tab-invest:not(.hidden),
-section#tab-fx:not(.hidden) {
-  display: grid;
-  grid-template-columns: minmax(460px, 1fr) minmax(460px, 1fr);
-  gap: 12px;
-  align-items: start;
-}
-
-/* karty i zawartość nie rozsadzają kolumn */
-section#tab-invest > .card,
-section#tab-fx > .card {
-  min-width: 0;
-}
-
-#stockList,
-#fxList,
-#tab-invest .row,
-#tab-fx .row {
-  min-width: 0;
-  overflow: hidden;
-}
-
-/* tabele przewijają się poziomo */
-#tab-invest .tableWrap,
-#tab-fx .tableWrap {
-  overflow-x: auto;
-}
-
-/* na wąskich ekranach 1 kolumna */
-@media (max-width: 900px) {
-  section#tab-invest:not(.hidden),
-  section#tab-fx:not(.hidden) {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* opcjonalnie: więcej miejsca na 2 kolumny */
-.container { max-width: 1280px; }
-/* ==== LAPTOP HEADER FIX (1366–1440) ==== */
-
-/* 1) topbar nie może się łamać, a środek może się zwężać */
-.topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  flex-wrap:nowrap !important;
-  padding:10px 14px;  /* ciaśniej jak na 2. screenie */
-}
-.topbar > *{ flex:0 0 auto; }                 /* nic nie rozpycha w bok */
-.topbar .role-switch{
-  flex:1 1 auto; min-width:0;                 /* środek może się zwężać */
-  display:flex; align-items:center; gap:8px;
-  flex-wrap:nowrap !important;                /* zero zawijania kapsułek */
-}
-
-/* 2) kompaktowe kapsułki (rozmiar jak na 2. screenie) */
-.topbar .tab,
-.topbar button,
-.topbar select{
-  padding:8px 12px !important;
-  font-size:14px !important;
-  white-space:nowrap;
-}
-
-/* 3) "Tutorial" zawsze w tym samym rzędzie i nie znika */
-#tutorialBtn{
-  display:inline-flex !important;
-  align-items:center;
-  padding:8px 12px !important;
-  min-width:auto !important;
-  order: 90;                                   /* ustaw na koniec grupy tabsów */
-}
-
-/* 4) drobna kosmetyka: badge 'Parent' nie pcha nic na dół */
-#authBadge{ white-space:nowrap; }
-
-/* 5) bezpieczeństwo – nic się nie wysunie poza topbar */
-.topbar, .role-switch{ overflow:hidden; }
-/* ==== TOPBAR: stałe wyśrodkowanie przycisków (desktop + laptop) ==== */
-/* Zamiast flex → 3-kolumnowy grid: [logo] [przyciski] [logout] */
-.topbar{
-  display:grid !important;
-  grid-template-columns: auto 1fr auto;   /* lewa, środek, prawa */
-  align-items:center;
-  gap:12px;
-}
-
-/* Logo / tytuł po lewej, bez wpływu na centrum */
-.topbar h1,
-#t-appTitle{
-  justify-self:start;
-  margin:0;
-}
-
-/* Cały „role-switch” (przyciski: EN, Child, Add child, Stocks, FX, Profits, Parent, Tutorial) w centrum */
-.topbar .role-switch{
-  justify-self:center;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap:nowrap;          /* NIC nie zawija się na laptopach */
-  min-width:0;               /* pozwala się zawężać */
-}
-
-/* Prawa część (badge + Logout) trzyma się prawej krawędzi */
-.topbar .authwrap{
-  justify-self:end;
-  margin-left:0;
-}
-
-/* Zapobiegaj znikaniu „Tutorial” – przywróć label na większych ekranach */
-@media (min-width: 900px){
-  #tutorialBtn span{ display:inline !important; }
-}
-
-/* Gdy już bardzo wąsko (tablety itp.) – pozwól na zawijanie i rozdziel rzędy */
-@media (max-width: 899.98px){
-  .topbar{
-    grid-template-columns: 1fr;   /* jeden pas */
-    row-gap:10px;
-  }
-  .topbar .role-switch{
-    justify-self:stretch;
-    justify-content:center;
-    flex-wrap:wrap;               /* teraz może się zawijać */
-  }
-  .topbar .authwrap{ justify-self:center; }
-}
-.kpi-box {
-  background: #111827;
-  border-radius: 10px;
-  padding: 12px 16px;
-  text-align: center;
-  min-width: 160px;
-  border: 2px solid transparent;
-}
-
-.kpi-box .kpi-label {
-  font-size: 14px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-
-.kpi-box .kpi-value {
-  font-size: 20px;
-  font-weight: bold;
-  color: var(--ink);
-}
-
-.kpi-box.earned {
-  border-color: #22c55e;
-}
-
-.kpi-box.earned .kpi-value {
-  color: #22c55e;
-}
-
-.kpi-box.loss {
-  border-color: #ef4444;
-}
-
-.kpi-box.loss .kpi-value {
-  color: #ef4444;
-}
-/* Zielone dla Total earned */
-#kpiTotal {
-  color: #22c55e; /* zielony */
-  font-weight: bold;
-}
-
-/* Czerwone dla Total loss */
-#kpiTotalLoss {
-  color: #ef4444; /* czerwony */
-  font-weight: bold;
-}
-td.space {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start; /* zamiast space-between */
-  gap: 8px;
-}
-/* było: #tab-invest, #tab-fx, #tab-parent */
-#tab-invest,
-#tab-fx,
-#tab-profits,   /* ⬅️ dodane */
-#tab-parent {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
-  gap: 12px;
-  align-items: start;
-}
-
-/* i w media query dopisz profits */
-/* Siatka kart (4 sekcje) */
-#tab-invest,
-#tab-fx,
-#tab-profits,
-#tab-parent {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
-  gap: 12px;
-  align-items: start;
-}
-
-/* 1 kolumna gdy wąsko */
-@media (max-width: 1400px){
-  #tab-invest,
-  #tab-fx,
-  #tab-profits {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Profits – siatka KPI */
-#tab-profits .kpi-grid{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(240px, 1fr));
-  gap:12px;
-}
-@media (max-width: 1200px){ #tab-profits .kpi-grid{ grid-template-columns:repeat(2,1fr); } }
-@media (max-width: 720px){  #tab-profits .kpi-grid{ grid-template-columns:1fr; } }
-#tab-profits .kpi-card .muted{ font-size:14px; }
-#tab-profits .kpi-card .value{ font-size:26px; font-weight:700; }
-
-/* KPI prefixes */
-#kpiTotal::before { content: "+ "; font-weight: 700; }
-#kpiTotalLoss::before { content: "− "; font-weight: 700; }
-.available-cash {
-  background-color: var(--card);
-  border-radius: var(--r-lg);
-  padding: 16px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  color: var(--ink);
-  font-size: 1rem;
-  margin: 0 16px; /* odstęp między Net Worth a Quick Actions */
-}
-
-.available-cash h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-/* ==== MINI JARS – sticky pasek pod topbarem (pełna szerokość) ==== */
-:root{
-  --topbar-h: 56px;   /* dostosuj jeśli zmienisz wysokość topbara */
-}
-
-/* sam pasek jest sticky i ma tło na CAŁĄ szerokość, tak jak topbar */
-#stickyMiniJars{
-  position: sticky;
-  top: var(--topbar-h);
-  z-index: 100; /* wyżej niż karty */
-  width: 100%;
-  background: color-mix(in srgb, var(--bg-2) 92%, transparent);
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  border-bottom: 1px solid var(--border-c);
-
-  /* UWAGA: sekcja #stickyMiniJars W TWOIM HTML ma klasę .mini-jars,
-     więc SIATKĘ ustawiamy bezpośrednio na #stickyMiniJars */
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  align-items: center;
-
-  /* padding jak w topbarze, żeby wyglądały identycznie na szerokość */
-  padding: 14px 20px;
-}
-
-/* elementy w pasku */
-.mini-jar{ text-align: center; }
-.mini-jar-label{ font-size: 12px; color: var(--muted); }
-.mini-jar-value{
-  font-size: 18px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-/* kolory wartości */
-#miniSave  { color:#22c55e; }
-#miniSpend { color:#f59e0b; }
-#miniGive  { color:#ec4899; }
-#miniInvest{ color:#60a5fa; }
-
-/* RWD – ten sam układ co wcześniej */
-@media (max-width: 900px){
-  #stickyMiniJars{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 500px){
-  #stickyMiniJars{ grid-template-columns: 1fr; }
-}
-/* ==== [OVERRIDE] Topbar + Mini Jars zawsze widoczne, pełna szerokość ==== */
-:root{
-  /* jeżeli zmienisz wizualnie wysokości, zaktualizuj te 2 zmienne */
-  --topbar-h: 56px;     /* wysokość topbara */
-  --minijars-h: 64px;   /* wysokość paska mini-jarów */
-}
-
-/* odsuń treść, żeby nie chowała się pod dwoma fixed paskami */
-body{
-  padding-top: calc(var(--topbar-h) + var(--minijars-h) + 12px);
-}
-
-/* TOPBAR na pełną szerokość, zawsze przyklejony do góry */
-.topbar{
-  position: fixed !important;
-  top: 0; left: 0; right: 0;
-  z-index: 300;                       /* ponad kartami/tabelami */
-  padding: 14px 20px;
-  background: color-mix(in srgb, var(--bg-2) 82%, transparent);
-  border-bottom: 1px solid var(--border-c);
-  backdrop-filter: saturate(140%) blur(8px);
-  -webkit-backdrop-filter: saturate(140%) blur(8px);
-
-  /* układ 3-kolumnowy jak miałeś */
-  display: grid !important;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 12px;
-  height: var(--topbar-h);
-  box-sizing: border-box;
-}
-
-/* MINI-JARS – też na pełną szerokość, tuż pod topbarem */
-#stickyMiniJars{
-  position: fixed !important;
-  top: var(--topbar-h);
-  left: 0; right: 0;
-  z-index: 250;                       /* pod topbarem, nad treścią */
-  height: var(--minijars-h);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  align-items: center;
-  gap: 16px;
-  padding: 14px 20px;
-  background: color-mix(in srgb, var(--bg-2) 92%, transparent);
-  border-bottom: 1px solid var(--border-c);
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  box-sizing: border-box;
-}
-
-/* RWD dla mini-jars (jak wcześniej) */
-@media (max-width: 900px){
-  #stickyMiniJars{ grid-template-columns: repeat(2, 1fr); height: auto; }
-}
-@media (max-width: 500px){
-  #stickyMiniJars{ grid-template-columns: 1fr; height: auto; }
-}
-
-/* nagłówki tabel sticky – żeby nie wjeżdżały pod paski */
-thead th{
-  position: sticky;
-  top: calc(var(--topbar-h) + var(--minijars-h));
-  z-index: 1;
-}
-
-/* na wszelki wypadek: żaden przodek nie psuje sticky/fixed overflowem */
-html, body { overflow-x: hidden; }
-
-/* kosmetyka: treści kontenera nie musisz ruszać, ale jak chcesz mieć
-   identyczne „wejście” jak topbar/mini-jars, zostaw standardowe marginesy */
-   /* ===== FIX: słoiki z powrotem w RZĘDZIE ===== */
-.jars{
-  display: grid !important;
-  grid-auto-flow: row dense;
-  grid-template-columns: repeat(4, minmax(240px, 1fr)) !important;
-  gap: 16px;
-  align-items: start;
-  margin-top: 20px;
-}
-.jars > .card{
-  min-width: 0;          /* nic nie rozszerza kolumny */
-  width: auto !important;/* gdyby coś nadawało 100% */
-}
-
-/* laptop/tablet: 2 kolumny */
-@media (max-width: 1200px){
-  .jars{
-    grid-template-columns: repeat(2, minmax(240px, 1fr)) !important;
-  }
-}
-
-/* telefon: 1 kolumna */
-@media (max-width: 640px){
-  .jars{
-    grid-template-columns: 1fr !important;
-  }
-}
-/* ===== Mini-Jars kolorystyka ===== */
-.mini-jars {
-  display: flex;
-  justify-content: space-around;
-  padding: 8px 0;
-  background: #0f172a; /* dopasowane do Twojego tła */
-}
-.mini-jar { text-align: center; }
-.mini-jar-label { font-size: 0.9rem; color: #ccc; }
-.mini-jar-amt { font-weight: bold; }
-
-.mini-jar[data-key="availableCash"] .mini-jar-amt { color: #ffffff; }
-.mini-jar[data-key="savings"]       .mini-jar-amt { color: #22c55e; }
-.mini-jar[data-key="earnings"]      .mini-jar-amt { color: #f59e0b; }
-.mini-jar[data-key="gifts"]         .mini-jar-amt { color: #ec4899; }
-.mini-jar[data-key="investments"]   .mini-jar-amt { color: #3b82f6; }
-/* ==== MINI JARS FIX: wszystkie w jednej linii ==== */
-#stickyMiniJars,
-.mini-jars.sticky {
-  display: flex !important;
-  justify-content: space-around;
-  align-items: center;
-  flex-wrap: nowrap !important; /* nie zawija */
-  gap: 20px;
-}
-
-#stickyMiniJars .mini-jar,
-.mini-jars.sticky .mini-jar {
-  text-align: center;
-  min-width: 120px; /* żeby nie ściskało */
-}
-/* 1) Karta z kontrolkami (Buy/inputs) ma być ponad sticky nagłówkiem tabeli */
-#tab-fx > .card:first-child,
-#tab-invest > .card:first-child {
-  position: relative;
-  z-index: 10;
-}
-
-/* 2) Samo pudełko z transakcją i kontrolki dodatkowo nad tabelą */
-#fxTradeBox,
-#tradeBox,
-#stockControls,
-#fxList,
-#stockList {
-  position: relative;
-  z-index: 10;
-}
-
-/* 3) Tabela: niższy stacking + brak przechwytywania klików przez nagłówek */
-.tableWrap { position: relative; z-index: 0; overflow-x: auto; }
-thead { pointer-events: none; }
-thead th {
-  position: sticky;
-  top: calc(var(--topbar-h) + var(--minijars-h));
-  z-index: 1;
-  background: #0f172acc;
-}
-thead th * { pointer-events: auto; }
-
-/* 4) Na wszelki wypadek – dodatkowy odstęp poniżej tabeli */
-.tableWrap { margin-bottom: 24px; }
-/* === HOTFIX: pasek nie zasłania wiersza z przyciskami === */
-
-/* 1) Mini-jars wracają do STICKY (nie fixed) */
-#stickyMiniJars{
-  position: sticky !important;
-  top: var(--topbar-h);
-  z-index: 200;
-  height: auto !important;
-}
-
-/* 2) Body liczy tylko topbar, nie mini-jars */
-body{
-  padding-top: calc(var(--topbar-h) + 12px) !important;
-}
-
-/* 3) Nagłówki tabel kleją się tylko do topbara */
-thead th{
-  position: sticky !important;
-  top: var(--topbar-h) !important;
-  z-index: 1;
-  background: #0f172acc;
-}
-
-/* 4) Odstęp i brak ucinania pod tabelą (żeby przyciski miały miejsce) */
-.tableWrap{
-  margin-bottom: 20px;
-  overflow-x: auto;
-  overflow-y: visible;
-}
-/* === FINAL FIX (wklej na koniec CSS) === */
-
-/* 1) Pasek top i mini-jars bez przerwy – oba fixed */
-:root{ --topbar-h:56px; --minijars-h:64px; }
-
-.topbar{
-  position: fixed !important;
-  top: 0; left: 0; right: 0;
-  z-index: 300;
-  height: var(--topbar-h);
-}
-
-#stickyMiniJars{
-  position: fixed !important;
-  top: var(--topbar-h);
-  left: 0; right: 0;
-  z-index: 250;
-  height: var(--minijars-h);
-  margin: 0 !important;
-}
-
-/* 2) Treść odsunięta dokładnie o wysokość obu pasków */
-body{
-  padding-top: calc(var(--topbar-h) + var(--minijars-h)) !important;
-}
-
-thead th{
-  position: sticky !important;
-  top: calc(var(--topbar-h) + var(--minijars-h)) !important;
-  z-index: 1;
-  background: #0f172acc;
-}
-
-.tableWrap{ position: relative; z-index: 0; overflow-x: auto; margin-bottom: 20px; }
-.tableWrap + .row,
-.tableWrap + .actions,
-.tableWrap + .buttons{
-  position: relative;
-  z-index: 10;
-}#tab-fx .tableWrap thead th,
-#tab-invest .tableWrap thead th{
-  position: static !important;
-  top: auto !important;
-  z-index: auto !important;
-  backdrop-filter: none !important;
-  background: transparent !important;
-}
-#tab-fx .tableWrap,
-#tab-invest .tableWrap{
-  overflow-x: auto;
-  overflow-y: visible;
-  margin-bottom: 20px;
-}
-#tab-fx th,
-#tab-invest th {
-  white-space: nowrap !important;
-  text-align: center;
-  vertical-align: middle;
-  padding: 8px 12px;
-}
-
-#tab-fx td,
-#tab-invest td {
-  white-space: nowrap !important;
-  text-align: center;
-  vertical-align: middle;
-  padding: 8px 12px;
-}
-
-/* ——— Komórka z przyciskami: jeden rząd, brak zawijania ——— */
-#tab-fx td.space,
-#tab-fx td.actions {
-  display: flex !important;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap !important;
-}
-
-#tab-fx td.space > *,
-#tab-fx td.actions > * {
-  flex: 0 0 auto;         /* nic się nie rozciąga i nie łamie */
-}
-
-/* ——— Węższe pole ilości, żeby zmieścić przyciski ——— */
-#tab-fx input[type="number"],
-#tab-fx input.qty,
-#tab-fx .input {
-  width: 72px !important;
-  min-width: 72px !important;
-}
-
-/* ——— Drobne: komórki i nagłówki bez łamania, zwęż marginesy ——— */
-#tab-fx th, #tab-fx td {
-  white-space: nowrap !important;
-  padding: 8px 10px;
-}
-/* === Make topbar & mini-jars identical transparency/background === */
-:root{
-  --bar-bg: color-mix(in srgb, var(--bg-2) 82%, transparent);
-}
-
-/* Top bar (bez zmiany wyglądu – tylko korzysta z tej samej zmiennej) */
-.topbar{
-  background: var(--bar-bg) !important;
-  backdrop-filter: saturate(140%) blur(8px) !important;
-  -webkit-backdrop-filter: saturate(140%) blur(8px) !important;
-  border-bottom: 1px solid var(--border-c) !important;
-}
-
-/* Mini-jars pasek – dokładnie taki sam jak topbar */
-#stickyMiniJars,
-.mini-jars,
-.mini-jars.sticky{
-  background: var(--bar-bg) !important;
-  backdrop-filter: saturate(140%) blur(8px) !important;
-  -webkit-backdrop-filter: saturate(140%) blur(8px) !important;
-  border-bottom: 1px solid var(--border-c) !important;
-}
-/* === Jars: input i +Add w jednej linii === */
-.jar-actions{
-  display:flex;
-  flex-wrap:nowrap;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-}
-
-.jar-actions .jar-input{
-  width:100px;          /* ustaw swoją szerokość */
-  flex:0 0 auto;        /* nie rozciąga się na 100% */
-}
-
-.jar-actions .btn{
-  flex:0 0 auto;        /* nie rozciąga się */
-  white-space:nowrap;   /* tekst się nie łamie */
-}
-/* HIDE/REMOVE "Max" column buttons – safe selectors */
-#tab-fx td.space .btn-max,
-#tab-invest td.space .btn-max { display: none !important; }
-
-/* if układ był kolumnowy, po usunięciu Maxa wyrównaj w jednej linii */
-#tab-fx td.space,
-#tab-invest td.space{
-  display:flex !important;
-  align-items:center;
-  gap:8px;
-  white-space:nowrap;
-}
-/* === STOCK PORTFOLIO = jak FX, bez scrolla === */
-#tab-invest .tableWrap table{ min-width:0 !important; }     /* nie wymuszaj szerokości */
-#tab-invest .tableWrap{ overflow-x:hidden; }                 /* i tak nie będzie potrzebny */
-
-#tab-invest th,
-#tab-invest td{
-  white-space:nowrap !important;
-  text-align:center;
-  vertical-align:middle;
-  padding:8px 10px;                                         /* tak samo jak w FX */
-}
-
-/* węższy input ilości jak w FX */
-#tab-invest input[type="number"],
-#tab-invest input.qty,
-#tab-invest .input{
-  width:72px !important;
-  min-width:72px !important;
-}
-
-/* akcje w jednej linii */
-#tab-invest td.space{
-  display:flex !important;
-  align-items:center;
-  gap:8px;
-  white-space:nowrap !important;
-}
-
-/* opcjonalnie: stałe proporcje kolumn, żeby ładnie się mieściło */
-#tab-invest table{ table-layout:fixed; }
-#tab-invest th:nth-child(1), #tab-invest td:nth-child(1){ width:12%; } /* Ticker   */
-#tab-invest th:nth-child(2), #tab-invest td:nth-child(2){ width:8%;  } /* Shares   */
-#tab-invest th:nth-child(3), #tab-invest td:nth-child(3){ width:15%; } /* Avg cost */
-#tab-invest th:nth-child(4), #tab-invest td:nth-child(4){ width:15%; } /* Price    */
-#tab-invest th:nth-child(5), #tab-invest td:nth-child(5){ width:15%; } /* Value    */
-#tab-invest th:nth-child(6), #tab-invest td:nth-child(6){ width:15%; } /* P/L      */
-#tab-invest th:nth-child(7), #tab-invest td:nth-child(7){ width:20%; } /* Qty+Sell */
-/* === FIX: ostatnia kolumna w Stock Portfolio === */
-#tab-invest td.space {
-  display: flex !important;
-  align-items: center;
-  gap: 8px;
-  justify-content: flex-start;
-  white-space: nowrap;
-  width: 100% !important;   /* ⬅️ pełna szerokość */
-  box-sizing: border-box;
-}
-
-/* ostatnia kolumna w tabeli też ma sięgać do końca */
-#tab-invest table th:last-child,
-#tab-invest table td:last-child {
-  width: auto !important;
-}
-/* ==== TOAST: zawsze nad mini-jars, na dole ekranu ==== */
-.toast{
-  position: fixed !important;
-  left: 50% !important;
-  bottom: calc(16px + env(safe-area-inset-bottom)) !important; /* iPhone notch-safe */
-  transform: translateX(-50%) !important;
-  z-index: 500 !important; /* topbar=300, mini-jars=250 -> toast ponad nimi */
-  background: rgba(11,18,32,.95) !important;
-  color: #fff !important;
-  padding: 12px 16px !important;
-  border-radius: 12px !important;
-  border: 1px solid rgba(255,255,255,.12) !important;
-  box-shadow: 0 10px 30px rgba(2,8,23,.45) !important;
-  pointer-events: none; /* nie blokuje klików w UI */
-  max-width: min(92vw, 560px);
-  text-align: center;
-  font-weight: 700;
-}
-
-/* opcjonalnie: delikatny fade-in/out */
-.toast{ opacity: 0; transition: opacity .2s ease; }
-.toast._show{ opacity: 1; }
-/* ===== TOAST – reset pozycji i kompaktowy pasek na dole ===== */
-.toast{
-  position: fixed !important;
-
-  /* resetuje stare "inset: 72px ..." */
-  inset: auto !important;
-  top: auto !important;
-  right: auto !important;
-
-  left: 50% !important;
-  bottom: calc(16px + env(safe-area-inset-bottom)) !important;
-  transform: translateX(-50%) !important;
-
-  z-index: 1000 !important;             /* ponad topbarem/mini-jars */
-  display: inline-block !important;     /* nie rozciąga się w pionie */
-  max-width: min(92vw, 560px) !important;
-
-  padding: 12px 16px !important;
-  border-radius: 12px !important;
-  background: rgba(11,18,32,.95) !important;
-  color: #fff !important;
-  border: 1px solid rgba(255,255,255,.12) !important;
-  box-shadow: 0 10px 30px rgba(2,8,23,.45) !important;
-
-  pointer-events: none !important;      /* nie blokuje klików */
-  text-align: center;
-  line-height: 1.3;
-
-  opacity: 0;                           /* animacja */
-  transition: opacity .25s ease;
-}
-.toast._show{ opacity: 1; }
-/* ===== price arrows ===== */
-.arrow-up   { color: #22c55e; }   /* zielony */
-.arrow-down { color: #ef4444; }   /* czerwony */
-.arrow-flat { color: #9ca3af; }   /* muted */
-/* CHILD: ukryj slot (input + Add) pod słoikami */
-body[data-role="child"] .jar-card .jar-actions { 
-  display: none !important; 
-}
-
-/* (opcjonalnie) zlikwiduj nadmiar odstępu pod słoikami w child */
-body[data-role="child"] .jar-card { 
-  gap: 4px; 
-}
-body[data-role="child"] .jar-card .jar-actions { display:none !important; }
-/* Profits → obszar przewijany dla historii, żeby sticky działał lokalnie */
-#tab-profits .tableWrap{
-  max-height: 260px;       /* możesz zmienić na swoją wysokość */
-  overflow: auto;
-  position: relative;
-}
-
-/* Sticky nagłówek – zawsze nad wierszami i z tłem */
-#tab-profits .table thead th{
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--card, #0b1220); /* solidne tło, żeby nic nie prześwitywało */
-}
-
-/* Drobne wygładzenie przewijania i wysokości wierszy (opcjonalnie) */
-#tab-profits .table tbody tr{ height: 36px; }
-/* === PATCH: stabilne nagłówki i brak „zjadania” wierszy === */
-
-/* 1) Domyślnie NIGDZIE nie rób globalnych sticky nagłówków */
-.tableWrap thead th{
-  position: static !important;
-  top: auto !important;
-  z-index: auto !important;
-  backdrop-filter: none !important;
-}
-
-/* 2) PROFITs – lokalny scroll tylko dla historii + sticky w obrębie pudełka */
-#tab-profits .tableWrap{
-  max-height: 320px;        /* możesz zwiększyć/zmniejszyć */
-  overflow: auto;           /* przewijane tylko w historii */
-  position: relative;
-}
-
-#tab-profits .tableWrap thead th{
-  position: sticky !important;
-  top: 0 !important;        /* bo scrolluje .tableWrap, nie okno */
-  z-index: 5;
-  background: #0f172acc;    /* nieprzezroczyste tło pod topbarem */
-  pointer-events: auto;     /* klik w sort/filtry jeśli masz */
-}
-
-/* 3) Market/Portfolio – zwykłe tabele, bez sticky (na wszelki wypadek) */
-#tab-fx .tableWrap thead th,
-#tab-invest .tableWrap thead th{
-  position: static !important;
-  top: auto !important;
-  z-index: auto !important;
-  background: transparent !important;
-}
-
-/* 4) Jedna definicja odsunięcia treści spod fixed topbar + mini-jars */
-:root{ --topbar-h:56px; --minijars-h:64px; }
-body{ padding-top: calc(var(--topbar-h) + var(--minijars-h)) !important; }
-/* ===== Mobile baseline fixes (Money Flow Kids) ===== */
-
-/* iOS/Android: brak poziomego przewijania i prawidłowe wypełnienie szerokości */
-html, body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* Bezpieczne strefy + wygodna poduszka dołem (żeby CTA nie wpadały pod paski systemowe) */
-:root{
-  --header-h: 64px;             /* wysokość top baru – dopasuj jeśli inna */
-  --page-pad: clamp(12px, 4vw, 20px);
-}
-
-body {
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-  /* U góry damy pad w mainie – patrz niżej */
-}
-
-/* Top bar: trzymaj nad treścią i pozwól mu „przyklejać się” */
-.topbar, .navbar, header.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  backdrop-filter: blur(8px);
-}
-
-/* Główna zawartość niech zaczyna się poniżej top baru */
-main, .page, .content, #app {
-  display: block;
-  padding: calc(var(--header-h) + env(safe-area-inset-top)) var(--page-pad) calc(16px + env(safe-area-inset-bottom));
-  box-sizing: border-box;
-}
-
-/* KPIs – pasek 'Available cash / Savings / Earnings' – elastycznie i bez łamania */
-.kpis, .summary-strip, .top-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-@media (max-width: 720px) {
-  .kpis, .summary-strip, .top-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 480px) {
-  .kpis, .summary-strip, .top-metrics { grid-template-columns: 1fr; }
-}
-
-/* Karty: pilnujemy pełnej szerokości i przewiewów po bokach */
-.card, .panel, .box {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Siatki kart – bez wymuszania zbyt szerokich kolumn */
-.grid, .cards, .sections {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-@media (max-width: 1024px){ .grid, .cards, .sections { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .grid, .cards, .sections { grid-template-columns: 1fr; } }
-
-/* Słoiki – SVG/obrazki muszą się skalować do kontenera */
-.jar-svg, .jar-img, .jar canvas, .jar img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-width: 360px; /* opcjonalnie: niech nie rośnie ponad tę szerokość */
-  margin-inline: auto;
-}
-
-/* Quick Actions – żeby przyciski nie wychodziły poza ekran */
-.quick-actions, .actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-@media (max-width: 480px) { .quick-actions, .actions { grid-template-columns: 1fr; } }
-
-/* Global Trends – tabela przewijalna horyzontalnie na wąskich ekranach */
-.global-trends, .stocks-table, .fx-table {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Teksty w KPI – bez „rozpychania” */
-.kpi .value, .kpi .title {
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
-}
-
-/* Upewnij się, że żadne „container” nie mają sztywnego width > 100% */
-.container, .wrap, .inner {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  box-sizing: border-box;
-}
-
-/* Częsty winowajca: margin/padding kolidujący z zaokrągleniami – ograniczamy overflow */
-.section, .panel {
-  overflow: hidden; /* cienie i zaokrąglenia wyglądają lepiej, nic nie wystaje */
-}
-/* ===== Money Flow Kids — Mobile & Drawer ===== */
-
-/* Sticky topbar ponad treścią */
-.mfk-topbar, .topbar, .navbar, header.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 200;
-  background: rgba(7, 11, 22, .72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-}
-
-/* Treść odsunięta od realnej wysokości topbaru (ustawianej w JS) */
-:root { --header-h: 64px; }
-main, .page, .content, #app {
-  padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  padding-left: clamp(12px, 4vw, 20px);
-  padding-right: clamp(12px, 4vw, 20px);
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  box-sizing: border-box;
-}
-
-/* Zapobiegaj poziomemu scrollowi na tel. */
-html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
-
-/* Drawer (boczne menu) */
-.mfk-drawer{
-  position: fixed; inset: 0 auto 0 0;
-  width: 82%; max-width: 320px; height: 100dvh;
-  transform: translateX(-100%);
-  transition: transform .25s ease;
-  background: rgba(10,14,27,.96);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border-right: 1px solid rgba(255,255,255,.08);
-  z-index: 300; display: flex; flex-direction: column;
-}
-.mfk-drawer.open{ transform: translateX(0); }
-
-.mfk-drawer-nav{ display: grid; gap: 10px; padding: 16px; }
-.mfk-drawer-nav .tab{
-  display:block; text-align:left;
-  padding: 12px 14px; border-radius: 12px;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.08);
-}
-
-/* Backdrop */
-.mfk-backdrop{
-  position: fixed; inset: 0; z-index: 250;
-  background: rgba(0,0,0,.4);
-}
-
-/* Desktop: chowamy drawer i hamburgera opcjonalnie */
-@media (min-width: 992px){
-  .mfk-drawer, .mfk-backdrop { display: none !important; }
-}
-
-/* KPI / tabele responsywnie (żeby nic nie było ucięte) */
-.kpis, .summary-strip, .top-metrics {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
-}
-@media (max-width: 720px){ .kpis, .summary-strip, .top-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-@media (max-width: 480px){ .kpis, .summary-strip, .top-metrics { grid-template-columns: 1fr; } }
-
-.global-trends, .stocks-table, .fx-table, .tableWrap {
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-}
-
-/* Jeżeli masz pseudo-elementy/overlaye w headerze, niech nie blokują kliknięć */
-.mfk-topbar::before, .mfk-topbar::after { pointer-events: none; }
-.mfk-topbar, .mfk-topbar * { pointer-events: auto; }
-/* ===== Topbar responsive fix (desktop vs mobile) ===== */
-
-/* Wspólny układ topbaru */
-.mfk-topbar{
-  display:flex; align-items:center; gap:10px;
-  padding:8px 12px;
-}
-.mfk-topbar h1{ margin:0; white-space:nowrap; font-size: clamp(18px, 2vw, 22px); }
-
-/* MOBILE (<= 991px): chowamy pełne menu, pokazujemy hamburgera */
-@media (max-width: 991px){
-  #mfkTopNav{ display:none !important; }   /* menu w topbarze przenosi się do drawer */
-  .mfk-nav-toggle{ display:inline-flex !important; }
-  .authwrap{ margin-left:auto; }
-}
-
-/* DESKTOP (>= 992px): chowamy hamburgera i drawer, pokazujemy pełne menu */
-@media (min-width: 992px){
-  .mfk-nav-toggle{ display:none !important; }            /* ← brak hamburgera na desktopie */
-  #mfkTopNav{ display:flex !important; gap:8px; }        /* pełne menu widoczne */
-  .mfk-drawer, .mfk-backdrop{ display:none !important; } /* drawer/offcanvas wyłączone */
-}
-
-/* Zapobieganie klik-blokadzie przez pseudo-elementy */
-.mfk-topbar::before, .mfk-topbar::after{ pointer-events:none; }
-.mfk-topbar, .mfk-topbar *{ pointer-events:auto; }
-/* Mini jars sticky bar fix */
-.mini-jars.sticky{
-  position: sticky;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  z-index: 150;
-  display: flex;
-  justify-content: space-around;
-  padding: 6px 10px;
-  background: rgba(7,11,22,0.72);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-}
-.mini-jars .mini-jar-label{ font-size: 0.75rem; }
-.mini-jars .mini-jar-value{ font-weight: 700; font-size: 0.9rem; }
-/* Net Worth + Available Cash + Quick Actions responsive */
-.grid.g-3{
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-@media (max-width: 1024px){
-  .grid.g-3{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px){
-  .grid.g-3{ grid-template-columns: 1fr; }
-}
-/* Sticky mini jars – optymalizacja na telefonie */
-#stickyMiniJars {
-  display: flex;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 4px 6px;
-  background: rgba(0,0,0,0.3); /* lekki kontrast, jak masz już to usuń */
-}
-
-#stickyMiniJars .mini-jar {
-  flex: 1; /* wszystkie dzielą równą szerokość */
-  min-width: 0; /* pozwala się ścisnąć */
-  text-align: center;
-  font-size: 0.75rem; /* zmniejszona czcionka */
-  line-height: 1.2;
-}
-
-#stickyMiniJars .mini-jar-label {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--muted, #aaa);
-}
-
-#stickyMiniJars .mini-jar-value {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-/* === FINAL MINI-JARS FIX === */
-#stickyMiniJars {
-  display: flex !important;
-  justify-content: space-around;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  flex-wrap: nowrap !important;   /* ⬅️ nie zawija */
-}
-
-#stickyMiniJars .mini-jar {
-  flex: 1 1 auto;        /* wszystkie zajmują równą szerokość */
-  min-width: 0;          /* pozwala się ścisnąć */
-  text-align: center;
-}
-
-#stickyMiniJars .mini-jar-label {
-  display: block;
-  font-size: 0.65rem;    /* mniejsze etykiety */
-  line-height: 1.1;
-  color: var(--muted, #aaa);
-}
-
-#stickyMiniJars .mini-jar-value {
-  font-size: 0.85rem;    /* mniejsze wartości */
-  font-weight: 700;
-  white-space: nowrap;   /* ⬅️ nie łamie się w 2 linie */
-}
