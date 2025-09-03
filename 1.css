@@ -1718,5 +1718,17 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     transform:none !important;
   }
 }
+@media (max-width: 991px){
+  .mfk-drawer-nav .tab {
+    background-image: linear-gradient(135deg, #3b82f6 0%, #2ef6b6 100%) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,.35) !important;
+  }
 
+  /* hover/active subtelnie */
+  .mfk-drawer-nav .tab:hover { filter: brightness(1.06); }
+  .mfk-drawer-nav .tab:active { filter: brightness(.96); }
+}
 
