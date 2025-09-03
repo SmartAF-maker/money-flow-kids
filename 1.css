@@ -1371,3 +1371,31 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   font-size: 0.85rem;
   font-weight: 600;
 }
+/* === FINAL MINI-JARS FIX === */
+#stickyMiniJars {
+  display: flex !important;
+  justify-content: space-around;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  flex-wrap: nowrap !important;   /* ⬅️ nie zawija */
+}
+
+#stickyMiniJars .mini-jar {
+  flex: 1 1 auto;        /* wszystkie zajmują równą szerokość */
+  min-width: 0;          /* pozwala się ścisnąć */
+  text-align: center;
+}
+
+#stickyMiniJars .mini-jar-label {
+  display: block;
+  font-size: 0.65rem;    /* mniejsze etykiety */
+  line-height: 1.1;
+  color: var(--muted, #aaa);
+}
+
+#stickyMiniJars .mini-jar-value {
+  font-size: 0.85rem;    /* mniejsze wartości */
+  font-weight: 700;
+  white-space: nowrap;   /* ⬅️ nie łamie się w 2 linie */
+}
