@@ -1432,48 +1432,60 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   /* Fallback: gdy brak data-action – zwykle "Clean demo" ma klasę danger */
   #tab-parent .btn-danger{ order: 3; }
 }
-/* ==== MOBILE-ONLY (≤640px) – first screen + Parent layout ==== */
+/* ==== MOBILE FIXES (≤640px) — bez psucia desktopu ==== */
 @media (max-width: 640px){
 
-  /* 1) Ekran 1: Net Worth, Available Cash, Quick Actions jeden pod drugim */
+  /* 1) Ekran 1: Net Worth → Available Cash → Quick Actions pionowo */
   .grid.g-3{
     grid-template-columns: 1fr !important;
   }
-  .grid.g-3 > *{ min-width: 0 !important; }
-
-  /* 2) Parent: wszystko w jednej kolumnie i bez "znikania" obok Settings */
-  #tab-parent{
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-  /* wiersze/sekcje w Parent pionowo i na pełną szerokość */
-  #tab-parent .row,
-  #tab-parent .actions,
-  #tab-parent .space{
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 10px !important;
-  }
-  #tab-parent .row > *,
-  #tab-parent .actions > *,
-  #tab-parent .space > *{
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  /* jawna kolejność sekcji w Parent (dopasuj do swoich ID/atrybutów) */
-  #parentSettings,        [data-action="settings"]      { order: 1; }
-  #parentHistory,         [data-section="history"]      { order: 2; }
-  #parentAllowance,       [data-action="allowance"]     { order: 3; }
-  #parentClearDemo,       [data-action="clean-demo"],
-  #cleanDemoBtn                                          { order: 4; }
-
-  /* przyciski na całą szerokość */
-  #tab-parent .btn,
-  #tab-parent button{ width: 100% !important; }
-
-  /* nic nie przycina zawartości kart */
-  #tab-parent .card{ overflow: visible !important; }
+  .grid.g-3 > *{ min-width:0 !important; }
 }
+
+/* 2) NIE wymuszaj wyświetlania #tab-parent, gdy ma klasę .hidden */
+#tab-parent.hidden{ display:none !important; }
+
+/* 3) Parent układ w kolumnie TYLKO gdy zakładka jest widoczna */
+#tab-parent:not(.hidden){
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+#tab-parent:not(.hidden) .row,
+#tab-parent:not(.hidden) .actions,
+#tab-parent:not(.hidden) .space{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:10px;
+}
+#tab-parent:not(.hidden) .row > *,
+#tab-parent:not(.hidden) .actions > *,
+#tab-parent:not(.hidden) .space > *{
+  width:100%;
+  min-width:0;
+}
+
+/* 4) Czytelna kolejność w Parent (jeśli masz te identyfikatory/atrybuty) */
+#tab-parent:not(.hidden) #parentSettings,        /* Settings */
+#tab-parent:not(.hidden) [data-action="settings"]     { order:1; }
+#tab-parent:not(.hidden) #parentHistory,
+#tab-parent:not(.hidden) [data-section="history"]     { order:2; }
+#tab-parent:not(.hidden) #parentAllowance,
+#tab-parent:not(.hidden) [data-action="allowance"]    { order:3; }
+#tab-parent:not(.hidden) #parentClearDemo,
+#tab-parent:not(.hidden) [data-action="clean-demo"],
+#tab-parent:not(.hidden) #cleanDemoBtn               { order:4; }
+
+/* 5) Drawer (hamburger): upewnij się, że „Parent” jest widoczny na mobile */
+@media (max-width: 991px){
+  .mfk-drawer-nav [data-tab="parent"],
+  .mfk-drawer-nav .tab-parent,
+  .mfk-drawer-nav button[data-role="parent"]{
+    display:block !important;
+    visibility:visible !important;
+  }
+}
+
+/* 6) Na wszelki wypadek: nic nie chowa elementów w Parent przez overflow */
+#tab-parent .card{ overflow:visible !important; }
