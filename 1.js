@@ -1315,22 +1315,36 @@ function ensureSellButtons() {
 // ====== TRADE — Stocks ======
 function updateTradeBox() {
   ensureSellButtons();
+
   const ch = activeChild();
-  if (!tradeBox || !ch || !selectedStock) { tradeBox && (tradeBox.style.display = "none"); return; }
+  if (!tradeBox || !ch || !selectedStock) {
+    if (tradeBox) tradeBox.style.display = "none";
+    return;
+  }
+
   const s = ch.stocks.find(x => x.t === selectedStock);
-  const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
+  if (!s) {
+    tradeBox.style.display = "none";
+    return;
+  }
+
+  const qty = Math.max(1, parseInt((qtyInput?.value || "1"), 10));
   lastStockUiPrice = s.p;
+
   if (tradeTitle) tradeTitle.textContent = `Trade ${s.t}`;
-  if (costEl) costEl.textContent = PLN(qty * s.p);
+  if (costEl)     costEl.textContent     = PLN(qty * s.p);
   tradeBox.style.display = "block";
-}
- const sellBtn = document.getElementById('sellBtn');
+
+  // ⬇️ aktualizacja stanu przycisku Sell – MUSI BYĆ W ŚRODKU FUNKCJI
+  const sellBtn = document.getElementById('sellBtn');
   if (sellBtn) {
     const pos = ch.portfolio?.[s.t];
     const canSell = !!(pos && pos.s > 0);
     sellBtn.disabled = !canSell;
     sellBtn.title = canSell ? "" : "You have 0 shares to sell";
   }
+}
+
 function buyStock() {
   const ch = activeChild(); if (!ch || !selectedStock) return;
   const s = ch.stocks.find(x => x.t === selectedStock);
@@ -1362,16 +1376,17 @@ function buyStock() {
   else { ch.portfolio[s.t] = { s: Number(pos.s), b: Number(pos.b.toFixed(5)) }; }
 
   save(app);
-  costEl && (costEl.textContent = PLN(cost));
+  if (costEl) costEl.textContent = PLN(cost);
   toast(TT().bought(qty, s.t));
   renderJars();
   renderPortfolioStocks();
   renderProfits();
 }
+
 function sellStock(t, qty) {
   qty = Math.max(1, parseInt(qty || "1", 10));
 
-  const ch = activeChild(); 
+  const ch = activeChild();
   if (!ch) return;
 
   const pos = ch.portfolio?.[t];
@@ -1410,21 +1425,31 @@ function sellStock(t, qty) {
 // ====== TRADE — FX (WERSJA USD) ======
 function updateFxTradeBox() {
   ensureSellButtons();
-  if (!fxTradeBox || !selectedFxPair) { fxTradeBox && (fxTradeBox.style.display = "none"); return; }
+
+  if (!fxTradeBox || !selectedFxPair) {
+    if (fxTradeBox) fxTradeBox.style.display = "none";
+    return;
+  }
+
+  const ch = activeChild();
   const rUsd = rateUsdFromPair(selectedFxPair);
   lastFxUiPrice = rUsd;
+
   const qty = Math.max(1, parseFloat(fxQty.value || "1"));
   if (fxTradeTitle) fxTradeTitle.textContent = `FX Trade ${selectedFxPair}`;
-  if (fxCost) fxCost.textContent = PLN(rUsd * qty); // koszt w USD
+  if (fxCost) fxCost.textContent = PLN(rUsd * qty);
   fxTradeBox.style.display = "block";
-}
+
+  // 🔒 stan przycisku SELL zależny od posiadanej pozycji
   const fxSellBtn = document.getElementById('fxSellBtn');
   if (fxSellBtn) {
-    const pos = activeChild()?.fxPortfolio?.[selectedFxPair];
+    const pos = ch?.fxPortfolio?.[selectedFxPair];
     const canSell = !!(pos && pos.q > 0);
     fxSellBtn.disabled = !canSell;
     fxSellBtn.title = canSell ? "" : "You have 0 units to sell";
   }
+}
+
 
 function buyFx() {
   const ch = activeChild(); if (!ch || !selectedFxPair) return;

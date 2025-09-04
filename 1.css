@@ -1741,6 +1741,37 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     border-color: #ffc9c9 !important;
   }
 }
+/* FX: nie ścinaj prawej krawędzi i daj miejsce na przycisk */
+#tab-fx .tableWrap{
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  padding-right: 12px;            /* oddech od prawej */
+}
+
+#tab-fx table{
+  table-layout: fixed !important;  /* stabilne szerokości */
+  width: 100% !important;
+}
+
+/* ostatnia kolumna – stałe minimum + odsunięcie od krawędzi */
+#tab-fx table th:last-child,
+#tab-fx table td:last-child{
+  min-width: 140px !important;     /* miejsce na input + przycisk */
+  width: 140px !important;
+  padding-right: 12px !important;
+  box-sizing: border-box;
+}
+
+/* akcje w jednej linii (gdyby coś je łamało) */
+#tab-fx td.space{
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  white-space: nowrap !important;
+}
+
+
 
  
 

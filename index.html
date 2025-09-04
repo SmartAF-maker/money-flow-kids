@@ -501,7 +501,8 @@
         <div class="card">
           <div class="title" data-i18n="stocksPortfolio">Stock Portfolio</div>
           <div id="portfolioEmpty" class="muted" data-i18n="empty">No positions.</div>
-          <div class="tableWrap" style="overflow: auto; display: none">
+         <div class="tableWrap" style="overflow-x:auto; overflow-y:visible; padding-right:12px; display:none">
+
             <table>
               <thead>
                 <tr class="muted">
@@ -520,57 +521,73 @@
         </div>
       </section>
 
-      <!-- FX -->
-      <section id="tab-fx" class="grid hidden">
-        <div class="card">
-          <div class="row"><div class="title" data-i18n="fxMarket">Currency Market (FX)</div></div>
+<!-- FX -->
+<section id="tab-fx" class="grid hidden">
+  <div class="card">
+    <div class="row"><div class="title" data-i18n="fxMarket">Currency Market (FX)</div></div>
 
-          <div class="row" style="margin: 6px 0">
-            <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
-            <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
-          </div>
+    <div class="row" style="margin: 6px 0">
+      <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
+      <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
+    </div>
 
-          <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
+    <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
 
-          <div id="fxTradeBox" class="card" style="margin-top: 12px; display: none">
-            <div class="title" id="fxTradeTitle" data-i18n="fxTrade">FX Transaction</div>
+    <div id="fxTradeBox" class="card" style="margin-top: 12px; display: none">
+      <div class="title" id="fxTradeTitle" data-i18n="fxTrade">FX Transaction</div>
 
-            <div class="row" style="margin-bottom: 8px">
-              <label class="muted" data-i18n="qtyBase">Quantity (base currency)</label>
-              <input id="fxQty" type="number" min="1" step="1" value="100" class="input" />
-              <div class="right muted"><span data-i18n="cost">Cost:</span> <span id="fxCost">0.00 USD</span></div>
-            </div>
+      <div class="row" style="margin-bottom: 8px">
+        <label class="muted" data-i18n="qtyBase">Quantity (base currency)</label>
+        <input id="fxQty" type="number" min="1" step="1" value="100" class="input" />
+        <div class="right muted"><span data-i18n="cost">Cost:</span> <span id="fxCost">0.00 USD</span></div>
+      </div>
 
-            <div class="space">
-              <button id="fxBuyBtn" class="btn primary" data-i18n="buy">Buy (investment cash)</button>
-              <button id="fxCancelTrade" class="btn" data-i18n="cancel">Cancel</button>
-            </div>
+      <div class="space">
+        <button id="fxBuyBtn" class="btn primary" data-i18n="buy">Buy (investment cash)</button>
+        <button id="fxCancelTrade" class="btn" data-i18n="cancel">Cancel</button>
+      </div>
 
-            <div class="sub" data-i18n="fxHint"></div>
-          </div>
-        </div>
+      <div class="sub" data-i18n="fxHint"></div>
+    </div>
+  </div>
 
-        <div class="card">
-          <div class="title" data-i18n="fxPortfolio">FX Portfolio</div>
-          <div id="fxEmpty" class="muted" data-i18n="empty">No positions.</div>
-          <div class="tableWrap" style="overflow: auto; display: none">
-            <table>
-              <thead>
-                <tr class="muted">
-                  <th data-i18n="pair">Pair</th>
-                  <th data-i18n="amount">Amount</th>
-                  <th data-i18n="avgRate">Avg. rate</th>
-                  <th data-i18n="rate">Rate</th>
-                  <th>Value (USD)</th>
-                  <th>P/L</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="fxBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+  <div class="card">
+    <div class="title" data-i18n="fxPortfolio">FX Portfolio</div>
+    <div id="fxEmpty" class="muted" data-i18n="empty">No positions.</div>
+
+    <!-- KLUCZ: overflow-x:hidden + overflow-y:visible (żeby tło pod guzikami się nie ucinało) -->
+    <div class="tableWrap" style="overflow-x:hidden; overflow-y:visible; display:none">
+      <table>
+        <!-- Proporcje kolumn – jak w Stock Portfolio; ostatnia kolumna elastyczna -->
+        <colgroup>
+          <col style="width:18%">
+          <col style="width:12%">
+          <col style="width:16%">
+          <col style="width:12%">
+          <col style="width:16%">
+          <col style="width:12%">
+          <col style="width:auto">  <!-- Qty + Sell -->
+        </colgroup>
+
+        <thead>
+          <tr class="muted">
+            <th data-i18n="pair">Pair</th>
+            <th data-i18n="amount">Amount</th>
+            <th data-i18n="avgRate">Avg. rate</th>
+            <th data-i18n="rate">Rate</th>
+            <th>Value (USD)</th>
+            <th>P/L</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody id="fxBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 
       <!-- Profits -->
       <section id="tab-profits" class="grid hidden">
