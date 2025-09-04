@@ -1741,34 +1741,51 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     border-color: #ffc9c9 !important;
   }
 }
-/* FX: nie ścinaj prawej krawędzi i daj miejsce na przycisk */
+/* --- FX: kompakt między Pair a Amount + bez paska przewijania --- */
 #tab-fx .tableWrap{
-  overflow-x: auto !important;
-  overflow-y: visible !important;
-  padding-right: 12px;            /* oddech od prawej */
+  overflow-x: hidden !important;     /* bez poziomego scrolla */
+  padding-right: 0 !important;       /* nic nie „pcha” w prawo */
 }
 
 #tab-fx table{
-  table-layout: fixed !important;  /* stabilne szerokości */
+  table-layout: fixed !important;
   width: 100% !important;
 }
 
-/* ostatnia kolumna – stałe minimum + odsunięcie od krawędzi */
-#tab-fx table th:last-child,
-#tab-fx table td:last-child{
-  min-width: 140px !important;     /* miejsce na input + przycisk */
-  width: 140px !important;
-  padding-right: 12px !important;
+#tab-fx th, #tab-fx td{
+  padding: 8px 10px;                 /* bazowe, równe */
+  white-space: nowrap !important;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* 1) Zmniejsz dystans MIĘDZY 1. i 2. kolumną */
+#tab-fx th:nth-child(1), #tab-fx td:nth-child(1){ padding-right: 6px !important; }
+#tab-fx th:nth-child(2), #tab-fx td:nth-child(2){ padding-left: 6px !important; }
+
+/* 2) Ostatnia kolumna: tyle, by zmieścić input + przycisk, bez wciskania scrolla */
+#tab-fx th:last-child, #tab-fx td:last-child{
+  min-width: 136px !important;       /* było 148–160, to często wywoływało scroll */
+  width: 136px !important;
+  padding-right: 8px !important;
   box-sizing: border-box;
 }
 
-/* akcje w jednej linii (gdyby coś je łamało) */
+/* 3) Akcje w jednej linii i BEZ marginesu w lewo (to robiło „przerwę”) */
 #tab-fx td.space{
   display: flex !important;
-  gap: 8px !important;
   align-items: center !important;
+  gap: 8px !important;
   justify-content: flex-start !important;
+  margin-left: 0 !important;         /* usuwa sztuczną szczelinę */
   white-space: nowrap !important;
+}
+
+/* 4) Węższy numeryczny input w akcjach — żeby wszystko siadło elegancko */
+#tab-fx td.space input[type="number"],
+#tab-fx td.space .input{
+  width: 72px !important;
+  min-width: 72px !important;
 }
 
 
