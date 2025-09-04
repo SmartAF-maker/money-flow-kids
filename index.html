@@ -463,132 +463,194 @@
         <div id="globalTrendsList" class="trend-list"></div>
       </section>
 
-      <!-- Stocks -->
-      <section id="tab-invest" class="grid">
-        <div class="card">
-          <div class="row"><div class="title" data-i18n="stocksMarket">Stock Market</div></div>
+<!-- Stocks -->
+<section id="tab-invest" class="grid">
+  <!-- LEWA: Stock Market + Trade -->
+  <div class="col left">
+    <div class="card">
+      <div class="row">
+        <div class="title" data-i18n="stocksMarket">Stock Market</div>
+      </div>
 
-          <div class="row" style="margin: 6px 0" id="stockControls">
-            <select id="stockRegion" class="input" title="Region" style="max-width: 170px">
-              <option value="all">All regions</option>
-              <option value="usa">USA</option>
-              <option value="eu">Europe</option>
-              <option value="cn">China</option>
-            </select>
+      <div class="row" style="margin: 6px 0" id="stockControls">
+        <select id="stockRegion" class="input" title="Region" style="max-width: 170px">
+          <option value="all">All regions</option>
+          <option value="usa">USA</option>
+          <option value="eu">Europe</option>
+          <option value="cn">China</option>
+        </select>
 
-            <input id="stockSearch" class="input" placeholder="AAPL, Microsoft…" />
-            <button id="stockAddPopular" class="btn">Add more</button>
-          </div>
+        <input id="stockSearch" class="input" placeholder="AAPL, Microsoft…" />
+        <button id="stockAddPopular" class="btn">Add more</button>
+      </div>
 
-          <div id="stockList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
+      <div id="stockList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
 
-          <div id="tradeBox" class="card" style="margin-top: 12px; display: none">
-            <div class="title" id="tradeTitle">Transaction</div>
+      <div id="tradeBox" class="card" style="margin-top: 12px; display: none">
+        <div class="title" id="tradeTitle">Transaction</div>
 
-            <div class="row" style="margin-bottom: 8px">
-              <label class="muted" data-i18n="qty">Quantity</label>
-              <input id="qty" type="number" min="1" step="1" value="1" class="input" />
-              <div class="right muted"><span data-i18n="cost">Cost:</span> <span id="cost">0.00 USD</span></div>
-            </div>
-
-            <div class="space">
-              <button id="buyBtn" class="btn primary" data-i18n="buy">Buy (investment cash)</button>
-              <button id="cancelTrade" class="btn" data-i18n="cancel">Cancel</button>
-            </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label class="muted" data-i18n="qty">Quantity</label>
+          <input id="qty" type="number" min="1" step="1" value="1" class="input" />
+          <div class="right muted">
+            <span data-i18n="cost">Cost:</span>
+            <span id="cost">0.00 USD</span>
           </div>
         </div>
 
-        <div class="card">
-          <div class="title" data-i18n="stocksPortfolio">Stock Portfolio</div>
-          <div id="portfolioEmpty" class="muted" data-i18n="empty">No positions.</div>
-         <div class="tableWrap" style="overflow-x:auto; overflow-y:visible; padding-right:12px; display:none">
-
-            <table>
-              <thead>
-                <tr class="muted">
-                  <th data-i18n="ticker">Ticker</th>
-                  <th data-i18n="shares">Shares</th>
-                  <th data-i18n="avgCost">Avg. cost</th>
-                  <th data-i18n="price">Price</th>
-                  <th data-i18n="value">Value</th>
-                  <th>P/L</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="portfolioBody"></tbody>
-            </table>
-          </div>
+        <div class="space">
+          <button id="buyBtn" class="btn primary" data-i18n="buy">Buy (investment cash)</button>
+          <button id="cancelTrade" class="btn" data-i18n="cancel">Cancel</button>
         </div>
-      </section>
-
-<!-- FX -->
-<section id="tab-fx" class="grid hidden">
-  <div class="card">
-    <div class="row"><div class="title" data-i18n="fxMarket">Currency Market (FX)</div></div>
-
-    <div class="row" style="margin: 6px 0">
-      <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
-      <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
-    </div>
-
-    <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
-
-    <div id="fxTradeBox" class="card" style="margin-top: 12px; display: none">
-      <div class="title" id="fxTradeTitle" data-i18n="fxTrade">FX Transaction</div>
-
-      <div class="row" style="margin-bottom: 8px">
-        <label class="muted" data-i18n="qtyBase">Quantity (base currency)</label>
-        <input id="fxQty" type="number" min="1" step="1" value="100" class="input" />
-        <div class="right muted"><span data-i18n="cost">Cost:</span> <span id="fxCost">0.00 USD</span></div>
       </div>
-
-      <div class="space">
-        <button id="fxBuyBtn" class="btn primary" data-i18n="buy">Buy (investment cash)</button>
-        <button id="fxCancelTrade" class="btn" data-i18n="cancel">Cancel</button>
-      </div>
-
-      <div class="sub" data-i18n="fxHint"></div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="title" data-i18n="fxPortfolio">FX Portfolio</div>
-    <div id="fxEmpty" class="muted" data-i18n="empty">No positions.</div>
+  <!-- PRAWA: najpierw Basket, potem Portfolio -->
+  <div class="col right">
+    <!-- Basket (JEDYNY dla akcji) -->
+    <div class="card basket" id="stock-basket">
+      <div class="panel-header">
+        <h3>Basket (Stocks)</h3>
+      </div>
 
-    <!-- KLUCZ: overflow-x:hidden + overflow-y:visible (żeby tło pod guzikami się nie ucinało) -->
-    <div class="tableWrap" style="overflow-x:hidden; overflow-y:visible; display:none">
-      <table>
-        <!-- Proporcje kolumn – jak w Stock Portfolio; ostatnia kolumna elastyczna -->
-        <colgroup>
-          <col style="width:18%">
-          <col style="width:12%">
-          <col style="width:16%">
-          <col style="width:12%">
-          <col style="width:16%">
-          <col style="width:12%">
-          <col style="width:auto">  <!-- Qty + Sell -->
-        </colgroup>
+      <div class="basket-list" data-basket-list="stocks">
+        <div class="basket-empty">No items in basket.</div>
+      </div>
 
-        <thead>
-          <tr class="muted">
-            <th data-i18n="pair">Pair</th>
-            <th data-i18n="amount">Amount</th>
-            <th data-i18n="avgRate">Avg. rate</th>
-            <th data-i18n="rate">Rate</th>
-            <th>Value (USD)</th>
-            <th>P/L</th>
-            <th></th>
-          </tr>
-        </thead>
+      <div class="basket-summary row" style="justify-content: space-between">
+        <div class="metric">
+          <span>Quantity</span>
+          <strong class="val" data-basket-qty="stocks">0</strong>
+        </div>
+        <div class="metric">
+          <span>Amount</span>
+          <strong class="val" data-basket-amt="stocks">0.00 USD</strong>
+        </div>
+      </div>
 
-        <tbody id="fxBody">
-        </tbody>
-      </table>
+      <div class="basket-actions">
+        <button class="btn btn-grad" data-basket-buy="stocks">Buy (investment cash)</button>
+      </div>
+    </div>
+
+    <!-- Stock Portfolio -->
+    <div class="card">
+      <div class="title" data-i18n="stocksPortfolio">Stock Portfolio</div>
+      <div id="portfolioEmpty" class="muted" data-i18n="empty">No positions.</div>
+      <div class="tableWrap" style="overflow: auto; display: none">
+        <table>
+          <thead>
+            <tr class="muted">
+              <th data-i18n="ticker">Ticker</th>
+              <th data-i18n="shares">Shares</th>
+              <th data-i18n="avgCost">Avg. cost</th>
+              <th data-i18n="price">Price</th>
+              <th data-i18n="value">Value</th>
+              <th>P/L</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="portfolioBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>
 
 
+<!-- FX -->
+<section id="tab-fx" class="grid hidden">
+  <!-- LEWA: FX Market + Trade -->
+  <div class="col left">
+    <div class="card">
+      <div class="row">
+        <div class="title" data-i18n="fxMarket">Currency Market (FX)</div>
+      </div>
+
+      <div class="row" style="margin: 6px 0">
+        <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
+        <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
+      </div>
+
+      <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
+
+      <div id="fxTradeBox" class="card" style="margin-top: 12px; display: none">
+        <div class="title" id="fxTradeTitle" data-i18n="fxTrade">FX Transaction</div>
+
+        <div class="row" style="margin-bottom: 8px">
+          <label class="muted" data-i18n="qtyBase">Quantity (base currency)</label>
+          <input id="fxQty" type="number" min="1" step="1" value="100" class="input" />
+          <div class="right muted">
+            <span data-i18n="cost">Cost:</span>
+            <span id="fxCost">0.00 USD</span>
+          </div>
+        </div>
+
+        <div class="space">
+          <button id="fxBuyBtn" class="btn primary" data-i18n="buy">Buy (investment cash)</button>
+          <button id="fxCancelTrade" class="btn" data-i18n="cancel">Cancel</button>
+        </div>
+
+        <div class="sub" data-i18n="fxHint"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRAWA: najpierw Basket, potem Portfolio -->
+  <div class="col right">
+    <!-- Basket -->
+    <div class="card basket" id="fx-basket">
+      <div class="panel-header">
+        <h3>Basket (FX)</h3>
+      </div>
+
+      <div class="basket-list" data-basket-list="fx">
+        <div class="basket-empty">No items in basket.</div>
+      </div>
+
+      <!-- Podsumowanie: Quantity i Amount obok siebie -->
+      <div class="basket-summary row" style="justify-content: space-between">
+        <div class="metric">
+          <span>Quantity</span>
+          <strong class="val" data-basket-qty="fx">0</strong>
+        </div>
+        <div class="metric">
+          <span>Amount</span>
+          <strong class="val" data-basket-amt="fx">0.00 USD</strong>
+        </div>
+      </div>
+
+      <div class="basket-actions">
+        <button class="btn btn-grad" data-basket-buy="fx">Buy (investment cash)</button>
+      </div>
+    </div>
+
+    <!-- FX Portfolio -->
+    <div class="card">
+      <div class="title" data-i18n="fxPortfolio">FX Portfolio</div>
+      <div id="fxEmpty" class="muted" data-i18n="empty">No positions.</div>
+      <div class="tableWrap" style="overflow: auto; display: none">
+        <table>
+          <thead>
+            <tr class="muted">
+              <th data-i18n="pair">Pair</th>
+              <th data-i18n="amount">Amount</th>
+              <th data-i18n="avgRate">Avg. rate</th>
+              <th data-i18n="rate">Rate</th>
+              <th>Value (USD)</th>
+              <th>P/L</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="fxBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+    
+  
       <!-- Profits -->
       <section id="tab-profits" class="grid hidden">
         <div class="card">

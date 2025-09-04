@@ -1,4 +1,4 @@
-  // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+   // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 (function lockNetwork() {
   const of = window.fetch;
   const ALLOW_ORIGINS = new Set([
@@ -235,7 +235,7 @@ function load() {
 if (!parsed.trends) parsed.trends = { stocks: {}, fx: {} };
 Object.values(parsed.children || {}).forEach(ch => {
   ensureExpandedStocks(ch);
-  sanitizePositions(ch); // ⬅️ ważne
+  sanitizePositions(ch); //⬅️ ważne
 });
 return parsed;
 }
