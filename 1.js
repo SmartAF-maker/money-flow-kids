@@ -40,6 +40,10 @@ const FX = v =>
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const nowISO = () => { const d = new Date(); return d.toISOString().slice(0, 10) + "T" + d.toTimeString().slice(0, 8); };
 
+// ========== helper: licz jak „do grosza” ==========
+const toCents = v => Math.round(Number(v || 0) * 100) / 100;
+
+
 // ====== FX CONFIG ======
 const ISO = ["PLN", "USD", "EUR", "GBP", "CHF", "JPY", "AUD", "CAD", "NOK", "SEK", "DKK", "CZK", "HUF", "UAH", "RUB", "TRY", "ZAR", "CNY", "HKD", "NZD", "MXN", "BRL", "ILS", "INR", "KRW", "SGD"];
 
@@ -254,7 +258,8 @@ function renderBasket(which) {
       amount = Number(it.price) * Number(it.qty);
       left = `<div><strong>${it.t}</strong> × ${it.qty}<br><span class="muted" style="font-size:12px">Price: ${USD(it.price).replace(' USD','')}</span></div>`;
     } else {
-      amount = Number(it.priceUsd) * Number(it.qty);
+      const unit = toCents(which === 'stocks' ? it.price : it.priceUsd);
+amount = toCents(unit * Number(it.qty));
       left = `<div><strong>${it.pair}</strong> × ${it.qty}<br><span class="muted" style="font-size:12px">Rate (USD/base): ${FX(it.priceUsd)}</span></div>`;
     }
 
@@ -1684,20 +1689,26 @@ function addToBasketStocks(sym, name, price, qty) {
 // --- add to basket: FX (para bazowa vs USD)
 function addToBasketFx(pair, priceUsd, qty) {
   qty = Math.max(1, parseFloat(qty || "1"));
-  priceUsd = Number(priceUsd || 0);
-  if (!pair || !qty || priceUsd <= 0) return;
+
+  // 1) weź liczbę i ZAOKRĄGLIJ do 2 miejsc (centy)
+  let px = Number(priceUsd || 0);
+  if (!pair || !qty || !(px > 0)) return;
+  const px2 = Math.round(px * 100) / 100;   // <- 1.1278 -> 1.13
 
   if (!app.basket) app.basket = { stocks: [], fx: [] };
 
+  // 2) wyszukaj po kluczu (pair)
   const it = findBasketItem(app.basket.fx, pair);
+
   if (it) {
-    it.qty += qty;
-    it.price = priceUsd;
+    it.qty = Number(it.qty || 0) + qty;
+    it.price = px2;                         // <- zapisujemy już 2-miejscową cenę
   } else {
     const [base] = pair.split("/");
     const baseName = (CURRENCY_NAMES[base] || base) + " vs USD";
-    app.basket.fx.push({ key: pair, pair, n: baseName, price: priceUsd, qty });
+    app.basket.fx.push({ key: pair, pair, n: baseName, price: px2, qty });
   }
+
   save(app);
   renderBasketFx();
   toast(`Added to basket: ${qty} × ${pair}`);
@@ -1722,11 +1733,14 @@ function basketTotals(list) {
   let q = 0, sum = 0;
   (list || []).forEach(it => {
     const qty = Number(it.qty || 0);
-    const px  = Number(it.price || 0);
-    q += qty; sum += qty * px;
+    const unit = toCents(Number(it.price || it.priceUsd || 0)); // ⬅️ najpierw 2 dp
+    q += qty;
+    sum = toCents(sum + toCents(qty * unit));
   });
-  return { qty: q, sum };
+  return { qty: q, sum: toCents(sum) };
 }
+
+
 
 // === RENDER: STOCK BASKET (dopasowane do Twojego HTML) ===
 // HTML:
@@ -1766,7 +1780,7 @@ function renderBasketStocks() {
         <input class="input" type="number" min="1" step="1" value="${it.qty}">
         <button class="btn" data-act="upd">Set</button>
       </div>
-      <div class="b-subtotal">${PLN(it.qty * it.price)}</div>
+      <div class="b-subtotal">${PLN(toCents(it.qty * it.price))}</div>
       <div class="b-remove"><button class="btn danger" data-act="rm">×</button></div>
     `;
     const inp = row.querySelector('input');
@@ -1813,7 +1827,7 @@ function renderBasketFx() {
         <input class="input" type="number" min="1" step="1" value="${it.qty}">
         <button class="btn" data-act="upd">Set</button>
       </div>
-      <div class="b-subtotal">${PLN(it.qty * it.price)}</div>
+      <div class="b-subtotal">${PLN(toCents(it.qty * it.price))}</div>
       <div class="b-remove"><button class="btn danger" data-act="rm">×</button></div>
     `;
     const inp = row.querySelector('input');
@@ -1836,7 +1850,8 @@ function buyBasketStocks() {
   const items = app?.basket?.stocks || [];
   if (!items.length) return toast('Basket is empty');
 
-  const total = items.reduce((s, it) => s + Number(it.qty||0)*Number(it.price||0), 0);
+const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty||0) * Number(it.price||0))), 0));
+
   if (total > ch.jars.save) return toast(TT().needFunds(PLN(total)));
 
   ch.jars.save   -= total;
@@ -1865,7 +1880,8 @@ function buyBasketFx() {
   const items = app?.basket?.fx || [];
   if (!items.length) return toast('Basket is empty');
 
-  const total = items.reduce((s, it) => s + Number(it.qty||0)*Number(it.price||0), 0);
+const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty||0) * Number(it.price||0))), 0));
+
   if (total > ch.jars.save) return toast(TT().needFunds(PLN(total)));
 
   ch.jars.save   -= total;
