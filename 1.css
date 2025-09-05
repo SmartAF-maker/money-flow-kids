@@ -1,4 +1,4 @@
- /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
+  /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
 
 /* Palette */
 :root{
@@ -1947,8 +1947,6 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
   }
 }
 /* --- Ustawienie koszyków pod prawą kolumną (Portfolio) --- */
-#tab-invest #stock-basket { grid-column: 2; }
-#tab-fx     #fx-basket    { grid-column: 2; }
 
 /* Na wąskich ekranach koszyk na pełną szerokość pod całością */
 @media (max-width: 900px){
@@ -1976,18 +1974,6 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 
 .basket-summary .summary-item .val{
   font-weight:800;
-}
-/* === UNCLAMP WIDTHS: portfolio tables + baskets full width === */
-
-/* pozwól tabelom mieć minimalną szerokość i przewijać się w poziomie */
-#tab-invest .tableWrap,
-#tab-fx .tableWrap{
-  overflow-x: auto !important;
-}
-
-#tab-invest .tableWrap table,
-#tab-fx .tableWrap table{
-  min-width: 720px !important;   /* wygodny próg; zmień na 840px jeśli chcesz jeszcze szerzej */
 }
 
 /* NIE zwężaj sztucznie kolumn w stock portfolio */
@@ -2028,10 +2014,71 @@ body[data-role="child"] .jar-card .jar-actions{
   min-width: 80px !important;
   width: 80px !important;
 }
+/* === LAYOUT FIX: stabilne 2 kolumny + koszyki TYLKO w prawej kolumnie === */
+
+/* Stałe 2 kolumny (desktop), 1 kolumna na wąskich ekranach */
+section#tab-invest:not(.hidden),
+section#tab-fx:not(.hidden){
+  display:grid !important;
+  grid-template-columns: minmax(520px,1fr) minmax(520px,1fr) !important;
+  gap:12px !important;
+  align-items:start !important;
+}
+
+/* Prawa kolumna dla koszyków */
+#tab-invest #stock-basket,
+#tab-fx     #fx-basket{
+  grid-column: 2 !important;   /* ← zawsze prawa kolumna */
+  width: auto !important;
+}
+
+/* Portfolia pod koszykami, też w prawej kolumnie */
+#tab-invest .col.right > .card,
+#tab-fx     .col.right > .card{
+  grid-column: 2 !important;
+}
+
+/* Lewa kolumna: lista + trade box */
+#tab-invest .col.left,
+#tab-fx     .col.left{
+  grid-column: 1 !important;
+}
+
+/* 1 kolumna na mobile */
+@media (max-width: 900px){
+  section#tab-invest:not(.hidden),
+  section#tab-fx:not(.hidden){
+    grid-template-columns: 1fr !important;
+  }
+  #tab-invest #stock-basket,
+  #tab-fx     #fx-basket{
+    grid-column: 1 / -1 !important; /* na mobile pełna szerokość */
+  }
+}
+
+/* Stabilizacja szerokości – nic nie „pcha” kolumny */
+section#tab-invest > .card,
+section#tab-fx > .card{ min-width:0 !important; }
+#stockList, #fxList, #tradeBox, #fxTradeBox{ min-width:0 !important; }
+
+/* Usuń wymuszanie pełnej szerokości z wcześniejszego „UNCLAMP WIDTHS” */
+#tab-invest .tableWrap table,
+#tab-fx .tableWrap table{
+  min-width: 0 !important;      /* brak sztucznego progu 720px */
+  width: 100% !important;
+}
+
+/* Zapobiegaj skokom wysokości koszyków przy dodawaniu pozycji */
+#stock-basket, #fx-basket{ min-height: 220px; }
+
+/* Tabele niech nie rozpychają kolumny */
+#tab-invest .tableWrap, #tab-fx .tableWrap{ overflow-x:auto; }
+
 
 
 
  
+
 
 
 
