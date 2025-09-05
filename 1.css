@@ -1979,12 +1979,6 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 /* NIE zwężaj sztucznie kolumn w stock portfolio */
 #tab-invest table{ table-layout: auto !important; }
 
-/* koszyki na pełną szerokość sekcji (zamiast trzymać je tylko w prawej kolumnie) */
-#tab-invest #stock-basket,
-#tab-fx #fx-basket{
-  grid-column: 1 / -1 !important;  /* zajmij cały wiersz siatki */
-  width: 100% !important;
-}
 
 /* jeśli chcesz, aby prawa kolumna (portfolio) była trochę szersza niż lewa (lista),
    to odkomentuj poniżej:
@@ -2014,71 +2008,52 @@ body[data-role="child"] .jar-card .jar-actions{
   min-width: 80px !important;
   width: 80px !important;
 }
-/* === LAYOUT FIX: stabilne 2 kolumny + koszyki TYLKO w prawej kolumnie === */
-
-/* Stałe 2 kolumny (desktop), 1 kolumna na wąskich ekranach */
+/* === Basket: pełna szerokość prawej kolumny (Stocks + FX) === */
 section#tab-invest:not(.hidden),
 section#tab-fx:not(.hidden){
-  display:grid !important;
-  grid-template-columns: minmax(520px,1fr) minmax(520px,1fr) !important;
-  gap:12px !important;
-  align-items:start !important;
+  justify-items: stretch !important;   /* grid items rozciągają się */
 }
 
-/* Prawa kolumna dla koszyków */
 #tab-invest #stock-basket,
 #tab-fx     #fx-basket{
-  grid-column: 2 !important;   /* ← zawsze prawa kolumna */
-  width: auto !important;
+  grid-column: 2 !important;           /* prawa kolumna */
+  width: 100% !important;              /* ⬅️ zamiast auto */
+  max-width: none !important;
+  justify-self: stretch !important;    /* rozciągnij w kolumnie */
 }
 
-/* Portfolia pod koszykami, też w prawej kolumnie */
-#tab-invest .col.right > .card,
-#tab-fx     .col.right > .card{
-  grid-column: 2 !important;
-}
-
-/* Lewa kolumna: lista + trade box */
-#tab-invest .col.left,
-#tab-fx     .col.left{
-  grid-column: 1 !important;
-}
-
-/* 1 kolumna na mobile */
-@media (max-width: 900px){
-  section#tab-invest:not(.hidden),
-  section#tab-fx:not(.hidden){
-    grid-template-columns: 1fr !important;
-  }
-  #tab-invest #stock-basket,
-  #tab-fx     #fx-basket{
-    grid-column: 1 / -1 !important; /* na mobile pełna szerokość */
-  }
-}
-
-/* Stabilizacja szerokości – nic nie „pcha” kolumny */
-section#tab-invest > .card,
-section#tab-fx > .card{ min-width:0 !important; }
-#stockList, #fxList, #tradeBox, #fxTradeBox{ min-width:0 !important; }
-
-/* Usuń wymuszanie pełnej szerokości z wcześniejszego „UNCLAMP WIDTHS” */
-#tab-invest .tableWrap table,
-#tab-fx .tableWrap table{
-  min-width: 0 !important;      /* brak sztucznego progu 720px */
+/* gdyby kolumna prawa miała gdzieś max-width – wyłącz */
+#tab-invest .col.right,
+#tab-fx     .col.right{
   width: 100% !important;
+  max-width: none !important;
+}
+/* === STOCK PORTFOLIO — bez paska, ciaśniejsze kolumny === */
+
+/* nie pozwól, by globalne 480px wymuszało scroll */
+#tab-invest .tableWrap table{ min-width: 0 !important; }
+
+/* tabela ma się mieścić w 100% kolumny i używać stałego layoutu */
+#tab-invest .tableWrap{ overflow-x: hidden !important; }
+#tab-invest table{
+  width: 100% !important;
+  table-layout: fixed !important;   /* zamiast auto */
 }
 
-/* Zapobiegaj skokom wysokości koszyków przy dodawaniu pozycji */
-#stock-basket, #fx-basket{ min-height: 220px; }
+/* ciaśniejsze komórki */
+#tab-invest th, #tab-invest td{ padding: 6px 8px !important; }
 
-/* Tabele niech nie rozpychają kolumny */
-#tab-invest .tableWrap, #tab-fx .tableWrap{ overflow-x:auto; }
+/* proporcje kolumn – tak, by się mieściło bez scrolla */
+#tab-invest th:nth-child(1), #tab-invest td:nth-child(1){ width: 12%; } /* Ticker   */
+#tab-invest th:nth-child(2), #tab-invest td:nth-child(2){ width:  8%; } /* Shares   */
+#tab-invest th:nth-child(3), #tab-invest td:nth-child(3){ width: 15%; } /* Avg cost */
+#tab-invest th:nth-child(4), #tab-invest td:nth-child(4){ width: 15%; } /* Price    */
+#tab-invest th:nth-child(5), #tab-invest td:nth-child(5){ width: 14%; } /* Value    */
+#tab-invest th:nth-child(6), #tab-invest td:nth-child(6){ width: 12%; } /* P/L      */
+#tab-invest th:nth-child(7), #tab-invest td:nth-child(7){ width: 24%; } /* Qty + Sell */
 
-
-
-
- 
-
-
-
-
+/* akcje w ostatniej kolumnie możliwie kompaktowo */
+#tab-invest td.space{ gap: 6px !important; }
+#tab-invest td.space input[type="number"],
+#tab-invest td.space .input{ width: 72px !important; min-width: 72px !important; }
+#tab-invest td.space .btn{ padding: 8px 10px !important; }
