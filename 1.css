@@ -926,9 +926,7 @@ thead th{
   flex:0 0 auto;        /* nie rozciąga się */
   white-space:nowrap;   /* tekst się nie łamie */
 }
-/* HIDE/REMOVE "Max" column buttons – safe selectors */
-#tab-fx td.space .btn-max,
-#tab-invest td.space .btn-max { display: none !important; }
+
 
 /* if układ był kolumnowy, po usunięciu Maxa wyrównaj w jednej linii */
 #tab-fx td.space,
@@ -1699,21 +1697,7 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
     border-color:#3a4f77 !important;
     transform:none !important;
   }
-}
-/* === Remove "Sell" ONLY in trade boxes (Stocks + FX) === */
-#tradeBox .space button:not(#buyBtn):not(#cancelTrade){
-  display: none !important;
-}
-#fxTradeBox .space button:not(#fxBuyBtn):not(#fxCancelTrade){
-  display: none !important;
-}
-
-/* (opcjonalne – gdyby JS dodał inne klasy/atrybuty) */
-#tradeBox [data-sell],       #fxTradeBox [data-sell],
-#tradeBox .btn-sell,         #fxTradeBox .btn-sell,
-#tradeBox button[id*="sell"],#fxTradeBox button[id*="sell"]{
-  display: none !important;
-}
+ }
 /* === MOBILE-ONLY BUTTON FIX (bez zieleni, nie rusza desktopu) === */
 @media (max-width: 640px){
   /* wszystkie guziki i kapsułki */
@@ -1992,6 +1976,57 @@ body[data-role="child"] .mfk-drawer-nav [data-tab="login"]{
 
 .basket-summary .summary-item .val{
   font-weight:800;
+}
+/* === UNCLAMP WIDTHS: portfolio tables + baskets full width === */
+
+/* pozwól tabelom mieć minimalną szerokość i przewijać się w poziomie */
+#tab-invest .tableWrap,
+#tab-fx .tableWrap{
+  overflow-x: auto !important;
+}
+
+#tab-invest .tableWrap table,
+#tab-fx .tableWrap table{
+  min-width: 720px !important;   /* wygodny próg; zmień na 840px jeśli chcesz jeszcze szerzej */
+}
+
+/* NIE zwężaj sztucznie kolumn w stock portfolio */
+#tab-invest table{ table-layout: auto !important; }
+
+/* koszyki na pełną szerokość sekcji (zamiast trzymać je tylko w prawej kolumnie) */
+#tab-invest #stock-basket,
+#tab-fx #fx-basket{
+  grid-column: 1 / -1 !important;  /* zajmij cały wiersz siatki */
+  width: 100% !important;
+}
+
+/* jeśli chcesz, aby prawa kolumna (portfolio) była trochę szersza niż lewa (lista),
+   to odkomentuj poniżej:
+#tab-invest,
+#tab-fx{
+  grid-template-columns: 1.1fr 1.4fr !important;
+}
+*/
+
+/* w ostatniej kolumnie akcji trzymaj input + przyciski w jednej linii */
+#tab-invest td.space,
+#tab-fx td.space{
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  white-space: nowrap !important;
+}
+
+/* przywróć widoczność slotu Add (input + Add) również dla dziecka */
+body[data-role="child"] .jar-card .jar-actions{
+  display: flex !important;
+}
+
+/* (opcjonalnie) delikatnie poszerz pole qty w portfolio */
+#tab-invest .input,
+#tab-fx .input{
+  min-width: 80px !important;
+  width: 80px !important;
 }
 
 
