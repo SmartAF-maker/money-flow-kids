@@ -716,16 +716,27 @@ setInterval(() => {
 }, 2000);
 
 let __qtyTyping = false;
+
 document.addEventListener('focusin',  e => {
-  if (e.target && (e.target.matches('input[data-fxsell-q]') || e.target.matches('input[data-sell-q]'))) {
+  if (e.target && (
+      e.target.matches('input[data-fxsell-q]') ||
+      e.target.matches('input[data-sell-q]')   ||
+      e.target.matches('.basket-qty')          // ⬅️ DODANE
+    )) {
     __qtyTyping = true;
   }
 });
+
 document.addEventListener('focusout', e => {
-  if (e.target && (e.target.matches('input[data-fxsell-q]') || e.target.matches('input[data-sell-q]'))) {
+  if (e.target && (
+      e.target.matches('input[data-fxsell-q]') ||
+      e.target.matches('input[data-sell-q]')   ||
+      e.target.matches('.basket-qty')          // ⬅️ DODANE
+    )) {
     __qtyTyping = false;
   }
 });
+
 
 
 let stockExpanded = false;
@@ -1717,13 +1728,14 @@ function addToBasketFx(pair, priceUsd, qty) {
 // --- remove
 function removeFromBasketStocks(sym) {
   if (!app?.basket?.stocks) return;
-  app.basket.stocks = app.basket.stocks.filter(x => x.key !== sym);
+  app.basket.stocks = app.basket.stocks.filter(x => x.t !== sym);
   save(app);
   renderBasketStocks();
 }
+
 function removeFromBasketFx(pair) {
   if (!app?.basket?.fx) return;
-  app.basket.fx = app.basket.fx.filter(x => x.key !== pair);
+  app.basket.fx = app.basket.fx.filter(x => x.pair !== pair);
   save(app);
   renderBasketFx();
 }
@@ -1777,18 +1789,31 @@ function renderBasketStocks() {
       <div class="b-price">${PLN(it.price)}</div>
       <div class="b-change"><span class="arrow-flat">—</span></div>
       <div class="b-qty">
-        <input class="input" type="number" min="1" step="1" value="${it.qty}">
+        <input class="input basket-qty" type="number" min="1" step="1" value="${it.qty}">
         <button class="btn" data-act="upd">Set</button>
       </div>
       <div class="b-subtotal">${PLN(toCents(it.qty * it.price))}</div>
       <div class="b-remove"><button class="btn danger" data-act="rm">×</button></div>
     `;
+
     const inp = row.querySelector('input');
+
+    // Enter = klik "Set"
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        row.querySelector('[data-act="upd"]')?.click();
+      }
+    });
+
     row.querySelector('[data-act="upd"]').addEventListener('click', () => {
       it.qty = Math.max(1, parseInt(inp.value || "1", 10));
-      save(app); renderBasketStocks();
+      save(app);
+      renderBasketStocks();
     });
-    row.querySelector('[data-act="rm"]').addEventListener('click', () => removeFromBasketStocks(it.key));
+
+ row.querySelector('[data-act="rm"]').addEventListener('click', () => removeFromBasketStocks(it.t));
+
     listEl.appendChild(row);
   });
 
@@ -1796,6 +1821,7 @@ function renderBasketStocks() {
   if (qtyEl) qtyEl.textContent = String(t.qty);
   if (amtEl) amtEl.textContent = PLN(t.sum);
 }
+
 
 // === RENDER: FX BASKET (dopasowane do Twojego HTML) ===
 function renderBasketFx() {
@@ -1824,18 +1850,30 @@ function renderBasketFx() {
       <div class="b-price">${PLN(it.price)}</div>
       <div class="b-change"><span class="arrow-flat">—</span></div>
       <div class="b-qty">
-        <input class="input" type="number" min="1" step="1" value="${it.qty}">
+        <input class="input basket-qty" type="number" min="1" step="1" value="${it.qty}">
         <button class="btn" data-act="upd">Set</button>
       </div>
       <div class="b-subtotal">${PLN(toCents(it.qty * it.price))}</div>
       <div class="b-remove"><button class="btn danger" data-act="rm">×</button></div>
     `;
+
     const inp = row.querySelector('input');
+
+    // Enter = klik "Set"
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        row.querySelector('[data-act="upd"]')?.click();
+      }
+    });
+
     row.querySelector('[data-act="upd"]').addEventListener('click', () => {
       it.qty = Math.max(1, parseFloat(inp.value || "1"));
-      save(app); renderBasketFx();
+      save(app);
+      renderBasketFx();
     });
-    row.querySelector('[data-act="rm"]').addEventListener('click', () => removeFromBasketFx(it.key));
+
+   row.querySelector('[data-act="rm"]').addEventListener('click', () => removeFromBasketFx(it.pair));
     listEl.appendChild(row);
   });
 
