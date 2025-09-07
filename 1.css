@@ -2148,3 +2148,76 @@ section#tab-fx td:nth-child(6){ padding-left: 16px !important; }    /* P/L   →
     margin-top: 6px;       /* drugi rząd zaraz pod pierwszym */
   }
 }
+/* === Mini strip – base === */
+.mini-strip{
+  position: sticky;
+  top: 60px;               /* dopasuj do wysokości topbara */
+  z-index: 50;
+  background: transparent;
+  padding: 4px 10px 8px;
+  backdrop-filter: blur(6px);
+}
+
+.mini-strip .mini-row{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.mini-strip .mini-pill{
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--border-c);
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: rgba(17,24,39,.45);
+}
+.mini-strip .mini-pill b{
+  margin-left: 6px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.mini-strip .mini-pill.good b{ color: var(--ok); }
+.mini-strip .mini-pill.bad  b{ color: var(--warn); }
+
+/* === Desktop: jeden rząd, auto-scroll poziomy jeśli brak miejsca === */
+@media (min-width: 641px){
+  .mini-strip{
+    padding-bottom: 6px;
+  }
+  .mini-strip .row-1,
+  .mini-strip .row-2{
+    flex-wrap: nowrap;
+  }
+  .mini-strip .row-2{ margin-top: 6px; }
+}
+
+/* === Mobile: dwa rzędy, pełna szerokość, brak ściskania === */
+@media (max-width: 640px){
+  .mini-strip{
+    padding-top: 2px;
+  }
+  .mini-strip .row-1,
+  .mini-strip .row-2{
+    justify-content: space-between;
+  }
+  .mini-strip .mini-pill{
+    flex: 1 1 auto;        /* pigułki rozszerzają się równomiernie */
+    min-width: calc(50% - 8px);
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  .mini-strip .row-2{
+    margin-top: 6px;       /* drugi rząd zaraz pod pierwszym */
+  }
+}
+/* ✅ Powiększone labelki bez pogrubienia */
+#stickyMiniJars .mini-jar .mini-jar-label {
+  font-size: 14px !important;   /* większy rozmiar */
+  font-weight: 400 !important;  /* normalna grubość */
+  letter-spacing: 0.3px;
+  color: var(--ink) !important;
+}
