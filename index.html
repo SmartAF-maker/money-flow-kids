@@ -788,7 +788,6 @@
             </div>
           </div>
         </div>
-
         <div class="card">
           <div class="title" data-i18n="ledgerTitle">History (allowance / expenses)</div>
           <div class="row" style="margin-bottom: 8px">
@@ -807,7 +806,7 @@
     <button id="ytToggleSize" class="yt-btn" title="Powiększ / Zmniejsz">⤢</button>
     <button id="ytClose" class="yt-btn danger" title="Zamknij">×</button>
   </div>
-  <iframe id="ytFrame"
+ <iframe id="ytFrame"
   src="https://www.youtube-nocookie.com/embed/bVSZxNiCBrE?rel=0&modestbranding=1&playsinline=1"
   title="Money Flow Kids — tutorial"
   frameborder="0"
@@ -816,29 +815,8 @@
 </iframe>
 </div>
     </main>
-
     <footer class="footer"><small id="t-footerNote"> </small></footer>
-
-    <!-- Tutorial modal -->
-    <div id="tutorialModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialText">
-      <div class="modal-content">
-        <div class="tutorial-controls" aria-label="Tutorial controls">
-          <button id="prevStep" type="button" title="Previous step">←</button>
-          <button id="nextStep" type="button" title="Next step">→</button>
-          <button id="closeTutorial" type="button" class="danger" title="Close">×</button>
-        </div>
-        <div class="tut-head">
-          <div id="tutorialIcon" class="tut-icon" aria-hidden="true">📘</div>
-          <div><h2 id="tutorialTitle">Tutorial</h2><p id="tutorialText" class="muted"></p></div>
-        </div>
-        <div class="tut-image-wrap">
-          <img id="tutorialImage" src="piggy.png" alt="Tutorial image" />
-          <div id="tutCaption" class="muted" role="note"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Login modal -->
+     <!-- Login modal -->
     <div id="loginModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
       <div class="modal-content">
         <h2 id="loginTitle" class="title" style="margin-bottom:12px">Login</h2>
@@ -968,14 +946,13 @@
      
       /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
 (function () {
-  const drawerTut  = document.getElementById('drawerTutorial');
+  const drawerTut = document.getElementById('drawerTutorial');
   if (!drawerTut) return;
 
-  const drawer     = document.getElementById('mfkMobileDrawer');
-  const backdrop   = document.getElementById('mfkBackdrop');
-  const navBtn     = document.getElementById('mfkNavToggle');
-  const topBtn     = document.getElementById('tutorialBtn');
-  const modal      = document.getElementById('tutorialModal');
+  const drawer   = document.getElementById('mfkMobileDrawer');
+  const backdrop = document.getElementById('mfkBackdrop');
+  const navBtn   = document.getElementById('mfkNavToggle');
+  const ytMini   = document.getElementById('ytMini');
 
   function closeDrawer() {
     if (drawer)   drawer.classList.remove('open');
@@ -984,21 +961,37 @@
     document.body.style.overflow = '';
   }
 
-  function openTutorial() {
-    if (topBtn) {
-      topBtn.click();               // użyj istniejącej logiki otwierania
-    } else if (modal) {
-      modal.classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'auto' });
-    }
+  function openYT() {
+    if (ytMini) ytMini.classList.remove('hidden');
   }
 
   drawerTut.addEventListener('click', function () {
     closeDrawer();
-    // pozwól DOM-owi się odmalować po zamknięciu szuflady
-    setTimeout(openTutorial, 0);
+    setTimeout(openYT, 150);
+  });
+})();
+
+/* === Mini-YT: powiększ / zamknij === */
+(function () {
+  const mini   = document.getElementById('ytMini');
+  const btnXL  = document.getElementById('ytToggleSize');
+  const btnX   = document.getElementById('ytClose');
+  const frame  = document.getElementById('ytFrame');
+  if (!mini || !btnXL || !btnX) return;
+
+  // Powiększ / zmniejsz
+  btnXL.addEventListener('click', () => {
+    mini.classList.toggle('large');
+    btnXL.title = mini.classList.contains('large') ? 'Zmniejsz' : 'Powiększ';
+  });
+
+  // Zamknij i zatrzymaj odtwarzanie
+  btnX.addEventListener('click', () => {
+    mini.classList.add('hidden');
+    if (frame) frame.src = frame.src; // reset iframe, żeby zatrzymać film
   });
 })();
     </script>
+
   </body>
 </html>

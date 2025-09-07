@@ -2491,3 +2491,13 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
 .yt-btn.danger { background: rgba(180,0,0,.6); }
 .yt-btn:hover { filter: brightness(1.1); }
 
+/* Mini-player – rozmiary */
+.yt-mini      { position: fixed; top: 12px; right: 12px; width: 320px; height: 180px; z-index: 9999; }
+.yt-mini.large{ width: 560px; height: 315px; }
+/* enforce bottom-right docking */
+.yt-mini{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  top: auto !important;   /* zabij ewentualne top: 12px */
+}

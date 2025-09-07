@@ -1,4 +1,4 @@
-  // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+   // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 (function lockNetwork() {
   const of = window.fetch;
   const ALLOW_ORIGINS = new Set([
@@ -3111,3 +3111,21 @@ observer.observe(document.body, { childList: true, subtree: true });
   safeAreaFix();
   window.addEventListener('resize', safeAreaFix, { passive: true });
 })();
+
+// === Auto-start tutorial video przy pierwszym uruchomieniu ===
+document.addEventListener("DOMContentLoaded", () => {
+  const mini = document.getElementById("ytMini");
+  const frame = document.getElementById("ytFrame");
+  if (!mini || !frame) return;
+
+  // Sprawdź, czy użytkownik już oglądał
+  const seen = localStorage.getItem("tutorialSeen");
+
+  if (!seen) {
+    // Pierwsze uruchomienie → pokaż mini-player
+    mini.classList.remove("hidden");
+
+    // Zapisz, że już wyświetlono tutorial
+    localStorage.setItem("tutorialSeen", "1");
+  }
+});
