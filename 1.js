@@ -604,6 +604,14 @@ function setPnlColor(el, pnl){
   else if (pnl < 0) el.classList?.add('pnl-neg');
 }
 
+// helper: USD ze znakiem dla earned/loss
+function fmtSignedUSD(amount, direction){
+  const sign = direction > 0 ? '+' : direction < 0 ? '−' : '';
+  const absTxt = USD(Math.abs(Number(amount || 0)));
+  return sign ? `${sign} ${absTxt}` : absTxt;
+}
+
+// zsumowane „wolne” środki (bez Investments)
 function computeAvailableCashFromJars(jars){
   return Number(jars?.save || 0) + Number(jars?.spend || 0) + Number(jars?.give || 0);
 }
@@ -635,19 +643,28 @@ function renderMiniJars(){
   const valFx     = portfolioValueFx(ch);
   const valTotal  = valStocks + valFx;
 
-  // niezrealizowane P/L (kolor)
+  // niezrealizowane P/L do koloru i strzałki
   const pnlStocks = unrealizedStocks(ch);
   const pnlFx     = unrealizedFx(ch);
   const pnlTotal  = pnlStocks + pnlFx;
 
-  if (miniEls.invStocks) { miniEls.invStocks.textContent = USD(valStocks); setPnlColor(miniEls.invStocks, pnlStocks); }
-  if (miniEls.invFx)     { miniEls.invFx.textContent     = USD(valFx);     setPnlColor(miniEls.invFx, pnlFx); }
-  if (miniEls.invTotal)  { miniEls.invTotal.textContent  = USD(valTotal);  setPnlColor(miniEls.invTotal, pnlTotal); }
+  // ⬇⬇⬇ ZAMIANA: zamiast +/− doklejamy strzałkę (▲/▼) i zachowujemy kolor liczby
+  if (miniEls.invStocks) {
+    miniEls.invStocks.innerHTML = `${USD(valStocks)} ${arrowHtml(pnlStocks > 0 ? 1 : pnlStocks < 0 ? -1 : 0)}`;
+    setPnlColor(miniEls.invStocks, pnlStocks);
+  }
+  if (miniEls.invFx) {
+    miniEls.invFx.innerHTML     = `${USD(valFx)} ${arrowHtml(pnlFx > 0 ? 1 : pnlFx < 0 ? -1 : 0)}`;
+    setPnlColor(miniEls.invFx, pnlFx);
+  }
+  if (miniEls.invTotal) {
+    miniEls.invTotal.innerHTML  = `${USD(valTotal)} ${arrowHtml(pnlTotal > 0 ? 1 : pnlTotal < 0 ? -1 : 0)}`;
+    setPnlColor(miniEls.invTotal, pnlTotal);
+  }
 
-  // === NEW: Total earned / Total loss (z historii transakcji) ===
+  // === Total earned / Total loss – nadal z + / − ===
   const round2 = v => Math.round(Number(v) * 100) / 100;
-  let totalEarned = 0;
-  let totalLoss   = 0;
+  let totalEarned = 0, totalLoss = 0;
 
   (ch.tradeLedgerStocks || []).forEach(tx => {
     if (tx.pnl > 0) totalEarned += round2(tx.pnl);
@@ -660,16 +677,14 @@ function renderMiniJars(){
   totalLoss = Math.abs(totalLoss);
 
   if (miniEls.totalEarned) {
-    miniEls.totalEarned.textContent = USD(totalEarned);
-    setPnlColor(miniEls.totalEarned, totalEarned); // zielony jeśli > 0
+    miniEls.totalEarned.textContent = fmtSignedUSD(totalEarned, totalEarned); // + przy >0
+    setPnlColor(miniEls.totalEarned, totalEarned);
   }
   if (miniEls.totalLoss) {
-    miniEls.totalLoss.textContent = USD(totalLoss);
-    // wymuszamy kolor „czerwony” jeśli jest jakakolwiek strata
+    miniEls.totalLoss.textContent = fmtSignedUSD(totalLoss, -totalLoss);      // − przy >0
     setPnlColor(miniEls.totalLoss, totalLoss > 0 ? -1 : 0);
   }
 }
-
 
 
 // Jars / KPI
@@ -740,8 +755,6 @@ function getDataModeSection() {
   return (n1 && n1.closest('.card')) || (n2 && n2.closest('.card')) || null;
 }
 function setHidden(el, hidden) { if (!el) return; el.classList.toggle('hidden', !!hidden); }
-
-
 
 // ====== APP ======
 let app = load();
