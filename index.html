@@ -77,6 +77,7 @@
       #tab-invest > .card, #tab-fx > .card, #tab-parent > .card, #tab-profits > .card { min-width: 0; }
       #tab-invest .tableWrap, #tab-fx .tableWrap, #tab-profits .tableWrap { overflow-x: auto; }
 
+      
       /* KPI – kontenerki */
       .grid.g-3 { display: grid; grid-template-columns: repeat(3, minmax(220px,1fr)); gap: 12px; }
       @media (max-width: 1200px) { .grid.g-3 { grid-template-columns: 1fr; } }
@@ -169,28 +170,46 @@
 <div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
 
     <!-- Sticky mini jars (below top buttons) -->
-    <section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
-      <div class="mini-jar">
-        <div class="mini-jar-label">Available cash</div>
-        <div id="miniCash" class="mini-jar-value">0.00 USD</div>
-      </div>
-      <div class="mini-jar">
-        <div class="mini-jar-label" data-i18n="jarSavings">Savings</div>
-        <div id="miniSave" class="mini-jar-value">0.00 USD</div>
-      </div>
-      <div class="mini-jar">
-        <div class="mini-jar-label" data-i18n="jarSpending">Earnings</div>
-        <div id="miniSpend" class="mini-jar-value">0.00 USD</div>
-      </div>
-      <div class="mini-jar">
-        <div class="mini-jar-label" data-i18n="jarGiving">Gifts</div>
-        <div id="miniGive" class="mini-jar-value">0.00 USD</div>
-      </div>
-      <div class="mini-jar">
-        <div class="mini-jar-label" data-i18n="jarInvest">Investments</div>
-        <div id="miniInvest" class="mini-jar-value">0.00 USD</div>
-      </div>
-    </section>
+<section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
+  <div class="mini-jar">
+    <div class="mini-jar-label">Available cash</div>
+    <div id="miniCash" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="jarSavings">Savings</div>
+    <div id="miniSave" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="jarSpending">Earnings</div>
+    <div id="miniSpend" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="jarGiving">Gifts</div>
+    <div id="miniGive" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="jarInvest">Investments</div>
+    <div id="miniInvest" class="mini-jar-value">0.00 USD</div>
+  </div>
+
+  <!-- NEW: INV. value FX -->
+  <div class="mini-jar">
+    <div class="mini-jar-label">INV. value FX</div>
+    <div id="miniInvFx" class="mini-jar-value">0.00 USD</div>
+  </div>
+
+  <!-- NEW: INV. value Stocks -->
+  <div class="mini-jar">
+    <div class="mini-jar-label">INV. value Stocks</div>
+    <div id="miniInvStocks" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <!-- NEW: INV. value Total -->
+    <div class="mini-jar">
+    <div class="mini-jar-label">INV. value Total</div>
+    <div id="miniInvTotal" class="mini-jar-value">0.00 USD</div>
+  </div>
+</section>
+
 
     <main class="container">
       <!-- Live mode switch -->
@@ -639,6 +658,7 @@
               <th data-i18n="amount">Amount</th>
               <th data-i18n="avgRate">Avg. rate</th>
               <th data-i18n="rate">Rate</th>
+                  <th data-i18n="value">Value</th> 
                        <th>P/L</th>
               <th></th>
             </tr>

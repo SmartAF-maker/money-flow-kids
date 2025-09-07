@@ -2057,3 +2057,28 @@ section#tab-fx:not(.hidden){
 #tab-invest td.space input[type="number"],
 #tab-invest td.space .input{ width: 72px !important; min-width: 72px !important; }
 #tab-invest td.space .btn{ padding: 8px 10px !important; }
+/* === FX Portfolio: Value i P/L nie nachodzą na siebie (FINAL OVERRIDE) === */
+section#tab-fx .tableWrap table{
+  table-layout: fixed !important;   /* stabilne szerokości kolumn */
+  width: 100% !important;
+}
+
+section#tab-fx th, 
+section#tab-fx td{
+  white-space: nowrap !important;
+  text-align: right;                /* liczby do prawej */
+  padding: 8px 12px !important;
+}
+
+/* Ustal szerokości kolumn (dopasowane do Twojego układu) */
+section#tab-fx th:nth-child(1), section#tab-fx td:nth-child(1){ width: 18%;  text-align:left; } /* Pair */
+section#tab-fx th:nth-child(2), section#tab-fx td:nth-child(2){ width: 14%; }                   /* Amount */
+section#tab-fx th:nth-child(3), section#tab-fx td:nth-child(3){ width: 16%; }                   /* Avg. rate */
+section#tab-fx th:nth-child(4), section#tab-fx td:nth-child(4){ width: 16%; }                   /* Rate */
+section#tab-fx th:nth-child(5), section#tab-fx td:nth-child(5){ width: 20%; }                   /* Value */
+section#tab-fx th:nth-child(6), section#tab-fx td:nth-child(6){ width: 16%; }                   /* P/L  */
+section#tab-fx th:nth-child(7), section#tab-fx td:nth-child(7){ width: auto; text-align:center;}/* Actions */
+
+/* Dodatkowy bufor między Value i P/L (gdy treści są długie) */
+section#tab-fx td:nth-child(5){ padding-right: 16px !important; }   /* Value → więcej miejsca po prawej */
+section#tab-fx td:nth-child(6){ padding-left: 16px !important; }    /* P/L   → odsuń od Value */

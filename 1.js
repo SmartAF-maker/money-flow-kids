@@ -583,12 +583,26 @@ const addChildBtn = $("#addChildBtn");
 
 // ===== MINI-JARS (sticky pasek) =====
 const miniEls = {
-  cash:  document.getElementById('miniCash'),   // ⬅ upewnij się, że w HTML masz <div id="miniCash">
-  save:  document.getElementById('miniSave'),
-  spend: document.getElementById('miniSpend'),
-  give:  document.getElementById('miniGive'),
-  invest:document.getElementById('miniInvest')
+  cash:       document.getElementById('miniCash'),
+  save:       document.getElementById('miniSave'),
+  spend:      document.getElementById('miniSpend'),
+  give:       document.getElementById('miniGive'),
+  invest:     document.getElementById('miniInvest'),
+  invFx:      document.getElementById('miniInvFx'),      // NEW
+  invStocks:  document.getElementById('miniInvStocks'),  // NEW
+  invTotal:   document.getElementById('miniInvTotal')    // NEW
 };
+function setPnlColor(el, pnl){
+  if (!el) return;
+  // najpierw zdejmij wcześniejsze klasy/kolory
+  el.classList?.remove('pnl-pos','pnl-neg');
+  el.style.color = '';
+  if (pnl > 0) {
+    el.classList?.add('pnl-pos');
+  } else if (pnl < 0) {
+    el.classList?.add('pnl-neg');
+  }
+}
 
 function computeAvailableCashFromJars(jars){
   return Number(jars?.save || 0) + Number(jars?.spend || 0) + Number(jars?.give || 0);
@@ -598,18 +612,50 @@ function renderMiniJars(){
   const ch = activeChild?.();
   if (!ch) {
     // wyczyść pasek gdy brak dziecka
-    Object.values(miniEls).forEach(el => { if (el) el.textContent = '0.00 USD'; });
+    Object.values(miniEls).forEach(el => {
+      if (!el) return;
+      el.textContent = '0.00 USD';
+      el.classList?.remove('pnl-pos','pnl-neg');
+      el.style && (el.style.color = '');
+    });
     return;
   }
+
   const j = ch.jars || { save:0, spend:0, give:0, invest:0 };
   const cash = computeAvailableCashFromJars(j);
 
-  if (miniEls.cash)  miniEls.cash.textContent  = USD(cash);
-  if (miniEls.save)  miniEls.save.textContent  = USD(j.save);
-  if (miniEls.spend) miniEls.spend.textContent = USD(j.spend);
-  if (miniEls.give)  miniEls.give.textContent  = USD(j.give);
-  if (miniEls.invest)miniEls.invest.textContent= USD(j.invest);
+  // istniejące wartości
+  if (miniEls.cash)   miniEls.cash.textContent   = USD(cash);
+  if (miniEls.save)   miniEls.save.textContent   = USD(j.save);
+  if (miniEls.spend)  miniEls.spend.textContent  = USD(j.spend);
+  if (miniEls.give)   miniEls.give.textContent   = USD(j.give);
+  if (miniEls.invest) miniEls.invest.textContent = USD(j.invest);
+
+  // --- NOWE: wartości inwestycji + kolor wg P/L ---
+  // wartości rynkowe (value)
+  const valStocks = portfolioValueStocks(ch); // już masz te funkcje wyżej
+  const valFx     = portfolioValueFx(ch);
+  const valTotal  = valStocks + valFx;
+
+  // niezrealizowane P/L (do koloru)
+  const pnlStocks = unrealizedStocks(ch);
+  const pnlFx     = unrealizedFx(ch);
+  const pnlTotal  = pnlStocks + pnlFx;
+
+  if (miniEls.invStocks) {
+    miniEls.invStocks.textContent = USD(valStocks);
+    setPnlColor(miniEls.invStocks, pnlStocks);
+  }
+  if (miniEls.invFx) {
+    miniEls.invFx.textContent = USD(valFx);
+    setPnlColor(miniEls.invFx, pnlFx);
+  }
+  if (miniEls.invTotal) {
+    miniEls.invTotal.textContent = USD(valTotal);
+    setPnlColor(miniEls.invTotal, pnlTotal);
+  }
 }
+
 
 // Jars / KPI
 const saveAmt = $("#saveAmt");
