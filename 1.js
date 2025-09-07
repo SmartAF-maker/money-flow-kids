@@ -3058,3 +3058,56 @@ const observer = new MutationObserver(() => {
     .forEach(btn => btn.remove());
 });
 observer.observe(document.body, { childList: true, subtree: true });
+/* === YouTube mini-player wiring === */
+(function () {
+  const ytMini   = document.getElementById('ytMini');
+  const iframe   = document.getElementById('ytFrame');
+  if (!ytMini || !iframe) return;
+
+  const openers  = [document.getElementById('tutorialBtn'), document.getElementById('drawerTutorial')].filter(Boolean);
+  const btnClose = document.getElementById('ytClose');
+  const btnSize  = document.getElementById('ytToggleSize');
+
+  // Używamy wersji nocookie + playsinline (iOS)
+  const YT_URL = "https://www.youtube-nocookie.com/embed/eIpCd1wRhYE?rel=0&modestbranding=1&playsinline=1";
+  iframe.setAttribute('data-src', YT_URL);
+
+  function openMini() {
+    ytMini.classList.remove('hidden');
+    if (!iframe.src) iframe.src = iframe.dataset.src; // lazy init
+  }
+
+  function closeMini() {
+    ytMini.classList.add('hidden');
+    // zatrzymaj odtwarzanie przez zresetowanie src
+    const tmp = iframe.src;
+    iframe.src = '';
+    // przywróć oryginalny adres, żeby był gotowy na kolejne otwarcie
+    setTimeout(() => { iframe.src = iframe.dataset.src; }, 0);
+  }
+
+  function toggleSize() {
+    ytMini.classList.toggle('expanded');
+  }
+
+  openers.forEach(btn => btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    openMini();
+  }));
+
+  btnClose?.addEventListener('click', closeMini);
+  btnSize?.addEventListener('click', toggleSize);
+
+  // ESC zamyka
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !ytMini.classList.contains('hidden')) closeMini();
+  });
+
+  // Dodatkowa korekta safe-area przy zmianie rozmiaru
+  function safeAreaFix() {
+    ytMini.style.bottom = `calc(12px + env(safe-area-inset-bottom, 0px))`;
+    ytMini.style.right  = `calc(12px + env(safe-area-inset-right, 0px))`;
+  }
+  safeAreaFix();
+  window.addEventListener('resize', safeAreaFix, { passive: true });
+})();

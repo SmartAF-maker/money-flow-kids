@@ -6,6 +6,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Money Flow Kids</title>
+<title>Money Flow Kids</title>
+
+<link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
+<link rel="preconnect" href="https://s.ytimg.com" crossorigin>
+<link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+<link rel="preconnect" href="https://r4---sn.googlevideo.com" crossorigin>
+<link rel="dns-prefetch" href="//www.youtube-nocookie.com">
+<link rel="dns-prefetch" href="//s.ytimg.com">
+<link rel="dns-prefetch" href="//i.ytimg.com">
+<link rel="dns-prefetch" href="//googlevideo.com">
+
+<link rel="stylesheet" href="1.css" />
 
     <link rel="stylesheet" href="1.css" />
 
@@ -99,19 +111,22 @@
 
     <!-- CSP: allow live data endpoints for fetch() (Tylko w <head>) -->
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self';
-      script-src  'self' 'unsafe-inline';
-      style-src   'self' 'unsafe-inline';
-      img-src     'self' data: blob:;
-      font-src    'self' data:;
-      connect-src 'self'
-                   https://api.exchangerate.host
-                   https://query1.finance.yahoo.com
-                   https://query2.finance.yahoo.com
-                   https://r.jina.ai;
-      frame-src   'none';
-      base-uri    'self';
-      form-action 'self'">
+  default-src 'self';
+  script-src  'self' 'unsafe-inline' https://www.youtube.com https://www.youtube-nocookie.com https://s.ytimg.com;
+  style-src   'self' 'unsafe-inline';
+  img-src     'self' data: blob: https://i.ytimg.com https://img.youtube.com;
+  font-src    'self' data:;
+  media-src   'self' blob: https://*.googlevideo.com;
+  connect-src 'self'
+               https://api.exchangerate.host
+               https://query1.finance.yahoo.com
+               https://query2.finance.yahoo.com
+               https://r.jina.ai;
+  frame-src   'self' https://www.youtube.com https://www.youtube-nocookie.com;
+  frame-ancestors 'self';
+  worker-src  'self';
+  base-uri    'self';
+  form-action 'self'">
   </head>
 
   <body>
@@ -787,6 +802,19 @@
           <ul id="ledger"></ul>
         </div>
       </section>
+     <div id="ytMini" class="yt-mini hidden" aria-label="Tutorial video" aria-live="polite">
+  <div class="yt-controls" aria-label="Video controls">
+    <button id="ytToggleSize" class="yt-btn" title="Powiększ / Zmniejsz">⤢</button>
+    <button id="ytClose" class="yt-btn danger" title="Zamknij">×</button>
+  </div>
+  <iframe id="ytFrame"
+  src="https://www.youtube-nocookie.com/embed/bVSZxNiCBrE?rel=0&modestbranding=1&playsinline=1"
+  title="Money Flow Kids — tutorial"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  allowfullscreen>
+</iframe>
+</div>
     </main>
 
     <footer class="footer"><small id="t-footerNote"> </small></footer>
