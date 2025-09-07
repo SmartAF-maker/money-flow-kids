@@ -1,4 +1,4 @@
-  // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+   // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 (function lockNetwork() {
   const of = window.fetch;
   const ALLOW_ORIGINS = new Set([
@@ -538,7 +538,7 @@ function makeSteps() {
     {
       icon: "🧮",
       title: "How transfers work",
-      text: "Transfers move money between your jars. Buying sends funds from Savings into Investments, where you purchase stocks or currencies. Selling moves profits into Earnings, which you can spend or return to Savings. Each transfer teaches how choices shape results. Practicing this flow step by step shows how real money systems work safely!",
+      text: "Here you’ll explore how pocket money, savings, and challenges build money skills. You’ll learn the role of jars, how to trade, try stocks and currencies, and grow step by step. Each choice brings you closer to leading your financial story. This journey is safe, exciting, and designed for you to explore, test ideas, and grow with confidence!",
       img: IMG_TRADE,
     },
     {
@@ -3058,3 +3058,4 @@ const observer = new MutationObserver(() => {
     .forEach(btn => btn.remove());
 });
 observer.observe(document.body, { childList: true, subtree: true });
+

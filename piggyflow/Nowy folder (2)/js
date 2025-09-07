@@ -1,10 +1,12 @@
-  // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+ // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 (function lockNetwork() {
   const of = window.fetch;
   const ALLOW_ORIGINS = new Set([
     location.origin,
     'https://api.exchangerate.host',
-       'https://r.jina.ai' // ✅ CORS/GDPR-safe fallback proxy
+    'https://query1.finance.yahoo.com',
+    'https://query2.finance.yahoo.com',
+    'https://r.jina.ai' // ✅ CORS/GDPR-safe fallback proxy
   ]);
   window.fetch = async function(resource, init) {
     const urlStr = resource instanceof Request ? resource.url : String(resource);
@@ -18,31 +20,26 @@
 
 // ====== UTIL ======
 const DB_KEY = "kidmoney_multi_fx_live_i18n_v1";
-const AUTH_KEY = window.AUTH_KEY || 'mfk-auth-v1';// { role: 'guest'|'parent'|'child', childId?: string }
+const AUTH_KEY = "kidmoney_auth_v1"; // { role: 'guest'|'parent'|'child', childId?: string }
 const LANG_KEY = "pf_lang";
 
-
 // Legacy formatter – zostaje dla zgodności
-// ===== Walutowe formatery (spójne: wszystko pokazujemy w USD) =====
+const PLN = v =>
+  new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    .format(Number(v)) + " USD";
+
+// DODANE: prawidłowy formatter USD (używamy w nowych miejscach)
 const USD = v =>
   new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     .format(Number(v || 0)) + " USD";
 
-// Zachowujemy starą nazwę dla kompatybilności – *PLN* aliasuje do USD
-const PLN = v => USD(v);
-
-// FX: 4 miejsca, bez sufiksu
+// FX-format (4 miejsca, bez sufiksu)
 const FX = v =>
   new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
-    .format(Number(v || 0));
-
+    .format(Number(v));
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const nowISO = () => { const d = new Date(); return d.toISOString().slice(0, 10) + "T" + d.toTimeString().slice(0, 8); };
-
-// ========== helper: licz jak „do grosza” ==========
-const toCents = v => Math.round(Number(v || 0) * 100) / 100;
-
 
 // ====== FX CONFIG ======
 const ISO = ["PLN", "USD", "EUR", "GBP", "CHF", "JPY", "AUD", "CAD", "NOK", "SEK", "DKK", "CZK", "HUF", "UAH", "RUB", "TRY", "ZAR", "CNY", "HKD", "NZD", "MXN", "BRL", "ILS", "INR", "KRW", "SGD"];
@@ -197,139 +194,8 @@ function refreshStaticI18n() {
 // ====== STATE ======
 const defaults = {
   childrenOrder: [], children: {}, activeChildId: null, pinHash: null, pinTries: 0, pinLockedUntil: 0,
-  dailyLimit: 50, liveMode: false, trends: { stocks: {}, fx: {} },
-  basket: { stocks: [], fx: [] }  // ⬅️ NEW
+  dailyLimit: 50, liveMode: false, trends: { stocks: {}, fx: {} }
 };
-
-/* === BASKETS ENGINE (stocks + fx) === */
-function addToBasketStock(ticker, price, qty) {
-  if (!app.basket) app.basket = { stocks: [], fx: [] };
-  const it = app.basket.stocks.find(x => x.t === ticker && Number.isFinite(x.price));
-  if (it) {
-    it.qty = Math.max(1, (Number(it.qty) || 0) + Number(qty || 0));
-    it.price = Number(price || it.price);
-  } else {
-    app.basket.stocks.push({ t: ticker, price: Number(price||0), qty: Math.max(1, Number(qty||1)) });
-  }
-  save(app);
-  renderBasketStocks();
-}
-
-function addToBasketFx(pair, priceUsd, qty) {
-  if (!app.basket) app.basket = { stocks: [], fx: [] };
-  const it = app.basket.fx.find(x => x.pair === pair && Number.isFinite(x.priceUsd));
-  if (it) {
-    it.qty = Math.max(1, (Number(it.qty) || 0) + Number(qty || 0));
-    it.priceUsd = Number(priceUsd || it.priceUsd);
-  } else {
-    app.basket.fx.push({ pair, priceUsd: Number(priceUsd||0), qty: Math.max(1, Number(qty||1)) });
-  }
-  save(app);
-  renderBasketFx();
-}
-
-function renderBasket(which) {
-  const listEl = document.querySelector(`[data-basket-list="${which}"]`);
-  const qtyEl  = document.querySelector(`[data-basket-qty="${which}"]`);
-  const amtEl  = document.querySelector(`[data-basket-amt="${which}"]`);
-  if (!listEl) return;
-
-  const items = (app.basket && app.basket[which]) ? app.basket[which] : [];
-  listEl.innerHTML = '';
-
-  if (!items.length) {
-    const empty = document.createElement('div');
-    empty.className = 'basket-empty';
-    empty.textContent = 'No items in basket.';
-    listEl.appendChild(empty);
-    if (qtyEl) qtyEl.textContent = '0';
-    if (amtEl) amtEl.textContent = '0.00 USD';
-    return;
-  }
-
-  let sumQty = 0, sumAmt = 0;
-
-  items.forEach((it, i) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'basket-item row';
-    let left = '', amount = 0;
-
-    if (which === 'stocks') {
-      amount = Number(it.price) * Number(it.qty);
-      left = `<div><strong>${it.t}</strong> × ${it.qty}<br><span class="muted" style="font-size:12px">Price: ${USD(it.price).replace(' USD','')}</span></div>`;
-    } else {
-      const unit = toCents(which === 'stocks' ? it.price : it.priceUsd);
-amount = toCents(unit * Number(it.qty));
-      left = `<div><strong>${it.pair}</strong> × ${it.qty}<br><span class="muted" style="font-size:12px">Rate (USD/base): ${FX(it.priceUsd)}</span></div>`;
-    }
-
-    const right = `
-      <div class="right" style="text-align:right; display:flex; align-items:center; gap:8px">
-        <div class="val" style="min-width:120px; font-weight:700">${USD(amount)}</div>
-        <button class="btn danger" data-remove-index="${i}">×</button>
-      </div>`;
-
-    wrap.innerHTML = left + right;
-    listEl.appendChild(wrap);
-
-    sumQty += Number(it.qty) || 0;
-    sumAmt += amount || 0;
-  });
-
-  if (qtyEl) qtyEl.textContent = String(sumQty);
-  if (amtEl) amtEl.textContent = USD(sumAmt);
-
-  listEl.onclick = (e) => {
-    const btn = e.target.closest('[data-remove-index]');
-    if (!btn) return;
-    const idx = parseInt(btn.getAttribute('data-remove-index'), 10);
-    if (!Number.isFinite(idx)) return;
-    items.splice(idx, 1);
-    save(app);
-    renderBasket(which);
-  };
-}
-
-function renderBasketStocks(){ renderBasket('stocks'); }
-function renderBasketFx(){ renderBasket('fx'); }
-
-function buyBasket(which) {
-  const ch = activeChild(); if (!ch) return;
-  const items = (app.basket && app.basket[which]) ? app.basket[which] : [];
-  if (!items.length) return toast('Basket is empty.');
-
-  const total = items.reduce((s, it) => {
-    const px = (which === 'stocks') ? Number(it.price) : Number(it.priceUsd);
-    const q  = Number(it.qty);
-    return s + (px * q);
-  }, 0);
-
-  if (total > ch.jars.save) {
-    return toast(TT().needFunds ? TT().needFunds(USD(total)) : `Not enough funds in Savings (need ${USD(total)})`);
-  }
-
-  if (which === 'stocks') {
-    items.forEach(it => {
-      selectedStock = it.t;
-      if (qtyInput) qtyInput.value = it.qty;
-      lastStockUiPrice = Number(it.price);
-      buyStock(); // użyje lastStockUiPrice
-    });
-    app.basket.stocks = [];
-    renderBasketStocks();
-  } else {
-    items.forEach(it => {
-      selectedFxPair = it.pair;
-      if (fxQty) fxQty.value = it.qty;
-      lastFxUiPrice = Number(it.priceUsd);
-      buyFx(); // użyje lastFxUiPrice
-    });
-    app.basket.fx = [];
-    renderBasketFx();
-  }
-
-  save(app);
-}
 
 function newChild(name) {
   return {
@@ -367,14 +233,9 @@ function load() {
     return s;
   }
   const parsed = JSON.parse(raw);
-if (!parsed.trends) parsed.trends = { stocks: {}, fx: {} };
-Object.values(parsed.children || {}).forEach(ch => {
-  ensureExpandedStocks(ch);
-  sanitizePositions(ch); // ⬅️ ważne
-});
-if (!parsed.basket) parsed.basket = { stocks: [], fx: [] }; // ⬅️ NEW
-return parsed;
-
+  if (!parsed.trends) parsed.trends = { stocks: {}, fx: {} };
+  Object.values(parsed.children || {}).forEach(ch => ensureExpandedStocks(ch));
+  return parsed;
 }
 
 function save(s) { localStorage.setItem(DB_KEY, JSON.stringify(s)); }
@@ -419,22 +280,6 @@ function ensureExpandedStocks(ch) {
     }
   }
 }
-// --- Long-only: usuń ujemne/zerowe pozycje z portfeli (migracja starych danych)
-function sanitizePositions(ch){
-  // Stocks
-  if (ch.portfolio) {
-    Object.entries(ch.portfolio).forEach(([t, p]) => {
-      if (!p || typeof p.s !== 'number' || p.s <= 0) delete ch.portfolio[t];
-    });
-  }
-  // FX
-  if (ch.fxPortfolio) {
-    Object.entries(ch.fxPortfolio).forEach(([pair, pos]) => {
-      if (!pos || typeof pos.q !== 'number' || pos.q <= 0) delete ch.fxPortfolio[pair];
-    });
-  }
-}
-
 
 // ====== TUTORIAL (assets + steps) ======
 // 1) Obrazek na slajd powitalny (Twoje PNG)
@@ -456,7 +301,6 @@ const IMG_PROFITS = new URL("./profits.png", document.baseURI).href;
 const IMG_SAFETY = new URL("./safety.png", document.baseURI).href;
 const IMG_READY = new URL("./awesome.png", document.baseURI).href;
 const IMG_ACCOUNTING    = new URL("./accounting.png",  document.baseURI).href;
-const IMG_TUTORIAL_STOCKS = new URL("./tuto.png", document.baseURI).href;
 
 // 4a) Wbudowany SVG do FX
 const IMG_FX = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
@@ -538,7 +382,7 @@ function makeSteps() {
     {
       icon: "🧮",
       title: "How transfers work",
-      text: "Transfers move money between your jars. Buying sends funds from Savings into Investments, where you purchase stocks or currencies. Selling moves profits into Earnings, which you can spend or return to Savings. Each transfer teaches how choices shape results. Practicing this flow step by step shows how real money systems work safely!",
+      text: "Here you’ll explore how pocket money, savings, and challenges build money skills. You’ll learn the role of jars, how to trade, try stocks and currencies, and grow step by step. Each choice brings you closer to leading your financial story. This journey is safe, exciting, and designed for you to explore, test ideas, and grow with confidence!",
       img: IMG_TRADE,
     },
     {
@@ -552,12 +396,6 @@ function makeSteps() {
       title: "Safety first",
       text: "This app is 100% safe—no real money is at risk. Parent PINs and spending limits protect every action. You can test ideas, undo mistakes, and try again freely. When you’re ready, you can even notify your parent to mirror choices in real life. Safety here means freedom to learn, grow, and explore.",
       img: IMG_SAFETY,
-    },
-     {
-      icon: "🛡️",
-      title: "How to start trading",
-      text: " 🟢1 Choose Stocks from the top bar. 🟢2 Check global trends to see what moves. 🟢3 Use the search bar to find a company. 🟢4 Press Add more to explore new shares. 🟢5 Pick one you like. 🟢6 Set a quantity and buy. 🟢7 Watch your trade, manage profits, and sell when ready. Each step is safe, simple, and helps you grow skills with confidence!.",
-      img: IMG_TUTORIAL_STOCKS,
     },
     {
       icon: "🎉",
@@ -583,35 +421,13 @@ const addChildBtn = $("#addChildBtn");
 
 // ===== MINI-JARS (sticky pasek) =====
 const miniEls = {
-  cash:        document.getElementById('miniCash'),
-  save:        document.getElementById('miniSave'),
-  spend:       document.getElementById('miniSpend'),
-  give:        document.getElementById('miniGive'),
-  invest:      document.getElementById('miniInvest'),
-  invFx:       document.getElementById('miniInvFx'),
-  invStocks:   document.getElementById('miniInvStocks'),
-  invTotal:    document.getElementById('miniInvTotal'),
-  // NEW: Profits in sticky bar
-  totalEarned: document.getElementById('miniTotalEarned'),
-  totalLoss:   document.getElementById('miniTotalLoss')
+  cash:  document.getElementById('miniCash'),   // ⬅ upewnij się, że w HTML masz <div id="miniCash">
+  save:  document.getElementById('miniSave'),
+  spend: document.getElementById('miniSpend'),
+  give:  document.getElementById('miniGive'),
+  invest:document.getElementById('miniInvest')
 };
 
-function setPnlColor(el, pnl){
-  if (!el) return;
-  el.classList?.remove('pnl-pos','pnl-neg');
-  el.style.color = '';
-  if (pnl > 0) el.classList?.add('pnl-pos');
-  else if (pnl < 0) el.classList?.add('pnl-neg');
-}
-
-// helper: USD ze znakiem dla earned/loss
-function fmtSignedUSD(amount, direction){
-  const sign = direction > 0 ? '+' : direction < 0 ? '−' : '';
-  const absTxt = USD(Math.abs(Number(amount || 0)));
-  return sign ? `${sign} ${absTxt}` : absTxt;
-}
-
-// zsumowane „wolne” środki (bez Investments)
 function computeAvailableCashFromJars(jars){
   return Number(jars?.save || 0) + Number(jars?.spend || 0) + Number(jars?.give || 0);
 }
@@ -619,73 +435,19 @@ function computeAvailableCashFromJars(jars){
 function renderMiniJars(){
   const ch = activeChild?.();
   if (!ch) {
-    Object.values(miniEls).forEach(el => {
-      if (!el) return;
-      el.textContent = '0.00 USD';
-      el.classList?.remove('pnl-pos','pnl-neg');
-      el.style && (el.style.color = '');
-    });
+    // wyczyść pasek gdy brak dziecka
+    Object.values(miniEls).forEach(el => { if (el) el.textContent = '0.00 USD'; });
     return;
   }
-
   const j = ch.jars || { save:0, spend:0, give:0, invest:0 };
   const cash = computeAvailableCashFromJars(j);
 
-  // podstawowe słoiki
-  if (miniEls.cash)   miniEls.cash.textContent   = USD(cash);
-  if (miniEls.save)   miniEls.save.textContent   = USD(j.save);
-  if (miniEls.spend)  miniEls.spend.textContent  = USD(j.spend);
-  if (miniEls.give)   miniEls.give.textContent   = USD(j.give);
-  if (miniEls.invest) miniEls.invest.textContent = USD(j.invest);
-
-  // wartości portfeli
-  const valStocks = portfolioValueStocks(ch);
-  const valFx     = portfolioValueFx(ch);
-  const valTotal  = valStocks + valFx;
-
-  // niezrealizowane P/L do koloru i strzałki
-  const pnlStocks = unrealizedStocks(ch);
-  const pnlFx     = unrealizedFx(ch);
-  const pnlTotal  = pnlStocks + pnlFx;
-
-  // ⬇⬇⬇ ZAMIANA: zamiast +/− doklejamy strzałkę (▲/▼) i zachowujemy kolor liczby
-  if (miniEls.invStocks) {
-    miniEls.invStocks.innerHTML = `${USD(valStocks)} ${arrowHtml(pnlStocks > 0 ? 1 : pnlStocks < 0 ? -1 : 0)}`;
-    setPnlColor(miniEls.invStocks, pnlStocks);
-  }
-  if (miniEls.invFx) {
-    miniEls.invFx.innerHTML     = `${USD(valFx)} ${arrowHtml(pnlFx > 0 ? 1 : pnlFx < 0 ? -1 : 0)}`;
-    setPnlColor(miniEls.invFx, pnlFx);
-  }
-  if (miniEls.invTotal) {
-    miniEls.invTotal.innerHTML  = `${USD(valTotal)} ${arrowHtml(pnlTotal > 0 ? 1 : pnlTotal < 0 ? -1 : 0)}`;
-    setPnlColor(miniEls.invTotal, pnlTotal);
-  }
-
-  // === Total earned / Total loss – nadal z + / − ===
-  const round2 = v => Math.round(Number(v) * 100) / 100;
-  let totalEarned = 0, totalLoss = 0;
-
-  (ch.tradeLedgerStocks || []).forEach(tx => {
-    if (tx.pnl > 0) totalEarned += round2(tx.pnl);
-    else if (tx.pnl < 0) totalLoss += round2(tx.pnl);
-  });
-  (ch.tradeLedgerFx || []).forEach(tx => {
-    if (tx.pnl > 0) totalEarned += round2(tx.pnl);
-    else if (tx.pnl < 0) totalLoss += round2(tx.pnl);
-  });
-  totalLoss = Math.abs(totalLoss);
-
-  if (miniEls.totalEarned) {
-    miniEls.totalEarned.textContent = fmtSignedUSD(totalEarned, totalEarned); // + przy >0
-    setPnlColor(miniEls.totalEarned, totalEarned);
-  }
-  if (miniEls.totalLoss) {
-    miniEls.totalLoss.textContent = fmtSignedUSD(totalLoss, -totalLoss);      // − przy >0
-    setPnlColor(miniEls.totalLoss, totalLoss > 0 ? -1 : 0);
-  }
+  if (miniEls.cash)  miniEls.cash.textContent  = USD(cash);
+  if (miniEls.save)  miniEls.save.textContent  = USD(j.save);
+  if (miniEls.spend) miniEls.spend.textContent = USD(j.spend);
+  if (miniEls.give)  miniEls.give.textContent  = USD(j.give);
+  if (miniEls.invest)miniEls.invest.textContent= USD(j.invest);
 }
-
 
 // Jars / KPI
 const saveAmt = $("#saveAmt");
@@ -756,6 +518,8 @@ function getDataModeSection() {
 }
 function setHidden(el, hidden) { if (!el) return; el.classList.toggle('hidden', !!hidden); }
 
+
+
 // ====== APP ======
 let app = load();
 if (app.pinHash == null) setPin(app, "1234");
@@ -768,50 +532,6 @@ save(app);
 
 let selectedStock = null;
 let selectedFxPair = null;
-setInterval(() => {
-  if (app.liveMode) return;
-  Object.values(app.children).forEach(ch => {
-    ch.stocks = ch.stocks.map(s => {
-      const drift = 1 + (Math.random() - 0.5) * 0.01;
-      const np = clamp(s.p * drift, 1, 9999);
-      return { ...s, p: Number(np.toFixed(2)) };
-    });
-  });
-  save(app);
-  if (!__qtyTyping) {
-  renderStocks(stockSearch?.value || "");
-  renderPortfolioStocks();
-  renderJars();
-  renderProfits();
-  renderBasketStocks();   // ⬅️ NEW
-  renderBasketFx();       // ⬅️ NEW
-}
-
-}, 2000);
-
-let __qtyTyping = false;
-
-document.addEventListener('focusin',  e => {
-  if (e.target && (
-      e.target.matches('input[data-fxsell-q]') ||
-      e.target.matches('input[data-sell-q]')   ||
-      e.target.matches('.basket-qty')          // ⬅️ DODANE
-    )) {
-    __qtyTyping = true;
-  }
-});
-
-document.addEventListener('focusout', e => {
-  if (e.target && (
-      e.target.matches('input[data-fxsell-q]') ||
-      e.target.matches('input[data-sell-q]')   ||
-      e.target.matches('.basket-qty')          // ⬅️ DODANE
-    )) {
-    __qtyTyping = false;
-  }
-});
-
-
 
 let stockExpanded = false;
 function updateStockMoreBtn(totalCount, isDefaultView) {
@@ -827,26 +547,6 @@ document.getElementById('stockAddPopular')?.addEventListener('click', () => {
 
 let lastFxUiPrice = null;
 let lastStockUiPrice = null;
-setInterval(() => {
-  if (app.liveMode) return;
-  Object.values(app.children).forEach(ch => {
-    ch.stocks = ch.stocks.map(s => {
-      const drift = 1 + (Math.random() - 0.5) * 0.01;
-      const np = clamp(s.p * drift, 1, 9999);
-      return { ...s, p: Number(np.toFixed(2)) };
-    });
-  });
-  save(app);
-  if (!__qtyTyping) {
-  renderStocks(stockSearch?.value || "");
-  renderPortfolioStocks();
-  renderJars();
-  renderProfits();
-  renderBasketStocks();   // ⬅️ NEW
-  renderBasketFx();       // ⬅️ NEW
-}
-
-}, 2000);
 
 // ====== TREND HELPERS ======
 function ensureTrends() { if (!app.trends) app.trends = { stocks: {}, fx: {} }; }
@@ -871,216 +571,100 @@ function arrowHtml(dir) {
   if (dir < 0) return `<span class="pnl-neg" aria-label="down" style="margin-left:6px;font-weight:700">▼</span>`;
   return `<span class="muted" aria-label="flat" style="margin-left:6px">—</span>`;
 }
-
-// 🔄 Reset trendów (np. przy przełączaniu Live)
-function clearTrendsAll() {
-  if (app?.trends?.stocks) Object.keys(app.trends.stocks).forEach(k => delete app.trends.stocks[k]);
-  if (app?.trends?.fx)     Object.keys(app.trends.fx).forEach(k => delete app.trends.fx[k]);
-  Object.keys(gtPrevStocks).forEach(k => delete gtPrevStocks[k]);
-  Object.keys(gtPrevFx).forEach(k => delete gtPrevFx[k]);
-}
-
 function activeChild() { return app.children[app.activeChildId]; }
 function toast(msg) {
-  if (!toastEl) {
-    alert(String(msg || 'Info'));
-    return;
-  }
-
+  if (!toastEl) return;
   toastEl.textContent = msg;
-  toastEl.classList.add('_show');
   toastEl.style.display = 'block';
-
   clearTimeout(toastEl._t);
-  toastEl._t = setTimeout(() => {
-    toastEl.classList.remove('_show');
-    setTimeout(() => {
-      toastEl.style.display = 'none';
-      toastEl.textContent = '';
-    }, 250);
-  }, 7000); // 7 sekund
+  toastEl._t = setTimeout(() => toastEl.style.display = 'none', 2200);
 }
-// ====== PRICING (SAFE) ======
+
+// ====== PRICING ======
+// Kurs pary A/B = baseFx[A] / baseFx[B] (PLN „per unit” → otrzymujemy A/B)
 function fxRate(pair) {
   const [A, B] = pair.split("/");
-  const a = baseFx?.[A];
-  const b = baseFx?.[B];
-  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= 0) return null;
-  return a / b;
+  if (!baseFx[A] || !baseFx[B]) return null;
+  return baseFx[A] / baseFx[B];
 }
-
-// cena BASE/USD niezależnie od QUOTE pary
+// >>> NOWE: kurs do USD – cena BASE/USD niezależnie od QUOTE pary
 function rateUsdFromPair(pair) {
   const [A] = pair.split("/");
-  const a = baseFx?.[A];
-  const usd = baseFx?.USD;
-  if (!Number.isFinite(a) || !Number.isFinite(usd) || usd <= 0) return null;
-  return a / usd;
+  if (!baseFx[A] || !baseFx.USD) return null;
+  return baseFx[A] / baseFx.USD; // (PLN per A) / (PLN per USD) = A/USD
 }
-
+// >>> NOWE: wycena pozycji w USD
 function fxValueUsd(pair, qty) {
-  const rUsd = rateUsdFromPair(pair);
-  if (!Number.isFinite(rUsd)) return 0;
-  return rUsd * (Number(qty) || 0);
+  const rUsd = rateUsdFromPair(pair) || 0;
+  return rUsd * qty;
 }
-
 
 // ====== GLOBAL TRENDS ======
 const gtPrevFx = {};
 const gtPrevStocks = {};
 let currentTrendsMode = 'stocks';
 
-/* KROK 4: bez mrugania — aktualizujemy elementy "w miejscu".
-   - Używamy data-key do identyfikacji kafelków
-   - Dla FX kierunek liczony z app.trends.fx (trwała mapa, nie znika między renderami)
-   - Nie czyścimy całego kontenera; dodajemy/aktualizujemy/ew. usuwamy nadmiar
-*/
-// ===== Stable FX state for Global Trends (no flicker) =====
-const GT_FX_STATE = new Map(); // key: "EUR/USD" -> { last:number, dir:-1|0|1, t:number }
-const GT_FX_MIN_PCT = 0.0005;  // 0.05% — próg zmiany kierunku
-const GT_FX_MIN_MS  = 1500;    // 1.5 s — minimalny odstęp między flipami
-
-function gtStableFxDir(pair, rateNow){
-  const st = GT_FX_STATE.get(pair) || { last: rateNow, dir: 0, t: 0 };
-  const now = Date.now();
-
-  if (!Number.isFinite(rateNow) || rateNow <= 0) {
-    return st.dir; // brak danych → nie zmieniaj
-  }
-
-  const prev = st.last;
-  let nextDir = st.dir;
-
-  if (Number.isFinite(prev) && prev > 0) {
-    const pct = Math.abs((rateNow / prev) - 1);
-    const enoughChange = pct >= GT_FX_MIN_PCT;
-    const enoughTime   = (now - st.t) >= GT_FX_MIN_MS;
-
-    if (enoughChange && enoughTime) {
-      nextDir = rateNow > prev ? 1 : (rateNow < prev ? -1 : 0);
-      st.t = now;
-    }
-  }
-
-  st.last = rateNow;
-  st.dir  = nextDir;
-  GT_FX_STATE.set(pair, st);
-  return nextDir;
-}
-
-// --- % change cache + format with min display ---
-const GT_CHG_LAST = new Map(); // pair -> last value used for % change
-
-function fxChangePctStable(pair, nowVal) {
-  const prev = GT_CHG_LAST.get(pair);
-  let pct = 0;
-  if (Number.isFinite(prev) && prev > 0 && Number.isFinite(nowVal) && nowVal > 0) {
-    pct = ((nowVal - prev) / prev) * 100;
-  }
-  GT_CHG_LAST.set(pair, nowVal);
-  return pct;
-}
-
-// Wyświetlaj min. ±0.005% zamiast +0.00% / -0.00%
-function fmtPctWithFloor(pct, dir) {
-  const abs = Math.abs(pct);
-  const FLOOR = 0.005; // 0.005%
-  if (dir !== 0 && abs < FLOOR) {
-    // gdy jest ruch, ale < 0.005% – pokaż 0.005% z odpowiednim znakiem
-    return (dir > 0 ? `+${FLOOR.toFixed(3)}%` : `-${FLOOR.toFixed(3)}%`);
-  }
-  const sign = pct >= 0 ? '+' : '';
-  return `${sign}${pct.toFixed(2)}%`;
-}
-
 function renderGlobalTrends(mode) {
   currentTrendsMode = mode;
   const wrap = document.getElementById('globalTrendsList');
-  const sub  = document.getElementById('globalTrendsSub');
+  const sub = document.getElementById('globalTrendsSub');
   if (!wrap) return;
-
-  // helper: pobierz/utwórz kafelek po kluczu
-  function getTile(key) {
-    let el = wrap.querySelector(`[data-key="${key}"]`);
-    if (!el) {
-      el = document.createElement('div');
-      el.className = 'trend-item';
-      el.setAttribute('data-key', key);
-      el.innerHTML = `
-        <div class="trend-head">
-          <span class="lh">
-            <div class="code" style="font-weight:700"></div>
-            <div class="name muted" style="font-size:12px"></div>
-          </span>
-          <span class="rh" style="text-align:right">
-            <div class="px"  style="font-weight:700"></div>
-            <div class="q muted" style="font-size:11px"></div>
-          </span>
-        </div>
-        <div class="trend-sub chg"></div>`;
-      wrap.appendChild(el);
-    }
-    return el;
-  }
-
-  const seen = new Set();
+  wrap.innerHTML = '';
 
   if (mode === 'fx') {
-    if (sub) sub.textContent = 'World currency trends';
-    const bases = ISO.filter(c => c !== "USD").slice(0, 8);
-    if (!app.trends) app.trends = { stocks: {}, fx: {} };
+  if (sub) sub.textContent = 'World currency trends';
+  const bases = ISO.filter(c => c !== "USD").slice(0, 8);
+  bases.forEach(base => {
+    const pair = `${base}/USD`;
+    const rateNow = Number(fxRate(pair) || 0);
+    const prev = gtPrevFx[pair];
+    const dir = (typeof prev === 'number') ? (rateNow > prev ? 1 : rateNow < prev ? -1 : 0) : 0;
+    const chgPct = (typeof prev === 'number' && prev !== 0) ? ((rateNow - prev) / prev) * 100 : 0;
+    gtPrevFx[pair] = rateNow;
 
-    bases.forEach(base => {
-      const pair = `${base}/USD`;
-      const rateNow = Number(fxRate(pair) || 0);
-      if (!Number.isFinite(rateNow) || rateNow <= 0) return;
+    const el = document.createElement('div');
+    el.className = 'trend-item';
+    const baseName = CURRENCY_NAMES[base] || base;
+    el.innerHTML = `
+      <div class="trend-head">
+        <span>
+          <div style="font-weight:700">${base}</div>
+          <div class="muted" style="font-size:12px">${baseName}</div>
+        </span>
+        <span>
+          ${FX(rateNow)} ${arrowHtml(dir)}
+          <div class="muted" style="font-size:11px">vs USD</div>
+        </span>
+      </div>
+      <div class="trend-sub">${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%</div>`;
+    wrap.appendChild(el);
+  });
+} else {
+  // (reszta bez zmian)
 
-      // stabilny kierunek
-      const dir = gtStableFxDir(pair, rateNow);
-
-      // stabilny % zmiany
-      const chgPct = fxChangePctStable(pair, rateNow);
-
-      app.trends.fx[pair] = rateNow;
-      const el = getTile(pair);
-      seen.add(pair);
-
-      el.querySelector('.code').textContent = base;
-      el.querySelector('.name').textContent = CURRENCY_NAMES[base] || base;
-      el.querySelector('.px').innerHTML     = `${FX(rateNow)} ${arrowHtml(dir)}`;
-      el.querySelector('.q').textContent    = 'vs USD';
-      el.querySelector('.chg').textContent  = fmtPctWithFloor(chgPct, dir);
-    });
-
-  } else {
     if (sub) sub.textContent = 'World stock trends';
     const ch = activeChild?.();
     (ch?.stocks || []).slice(0, 6).forEach(s => {
-      const key = `STK:${s.t}`;
       const prev = gtPrevStocks[s.t];
-      const dir  = (typeof prev === 'number') ? (s.p > prev ? 1 : s.p < prev ? -1 : 0) : 0;
+      const dir = (typeof prev === 'number') ? (s.p > prev ? 1 : s.p < prev ? -1 : 0) : 0;
       const chgPct = (typeof prev === 'number' && prev !== 0) ? ((s.p - prev) / prev) * 100 : 0;
       gtPrevStocks[s.t] = s.p;
 
-      const el = getTile(key);
-      seen.add(key);
-
-      el.querySelector('.code').textContent = s.t;
-      el.querySelector('.name').textContent = s.n || '';
-      el.querySelector('.px').innerHTML    = `${PLN(s.p)} ${arrowHtml(dir)}`;
-      el.querySelector('.q').textContent    = ''; // brak „vs …” dla akcji
-      el.querySelector('.chg').textContent  = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
+      const el = document.createElement('div');
+      el.className = 'trend-item';
+      el.innerHTML = `
+        <div class="trend-head">
+          <span>
+            <div style="font-weight:700">${s.t}</div>
+            <div class="muted" style="font-size:12px">${s.n || ''}</div>
+          </span>
+          <span>${PLN(s.p)} ${arrowHtml(dir)}</span>
+        </div>
+        <div class="trend-sub">${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%</div>`;
+      wrap.appendChild(el);
     });
   }
-
-  // usuń kafelki, których nie było w tym renderze
-  wrap.querySelectorAll('.trend-item').forEach(el => {
-    const key = el.getAttribute('data-key');
-    if (!seen.has(key)) el.remove();
-  });
 }
-
-
 function updateGlobalTrendsForTab(tabId){
   const card = document.getElementById('globalTrendsCard');
   if (!card) return;
@@ -1096,7 +680,6 @@ function updateGlobalTrendsForTab(tabId){
     setHidden(card, true);
   }
 }
-
 
 // ====== RENDER ======
 function renderChildSelector() {
@@ -1206,24 +789,12 @@ stockSearch?.addEventListener('input', (e) => renderStocks(e.target.value));
 
 function renderPortfolioStocks() {
   const ch = activeChild(); if (!ch || !portfolioBody) return;
-
-  // ➜ Zachowaj wpisane ilości zanim wyczyścimy tabelę
-  const prevVals = {};
-  portfolioBody.querySelectorAll('input[data-sell-q]').forEach(inp => {
-    prevVals[inp.getAttribute('data-sell-q')] = inp.value;
-  });
-
   portfolioBody.innerHTML = "";
   Object.entries(ch.portfolio).forEach(([t, p]) => {
     const s = ch.stocks.find(x => x.t === t) || { p: p.b };
     const value = (p.s || 0) * s.p;
     const pnl = (s.p - p.b) * (p.s || 0);
     const qMax = Math.max(1, Math.abs(p.s || 0));
-
-    // przywróć to, co wpisał użytkownik (z klamrą)
-       // ➜ pole startuje puste, jeśli user nic nie wpisał
-    const userVal = (prevVals[t] !== undefined ? String(prevVals[t]) : "");
-
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td style="font-weight:600">${t}</td>
@@ -1233,33 +804,23 @@ function renderPortfolioStocks() {
       <td>${PLN(value)}</td>
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
-        <input type="number" min="1" max="${qMax}" step="1"
-               value="${userVal}" class="input" style="width:90px"
-               data-sell-q="${t}" placeholder="enter 1–${qMax}">
+        <input type="number" min="1" step="1" value="${qMax}" class="input" style="width:90px" data-sell-q="${t}">
         <button class="btn" data-sell-row="${t}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-sell-max="${t}">Max</button>
       </td>`;
-
     portfolioBody.appendChild(tr);
   });
 
   const has = Object.keys(ch.portfolio).length > 0;
   portfolioEmpty && (portfolioEmpty.style.display = has ? 'none' : 'block');
- tableWrapStocks && (tableWrapStocks.style.display = has ? '' : 'none');
+  tableWrapStocks && (tableWrapStocks.style.display = has ? 'block' : 'none');
 
-
-  // ➜ Klik w wierszu: klamrujemy qty do [1..max]
   portfolioBody.onclick = (e) => {
     const btnSell = e.target.closest('[data-sell-row]');
     if (btnSell) {
       const t = btnSell.getAttribute('data-sell-row');
-      const pos = activeChild().portfolio[t];
-      const qMax = Math.max(1, Math.abs(pos?.s || 0));
       const inp = portfolioBody.querySelector(`input[data-sell-q="${t}"]`);
-      let qty = parseInt((inp?.value) || "1", 10);
-      if (!isFinite(qty)) qty = 1;
-      qty = Math.max(1, Math.min(qty, qMax));
-      if (inp) inp.value = qty;          // pokaż skorygowaną wartość
+      const qty = Math.max(1, parseInt((inp?.value) || "1", 10));
       sellStock(t, qty);
       return;
     }
@@ -1272,7 +833,6 @@ function renderPortfolioStocks() {
     }
   };
 }
-
 
 
 // === NOWE FUNKCJE do sumowania zaokrąglonego P/L ===
@@ -1359,8 +919,8 @@ function renderFxList(filter = "") {
   const isDefaultView = raw === "";
 
   const toBtn = (pair) => {
-  const r = fxRate(pair);
-if (!Number.isFinite(r)) return null;
+    const r = fxRate(pair);
+    if (!r) return null;
     const dir = fxTrendDir(pair, r);
     const [baseC, quoteC] = pair.split("/");
     const baseName = CURRENCY_NAMES[baseC] || baseC;
@@ -1441,24 +1001,12 @@ if (!Number.isFinite(r)) return null;
 
 function renderPortfolioFx() {
   const ch = activeChild(); if (!ch || !fxBody) return;
-
-  // ➜ Zachowaj wpisane ilości zanim wyczyścimy tabelę
-  const prevVals = {};
-  fxBody.querySelectorAll('input[data-fxsell-q]').forEach(inp => {
-    prevVals[inp.getAttribute('data-fxsell-q')] = inp.value;
-  });
-
   fxBody.innerHTML = "";
   Object.entries(ch.fxPortfolio).forEach(([pair, pos]) => {
     const rUsd = rateUsdFromPair(pair);
     const valueUsd = fxValueUsd(pair, pos.q || 0);
     const pnl = (rUsd - pos.b) * (pos.q || 0);
     const qMax = Math.max(1, Math.abs(pos.q || 0));
-
-    // przywróć to, co wpisał użytkownik (z klamrą)
-       // ➜ pole startuje puste, jeśli user nic nie wpisał
-    const userVal = (prevVals[pair] !== undefined ? String(prevVals[pair]) : "");
-
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td style="font-weight:600">${pair}</td>
@@ -1468,32 +1016,23 @@ function renderPortfolioFx() {
       <td>${PLN(valueUsd)}</td>
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
-        <input type="number" min="1" max="${qMax}" step="1"
-               value="${userVal}" class="input" style="width:90px"
-               data-fxsell-q="${pair}" placeholder="enter 1–${qMax}">
+        <input type="number" min="1" step="1" value="${qMax}" class="input" style="width:90px" data-fxsell-q="${pair}">
         <button class="btn" data-fxsell-row="${pair}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-fxmax="${pair}">Max</button>
       </td>`;
-
     fxBody.appendChild(tr);
   });
 
   const has = Object.keys(ch.fxPortfolio).length > 0;
   fxEmpty && (fxEmpty.style.display = has ? 'none' : 'block');
-  tableWrapFx && (tableWrapFx.style.display = has ? '' : 'none');
+  tableWrapFx && (tableWrapFx.style.display = has ? 'block' : 'none');
 
-  // ➜ Klik w wierszu: klamrujemy qty do [1..max]
   fxBody.onclick = (e) => {
     const btnSell = e.target.closest('[data-fxsell-row]');
     if (btnSell) {
       const pair = btnSell.getAttribute('data-fxsell-row');
-      const pos = activeChild().fxPortfolio[pair];
-      const qMax = Math.max(1, Math.abs(pos?.q || 0));
       const inp = fxBody.querySelector(`input[data-fxsell-q="${pair}"]`);
-      let qty = parseFloat((inp?.value) || "1");
-      if (!isFinite(qty)) qty = 1;
-      qty = Math.max(1, Math.min(qty, qMax));
-      if (inp) inp.value = qty;          // pokaż skorygowaną wartość
+      const qty = Math.max(1, parseFloat((inp?.value) || "1"));
       sellFx(pair, qty);
       return;
     }
@@ -1506,7 +1045,6 @@ function renderPortfolioFx() {
     }
   };
 }
-
 
 function renderLedger() {
   const ch = activeChild(); if (!ch || !ledgerEl) return;
@@ -1540,7 +1078,7 @@ function ensureSellButtons() {
       const qty = Math.max(1, parseInt(document.getElementById('qty').value || "1", 10));
       sellStock(selectedStock, qty);
     });
-    }
+  }
   const fxBuyBtn = document.getElementById('fxBuyBtn');
   const fxCancel = document.getElementById('fxCancelTrade');
   if (fxBuyBtn && !document.getElementById('fxSellBtn')) {
@@ -1555,10 +1093,9 @@ function ensureSellButtons() {
       const qty = Math.max(1, parseFloat(document.getElementById('fxQty').value || "1"));
       sellFx(selectedFxPair, qty);
     });
-  
-
   }
 }
+
 // ====== TRADE — Stocks ======
 function updateTradeBox() {
   ensureSellButtons();
@@ -1569,15 +1106,8 @@ function updateTradeBox() {
   lastStockUiPrice = s.p;
   if (tradeTitle) tradeTitle.textContent = `Trade ${s.t}`;
   if (costEl) costEl.textContent = PLN(qty * s.p);
-  tradeBox.style.display = "block";  const sellBtn = document.getElementById('sellBtn');
-  if (sellBtn) {
-    const pos = ch.portfolio?.[s.t];
-    const canSell = !!(pos && pos.s > 0);
-    sellBtn.disabled = !canSell;
-    sellBtn.title = canSell ? "" : "You have 0 shares to sell";
-  }
+  tradeBox.style.display = "block";
 }
-  
 function buyStock() {
   const ch = activeChild(); if (!ch || !selectedStock) return;
   const s = ch.stocks.find(x => x.t === selectedStock);
@@ -1617,33 +1147,34 @@ function buyStock() {
 }
 function sellStock(t, qty) {
   qty = Math.max(1, parseInt(qty || "1", 10));
+  const ch = activeChild(); if (!ch) return;
+  let pos = ch.portfolio[t] || { s: 0, b: (activeChild().stocks.find(x => x.t === t) || { p: 0 }).p };
+  const s = ch.stocks.find(x => x.t === t) || { p: pos.b || 0 };
+  let realized = 0;
+  const proceeds = s.p * qty;
 
-  const ch = activeChild(); 
-  if (!ch) return;
+  ch.jars.spend += proceeds;
+  ch.jars.invest = 0;
 
-  const pos = ch.portfolio?.[t];
-  if (!pos || pos.s <= 0) {
-    return toast(`You don't own ${t} yet.`);
+  if (pos.s > 0) {
+    const close = Math.min(qty, pos.s);
+    realized += (s.p - pos.b) * close;
+    ch.tradeLedgerStocks.unshift({ ts: nowISO(), t, qty: close, price: s.p, basis: pos.b, pnl: (s.p - pos.b) * close });
+    pos.s -= close;
+    const remaining = qty - close;
+    if (remaining > 0) {
+      if (pos.s === 0) { pos.b = s.p; pos.s = -remaining; }
+      else { pos.b = s.p; pos.s = -remaining; }
+    }
+  } else {
+    const oldAbs = Math.abs(pos.s);
+    const totalAbs = oldAbs + qty;
+    pos.b = totalAbs ? (((oldAbs * pos.b) + (qty * s.p)) / totalAbs) : s.p;
+    pos.s -= qty;
   }
 
-  // nie pozwalaj sprzedać więcej niż posiadane
-  qty = Math.min(qty, pos.s);
-
-  const s = ch.stocks.find(x => x.t === t) || { p: pos.b || 0 };
-  const proceeds = s.p * qty;
-  const basisOut = pos.b * qty;
-
-  // wpływy do Earnings/Spend, baza schodzi z Investments
-  ch.jars.spend += proceeds;
-  ch.jars.invest = Math.max(0, (ch.jars.invest || 0) - basisOut);
-
-  const realized = (s.p - pos.b) * qty;
   ch.realizedStocks += realized;
-  ch.tradeLedgerStocks.unshift({ ts: nowISO(), t, qty, price: s.p, basis: pos.b, pnl: realized });
-
-  pos.s -= qty;
-
-  if (pos.s <= 0) delete ch.portfolio[t];
+  if (pos.s === 0) delete ch.portfolio[t];
   else ch.portfolio[t] = { s: Number(pos.s), b: Number(pos.b.toFixed(5)) };
 
   save(app);
@@ -1652,6 +1183,7 @@ function sellStock(t, qty) {
   renderPortfolioStocks();
   renderProfits();
 }
+
 // ====== TRADE — FX (WERSJA USD) ======
 function updateFxTradeBox() {
   ensureSellButtons();
@@ -1663,14 +1195,6 @@ function updateFxTradeBox() {
   if (fxCost) fxCost.textContent = PLN(rUsd * qty); // koszt w USD
   fxTradeBox.style.display = "block";
 }
-  const fxSellBtn = document.getElementById('fxSellBtn');
-  if (fxSellBtn) {
-    const pos = activeChild()?.fxPortfolio?.[selectedFxPair];
-    const canSell = !!(pos && pos.q > 0);
-    fxSellBtn.disabled = !canSell;
-    fxSellBtn.title = canSell ? "" : "You have 0 units to sell";
-  }
-
 function buyFx() {
   const ch = activeChild(); if (!ch || !selectedFxPair) return;
   const rUsd = (lastFxUiPrice ?? rateUsdFromPair(selectedFxPair));
@@ -1710,32 +1234,34 @@ function buyFx() {
 }
 function sellFx(pair, qty) {
   qty = Math.max(1, parseFloat(qty || "1"));
-
-  const ch = activeChild(); 
-  if (!ch) return;
-
-  const pos = ch.fxPortfolio?.[pair];
-  if (!pos || pos.q <= 0) {
-    return toast(`You don't own ${pair} yet.`);
-  }
-
-  // nie pozwalaj sprzedać więcej niż posiadane
-  qty = Math.min(qty, pos.q);
-
+  const ch = activeChild(); if (!ch) return;
+  let pos = ch.fxPortfolio[pair] || { q: 0, b: rateUsdFromPair(pair) };
   const rUsd = rateUsdFromPair(pair);
+  let realized = 0;
   const proceeds = rUsd * qty;
-  const basisOut = pos.b * qty;
 
   ch.jars.spend += proceeds;
-  ch.jars.invest = Math.max(0, (ch.jars.invest || 0) - basisOut);
+  ch.jars.invest = 0;
 
-  const realized = (rUsd - pos.b) * qty;
+  if (pos.q > 0) {
+    const close = Math.min(qty, pos.q);
+    realized += (rUsd - pos.b) * close;
+    ch.tradeLedgerFx.unshift({ ts: nowISO(), pair, qty: close, price: rUsd, basis: pos.b, pnl: (rUsd - pos.b) * close });
+    pos.q -= close;
+    const remaining = qty - close;
+    if (remaining > 0) {
+      if (pos.q === 0) { pos.b = rUsd; pos.q = -remaining; }
+      else { pos.b = rUsd; pos.q = -remaining; }
+    }
+  } else {
+    const oldAbs = Math.abs(pos.q);
+    const totalAbs = oldAbs + qty;
+    pos.b = totalAbs ? (((oldAbs * pos.b) + (qty * rUsd)) / totalAbs) : rUsd;
+    pos.q -= qty;
+  }
+
   ch.realizedFx += realized;
-  ch.tradeLedgerFx.unshift({ ts: nowISO(), pair, qty, price: rUsd, basis: pos.b, pnl: realized });
-
-  pos.q -= qty;
-
-  if (pos.q <= 0) delete ch.fxPortfolio[pair];
+  if (pos.q === 0) delete ch.fxPortfolio[pair];
   else ch.fxPortfolio[pair] = { q: Number(pos.q), b: Number(pos.b.toFixed(5)) };
 
   save(app);
@@ -1746,282 +1272,6 @@ function sellFx(pair, qty) {
 }
 
 // ====== LEDGER / TABS / PARENT GUARD / QUICK ACTIONS / EVENTS ======
-// ====== BASKET (stocks + fx) ======
-function findBasketItem(list, key) {
-  return (list || []).find(x => x.key === key) || null;
-}
-
-// --- add to basket: STOCKS
-function addToBasketStocks(sym, name, price, qty) {
-  qty = Math.max(1, parseInt(qty || "1", 10));
-  price = Number(price || 0);
-  if (!sym || !qty || price <= 0) return;
-
-  if (!app.basket) app.basket = { stocks: [], fx: [] };
-
-  const it = findBasketItem(app.basket.stocks, sym);
-  if (it) {
-    it.qty += qty;
-    it.price = price;       // aktualizuj do bieżącej ceny
-  } else {
-    app.basket.stocks.push({ key: sym, t: sym, n: name || sym, price, qty });
-  }
-  save(app);
-  renderBasketStocks();
-  toast(`Added to basket: ${qty} × ${sym}`);
-}
-
-// --- add to basket: FX (para bazowa vs USD)
-function addToBasketFx(pair, priceUsd, qty) {
-  qty = Math.max(1, parseFloat(qty || "1"));
-
-  // 1) weź liczbę i ZAOKRĄGLIJ do 2 miejsc (centy)
-  let px = Number(priceUsd || 0);
-  if (!pair || !qty || !(px > 0)) return;
-  const px2 = Math.round(px * 100) / 100;   // <- 1.1278 -> 1.13
-
-  if (!app.basket) app.basket = { stocks: [], fx: [] };
-
-  // 2) wyszukaj po kluczu (pair)
-  const it = findBasketItem(app.basket.fx, pair);
-
-  if (it) {
-    it.qty = Number(it.qty || 0) + qty;
-    it.price = px2;                         // <- zapisujemy już 2-miejscową cenę
-  } else {
-    const [base] = pair.split("/");
-    const baseName = (CURRENCY_NAMES[base] || base) + " vs USD";
-    app.basket.fx.push({ key: pair, pair, n: baseName, price: px2, qty });
-  }
-
-  save(app);
-  renderBasketFx();
-  toast(`Added to basket: ${qty} × ${pair}`);
-}
-
-// --- remove
-function removeFromBasketStocks(sym) {
-  if (!app?.basket?.stocks) return;
-  app.basket.stocks = app.basket.stocks.filter(x => x.t !== sym);
-  save(app);
-  renderBasketStocks();
-}
-
-function removeFromBasketFx(pair) {
-  if (!app?.basket?.fx) return;
-  app.basket.fx = app.basket.fx.filter(x => x.pair !== pair);
-  save(app);
-  renderBasketFx();
-}
-
-// --- totals
-function basketTotals(list) {
-  let q = 0, sum = 0;
-  (list || []).forEach(it => {
-    const qty = Number(it.qty || 0);
-    const unit = toCents(Number(it.price || it.priceUsd || 0)); // ⬅️ najpierw 2 dp
-    q += qty;
-    sum = toCents(sum + toCents(qty * unit));
-  });
-  return { qty: q, sum: toCents(sum) };
-}
-
-
-
-// === RENDER: STOCK BASKET (dopasowane do Twojego HTML) ===
-// HTML:
-// <div id="stock-basket">
-//   <div class="basket-list">…</div>
-//   <strong data-basket-qty="stocks"></strong>
-//   <strong data-basket-amt="stocks"></strong>
-// </div>
-function renderBasketStocks() {
-  const wrap = document.getElementById('stock-basket');
-  if (!wrap) return;
-
-  const listEl  = wrap.querySelector('.basket-list') || wrap;
-  const emptyEl = listEl.querySelector('.basket-empty');
-  const qtyEl   = wrap.querySelector('[data-basket-qty="stocks"]');
-  const amtEl   = wrap.querySelector('[data-basket-amt="stocks"]');
-
-  const items = app?.basket?.stocks || [];
-
-  if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
-
-  // wyczyść listę
-  listEl.querySelectorAll('.basket-item').forEach(n => n.remove());
-
-  // wiersze
-  items.forEach(it => {
-    const row = document.createElement('div');
-    row.className = 'basket-item';
-    row.innerHTML = `
-      <div class="b-item-asset">
-        <span class="b-ticker">${it.t}</span>
-        <span class="b-name">${it.n || ''}</span>
-      </div>
-      <div class="b-price">${PLN(it.price)}</div>
-      <div class="b-change"><span class="arrow-flat">—</span></div>
-      <div class="b-qty">
-        <input class="input basket-qty" type="number" min="1" step="1" value="${it.qty}">
-        <button class="btn" data-act="upd">Set</button>
-      </div>
-      <div class="b-subtotal">${PLN(toCents(it.qty * it.price))}</div>
-      <div class="b-remove"><button class="btn danger" data-act="rm">×</button></div>
-    `;
-
-    const inp = row.querySelector('input');
-
-    // Enter = klik "Set"
-    inp.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter') {
-        ev.preventDefault();
-        row.querySelector('[data-act="upd"]')?.click();
-      }
-    });
-
-    row.querySelector('[data-act="upd"]').addEventListener('click', () => {
-      it.qty = Math.max(1, parseInt(inp.value || "1", 10));
-      save(app);
-      renderBasketStocks();
-    });
-
- row.querySelector('[data-act="rm"]').addEventListener('click', () => removeFromBasketStocks(it.t));
-
-    listEl.appendChild(row);
-  });
-
-  const t = basketTotals(items);
-  if (qtyEl) qtyEl.textContent = String(t.qty);
-  if (amtEl) amtEl.textContent = PLN(t.sum);
-}
-
-
-// === RENDER: FX BASKET (dopasowane do Twojego HTML) ===
-function renderBasketFx() {
-  const wrap = document.getElementById('fx-basket');
-  if (!wrap) return;
-
-  const listEl  = wrap.querySelector('.basket-list') || wrap;
-  const emptyEl = listEl.querySelector('.basket-empty');
-  const qtyEl   = wrap.querySelector('[data-basket-qty="fx"]');
-  const amtEl   = wrap.querySelector('[data-basket-amt="fx"]');
-
-  const items = app?.basket?.fx || [];
-
-  if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
-
-  listEl.querySelectorAll('.basket-item').forEach(n => n.remove());
-
-  items.forEach(it => {
-    const row = document.createElement('div');
-    row.className = 'basket-item';
-    row.innerHTML = `
-      <div class="b-item-asset">
-        <span class="b-ticker">${it.pair}</span>
-        <span class="b-name">${it.n || ''}</span>
-      </div>
-      <div class="b-price">${PLN(it.price)}</div>
-      <div class="b-change"><span class="arrow-flat">—</span></div>
-      <div class="b-qty">
-        <input class="input basket-qty" type="number" min="1" step="1" value="${it.qty}">
-        <button class="btn" data-act="upd">Set</button>
-      </div>
-      <div class="b-subtotal">${PLN(toCents(it.qty * it.price))}</div>
-      <div class="b-remove"><button class="btn danger" data-act="rm">×</button></div>
-    `;
-
-    const inp = row.querySelector('input');
-
-    // Enter = klik "Set"
-    inp.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter') {
-        ev.preventDefault();
-        row.querySelector('[data-act="upd"]')?.click();
-      }
-    });
-
-    row.querySelector('[data-act="upd"]').addEventListener('click', () => {
-      it.qty = Math.max(1, parseFloat(inp.value || "1"));
-      save(app);
-      renderBasketFx();
-    });
-
-   row.querySelector('[data-act="rm"]').addEventListener('click', () => removeFromBasketFx(it.pair));
-    listEl.appendChild(row);
-  });
-
-  const t = basketTotals(items);
-  if (qtyEl) qtyEl.textContent = String(t.qty);
-  if (amtEl) amtEl.textContent = PLN(t.sum);
-}
-
-// ===== BUY FROM BASKET =====
-function buyBasketStocks() {
-  const ch = activeChild(); if (!ch) return;
-  const items = app?.basket?.stocks || [];
-  if (!items.length) return toast('Basket is empty');
-
-const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty||0) * Number(it.price||0))), 0));
-
-  if (total > ch.jars.save) return toast(TT().needFunds(PLN(total)));
-
-  ch.jars.save   -= total;
-  ch.jars.invest += total;
-
-  items.forEach(it => {
-    const t = it.t; const qty = Number(it.qty||0); const price = Number(it.price||0);
-    if (!t || qty<=0 || price<=0) return;
-    let pos = ch.portfolio[t] || { s:0, b:price };
-    const newS = pos.s + qty;
-    pos.b = ((pos.s * pos.b) + (qty * price)) / newS;
-    pos.s = newS;
-    ch.portfolio[t] = { s: Number(pos.s), b: Number(pos.b.toFixed(5)) };
-  });
-
-  app.basket.stocks = [];
-  save(app);
-  renderBasketStocks();
-  renderJars();
-  renderPortfolioStocks();
-  toast('Bought all stock items from basket');
-}
-
-function buyBasketFx() {
-  const ch = activeChild(); if (!ch) return;
-  const items = app?.basket?.fx || [];
-  if (!items.length) return toast('Basket is empty');
-
-const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty||0) * Number(it.price||0))), 0));
-
-  if (total > ch.jars.save) return toast(TT().needFunds(PLN(total)));
-
-  ch.jars.save   -= total;
-  ch.jars.invest += total;
-
-  items.forEach(it => {
-    const pair = it.pair || it.key; const qty = Number(it.qty||0); const rUsd = Number(it.price||0);
-    if (!pair || qty<=0 || rUsd<=0) return;
-    let pos = ch.fxPortfolio[pair] || { q:0, b:rUsd };
-    const newQ = pos.q + qty;
-    pos.b = ((pos.q * pos.b) + (qty * rUsd)) / newQ;
-    pos.q = newQ;
-    ch.fxPortfolio[pair] = { q: Number(pos.q), b: Number(pos.b.toFixed(5)) };
-  });
-
-  app.basket.fx = [];
-  save(app);
-  renderBasketFx();
-  renderJars();
-  renderPortfolioFx();
-  toast('Bought all FX items from basket');
-}
-
-// --- podpięcie przycisków „Buy (investment cash)” w kartach koszyka
-document.querySelector('[data-basket-buy="stocks"]')?.addEventListener('click', buyBasketStocks);
-document.querySelector('[data-basket-buy="fx"]')?.addEventListener('click', buyBasketFx);
-
-
 function addLedger(type, amount, note) {
   const ch = activeChild(); if (!ch) return;
   const id = crypto.randomUUID ? crypto.randomUUID() : String(Math.random());
@@ -2041,28 +1291,27 @@ document.querySelectorAll('.tab').forEach(b => {
     updateGlobalTrendsForTab(t);
   });
 });
-
-document.querySelectorAll('.tab').forEach(b => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+document.querySelectorAll('.tab').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
 
     const t = b.dataset.tab;
-    ["invest","fx","profits","parent"].forEach(id => {
+    ["invest","fx","profits","parent"].forEach(id=>{
       const el = document.getElementById(`tab-${id}`);
       if (el) el.classList.toggle('hidden', id!==t);
     });
 
-    // chowaj sekcje spoza kart
+    // ⬇⬇⬇ DODANE: chowaj sekcje spoza kart
     const homeTop = document.getElementById('homeTop');
-    if (homeTop) homeTop.classList.toggle('hidden', t!=='invest');
+    if (homeTop) homeTop.classList.toggle('hidden', t!=='invest');     // tylko na Invest
     const gt = document.getElementById('globalTrendsCard');
-    if (gt) gt.classList.toggle('hidden', !(t==='invest' || t==='fx'));
+    if (gt) gt.classList.toggle('hidden', !(t==='invest' || t==='fx')); // nie pokazuj na Profits/Parent
+    // ⬆⬆⬆ DODANE
 
     updateGlobalTrendsForTab(t);
   });
 });
-
 function requireParent() {
   const a = JSON.parse(localStorage.getItem(AUTH_KEY) || '{"role":"guest"}');
   if (a.role !== 'parent') { alert((TT().onlyParent) || 'Parent only: please log in as Parent.'); return false; }
@@ -2104,21 +1353,18 @@ function moveAllDonationsToSavings() {
 document.getElementById('moveDonationsToSavings')?.addEventListener('click', moveAllDonationsToSavings);
 document.getElementById('moveDonToSave')?.addEventListener('click', moveAllDonationsToSavings);
 
-/* === TRADE – STOCKS (btns) === */
 document.getElementById('buyBtn')?.addEventListener('click', buyStock);
 document.getElementById('cancelTrade')?.addEventListener('click', () => {
   selectedStock = null; updateTradeBox(); renderStocks(stockSearch?.value || "");
 });
 document.getElementById('qty')?.addEventListener('input', updateTradeBox);
 
-/* === TRADE – FX (btns) === */
 document.getElementById('fxBuyBtn')?.addEventListener('click', buyFx);
 document.getElementById('fxCancelTrade')?.addEventListener('click', () => {
   selectedFxPair = null; updateFxTradeBox(); renderFxList($("#fxSearch")?.value || "");
 });
 document.getElementById('fxQty')?.addEventListener('input', updateFxTradeBox);
 
-/* === LISTY / SZUKAJKI === */
 document.getElementById('fxSearch')?.addEventListener('input', (e) => renderFxList(e.target.value));
 document.getElementById('fxAddAllMajors')?.addEventListener('click', () => {
   const ch = activeChild(); if (!ch) return;
@@ -2129,18 +1375,18 @@ document.getElementById('fxAddAllMajors')?.addEventListener('click', () => {
   renderFxList(document.getElementById('fxSearch')?.value || "");
 });
 
-/* === JARS – szybkie dodawanie === */
+
 document.querySelectorAll('[data-add]').forEach(btn => {
   btn.addEventListener('click', () => {
     const ch = activeChild(); if (!ch) return;
     const k = btn.getAttribute('data-add');
 
-    // input obok przycisku
+    // znajdź input obok tego przycisku
     const input = btn.parentElement.querySelector('.jar-input');
     let inc = Number(input?.value || 0);
 
     if (!inc || inc <= 0) {
-      // fallback – gdy pusto
+      // fallback – jeśli nic nie wpisano, użyj domyślnej wartości
       inc = (k === 'give' ? 2 : 5);
     }
 
@@ -2148,11 +1394,11 @@ document.querySelectorAll('[data-add]').forEach(btn => {
     save(app);
     renderJars();
 
-    if (input) input.value = '';
+    if (input) input.value = ''; // wyczyść po użyciu
   });
 });
 
-/* === PARENT top-up / settings / clear === */
+
 document.getElementById('topupForm')?.addEventListener('submit', e => {
   e.preventDefault();
   if (!requireParent()) return;
@@ -2197,7 +1443,6 @@ document.getElementById('clearDataBtn')?.addEventListener('click', () => {
   }
 });
 
-/* === Ledger & child switch === */
 document.getElementById('filterType')?.addEventListener('change', () => renderLedger());
 
 childSel?.addEventListener('change', () => {
@@ -2206,7 +1451,7 @@ childSel?.addEventListener('change', () => {
   renderAll();
 });
 
-/* === Add Child === */
+// Add Child
 addChildBtn?.addEventListener('click', () => {
   if (!requireParent()) return;
   const name = prompt("Child's name:");
@@ -2223,29 +1468,6 @@ addChildBtn?.addEventListener('click', () => {
   toast(`Added: ${name}`);
 });
 
-/* === NEW: Add to basket (Stocks) === */
-document.getElementById('addToStockBasket')?.addEventListener('click', () => {
-  if (!selectedStock) return toast('Pick a stock first.');
-  const ch = activeChild();
-  const s = ch?.stocks.find(x => x.t === selectedStock);
-  const qty = Math.max(1, parseInt(document.getElementById('qty')?.value || '1', 10));
-  const price = (lastStockUiPrice ?? s?.p ?? 0);
-  addToBasketStock(selectedStock, price, qty);
-});
-
-/* === NEW: Add to basket (FX) === */
-document.getElementById('addToFxBasket')?.addEventListener('click', () => {
-  if (!selectedFxPair) return toast('Pick a currency pair first.');
-  const qty = Math.max(1, parseFloat(document.getElementById('fxQty')?.value || '1'));
-  const priceUsd = (lastFxUiPrice ?? rateUsdFromPair(selectedFxPair) ?? 0);
-  addToBasketFx(selectedFxPair, priceUsd, qty);
-});
-
-/* === NEW: Buy from baskets === */
-document.querySelector('[data-basket-buy="stocks"]')?.addEventListener('click', () => buyBasket('stocks'));
-document.querySelector('[data-basket-buy="fx"]')?.addEventListener('click', () => buyBasket('fx'));
-
-
 // ====== LIVE MODE (BEGIN)
 let liveFetchLock = false;
 let liveFxTimer = null;
@@ -2254,40 +1476,18 @@ let liveStTimer = null;
 function setLiveTimers(on) {
   clearInterval(liveFxTimer);
   clearInterval(liveStTimer);
-  liveFxTimer = null;
-  liveStTimer = null;
+  liveFxTimer = liveStTimer = null;
 
   if (on) {
     // ⏱️ natychmiastowy pierwszy tick po włączeniu Live
     refreshStocksFromApi();
     refreshFxFromApi();
 
-    // ⏲️ potem cyklicznie (wolniej – łagodniej dla limitów)
-    liveStTimer = setInterval(() => refreshStocksFromApi(), 45_000); // 45s
-liveFxTimer = setInterval(() => refreshFxFromApi(),    70_000);  // 70s
+    // potem cyklicznie
+    liveStTimer = setInterval(() => refreshStocksFromApi(), 15000);
+    liveFxTimer = setInterval(() => refreshFxFromApi(),     30000);
   }
 }
-
-// ==== OFFLINE FX SIMULATION (tylko offline) ====
-function simulateFxOfflineTick() {
-  if (app.liveMode) return;               // tylko offline
-  const next = { ...baseFx, PLN: 1 };     // PLN zawsze 1
-  ISO.forEach(code => {
-    if (code === "PLN") return;
-    const v = Number(next[code]);
-    if (!Number.isFinite(v) || v <= 0) return;
-    const drift = 1 + (Math.random() - 0.5) * 0.005; // ±0.25%
-    const nv = Math.max(0.00001, v * drift);
-    next[code] = Number(nv.toFixed(5));
-  });
-  baseFx = next;
-
-  const fxSearchEl = document.getElementById("fxSearch");
-  renderFxList((fxSearchEl && fxSearchEl.value) || "");
-  renderPortfolioFx(); renderJars(); renderProfits();
-  renderGlobalTrends(currentTrendsMode);
-}
-setInterval(simulateFxOfflineTick, 3000); // co 3 sekundy
 
 function syncLiveToggleUI() {
   const t = document.getElementById('liveModeToggle');
@@ -2298,34 +1498,42 @@ function syncLiveToggleUI() {
   if (s) s.textContent = app.liveMode ? TT().apiConn : TT().apiNot;
 }
 
-// --- Self-test łączności: proxy (Yahoo) + FX host (bez direct, żeby nie było CORS) ---
+// --- Self-test łączności (statusy w #liveStatus + logi w konsoli)
 async function liveSelfTest() {
   const s = document.getElementById('liveStatus');
-  const q = "AAPL,MSFT";
-
+  function fmt(ok, name, code) { return (ok ? "✅" : "❌") + " " + name + (code ? "("+code+")" : ""); }
   async function ping(url, name) {
     const started = Date.now();
     try {
       const r = await fetch(url, { headers: { "Accept": "application/json" } });
-      return { ok: r.ok, code: r.status, ms: Date.now() - started, name };
-    } catch {
-      return { ok: false, code: "ERR", ms: Date.now() - started, name };
+      return { ok: r.ok, code: r.status, ms: Date.now() - started };
+    } catch (e) {
+      console.warn("[selftest] fail", name, url, e);
+      return { ok: false, code: "ERR", ms: Date.now() - started };
     }
   }
 
-  const proxyUrl = "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(q);
-  const fxUrl    = "https://api.exchangerate.host/latest?base=USD&places=6";
+  const q = "AAPL,MSFT";
+  const [y1, y2, proxy, fx] = await Promise.all([
+    ping("https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(q), "Yahoo#1"),
+    ping("https://query2.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(q), "Yahoo#2"),
+    ping("https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(q), "Proxy"),
+    ping("https://api.exchangerate.host/latest?base=USD&places=6", "FXhost")
+  ]);
 
-  const [proxy, fx] = await Promise.all([ ping(proxyUrl, "Proxy"), ping(fxUrl, "FXhost") ]);
-  const ok = (proxy.ok && fx.ok);
+  const line = [fmt(y1.ok, "Yahoo#1", y1.code), fmt(y2.ok, "Yahoo#2", y2.code), fmt(proxy.ok, "Proxy", proxy.code), fmt(fx.ok, "FXhost", fx.code)].join(" • ");
+  if (s) s.textContent = "API self-test: " + line;
+  console.log("[LIVE SELF-TEST]", { y1, y2, proxy, fx });
 
-  if (s) s.textContent = `API self-test: ${proxy.ok ? "✅" : "❌"} Proxy(${proxy.code}) • ${fx.ok ? "✅" : "❌"} FXhost(${fx.code})`;
-  window.__lastSelfTest = { proxy, fx, ok, route: proxy.ok ? 'proxy' : 'offline' };
-  console.log("[LIVE SELF-TEST]", window.__lastSelfTest);
-  return window.__lastSelfTest;
+  const summary = {
+    y1, y2, proxy, fx,
+    ok: ((y1.ok || y2.ok || proxy.ok) && fx.ok)
+  };
+  window.__lastSelfTest = summary; // opcjonalnie do debug
+  return summary;
 }
 
-// --- Jednorazowy refresh (FX + akcje) z self-testem + sufiks „via …” i „rate-limited” ---
+// --- Jednorazowy refresh (FX + akcje) z self-testem + sufiks direct/proxy
 async function forceLiveRefresh() {
   if (liveFetchLock) return false;
   liveFetchLock = true;
@@ -2334,47 +1542,30 @@ async function forceLiveRefresh() {
   if (s) s.textContent = TT().apiConn;
 
   try {
-    // self-test łączności (proxy + FX host)
     let st = null, okNet = false;
-    try {
-      st = await liveSelfTest();
-      okNet = !!st.ok;
-    } catch {
-      okNet = false;
-    }
+    try { st = await liveSelfTest(); okNet = !!st.ok; } catch { okNet = false; }
 
     if (!okNet) {
       if (s) s.textContent = "API: trying via proxy…";
       console.warn("[forceLiveRefresh] self-test failed; trying fetchers anyway.");
     }
 
-    // równoległy refresh FX i akcji
     const [fxRes, stRes] = await Promise.allSettled([
       refreshFxFromApi(),
       refreshStocksFromApi()
     ]);
+    const fxOk = ((fxRes.status === 'fulfilled') && fxRes.value) === true;
+    const stOk = ((stRes.status === 'fulfilled') && stRes.value) === true;
 
-    const fxOk = (fxRes.status === 'fulfilled' && fxRes.value === true);
-    const stOk = (stRes.status === 'fulfilled' && stRes.value === true);
-
-    // ustal trasę (route) na podstawie self-testu
-   // ustal trasę: direct / proxy / offline
-let route = 'offline';
-if (st) {
-  const directOk = (st.d1?.ok || st.d2?.ok);
-  const proxyOk  = !!st.proxy?.ok;
-  route = directOk ? 'direct' : (proxyOk ? 'proxy' : 'offline');
-}
-
-// NEW: sprawdź cooldown ustawiony po 429
-const rateLimited = window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil;
-const suffix = rateLimited ? ' • rate-limited – slowing down' : '';
-
-if (s) {
-  s.textContent =
-    `API: ${fxOk ? TT().fxOk : TT().fxFail} • ${stOk ? TT().stOk : TT().stFail}${suffix} (via ${route})`;
-}
-
+    // sufiks: direct / proxy / offline
+    let route = 'offline';
+    if (st) {
+      const directOk = (st.y1.ok || st.y2.ok);
+      const proxyOk  = st.proxy.ok;
+      route = directOk ? 'direct' : (proxyOk ? 'proxy' : 'offline');
+    }
+    if (s) s.textContent =
+      `API: ${fxOk ? TT().fxOk : TT().fxFail} • ${stOk ? TT().stOk : TT().stFail} (via ${route})`;
 
     return (fxOk || stOk);
   } finally {
@@ -2382,7 +1573,6 @@ if (s) {
     renderGlobalTrends(currentTrendsMode);
   }
 }
-
 
 // --- Odświeżenie UI + timery
 function updateLiveUI(forceFetch = false) {
@@ -2445,21 +1635,8 @@ function wireLiveToggleOnce() {
   updateLiveUI(false);
   if (app.liveMode) forceLiveRefresh();
 })();
-
-// 🔇 Pauza odświeżania, gdy zakładka niewidoczna (oszczędza limity)
-document.addEventListener('visibilitychange', () => {
-  if (!app.liveMode) return;
-  const s = document.getElementById('liveStatus');
-  if (document.hidden) {
-    setLiveTimers(false); // stop
-    if (s) s.textContent = 'API: paused (tab hidden)';
-  } else {
-    setLiveTimers(true);  // start
-    if (s) s.textContent = TT().apiConn;
-    forceLiveRefresh();
-  }
-});
 // ====== LIVE MODE (END)
+
 
 // ====== Tutorial (skrócone) ======
 let TUTORIAL_STEPS = makeSteps();
@@ -2517,182 +1694,133 @@ function mapToYahoo(sym) {
 
 // ====== LIVE DATA FETCHERS (BEGIN)
 
-// --- YAHOO (proxy-first) + cooldown + bezpieczny parser ---
+// --- wspólny helper do Yahoo z chunkowaniem + fallback r.jina.ai + lepsze logi ---
+// --- YAHOO (proxy-first) + odporne parsowanie ---
 async function yahooQuote(symbolsArr) {
- const CHUNK = 3;
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  var CHUNK = 10;
+  var chunks = [];
+  for (var i = 0; i < symbolsArr.length; i += CHUNK) chunks.push(symbolsArr.slice(i, i + CHUNK));
 
   function pickPrice(q) {
-    const cand = [q?.regularMarketPrice, q?.postMarketPrice, q?.preMarketPrice, q?.bid, q?.ask];
-    for (let i = 0; i < cand.length; i++) {
-      const v = cand[i];
-      if (typeof v === "number" && isFinite(v)) return Number(v);
-    }
+    var cand = [ q?.regularMarketPrice, q?.postMarketPrice, q?.preMarketPrice, q?.bid, q?.ask ];
+    for (var i = 0; i < cand.length; i++) { var v = cand[i]; if (typeof v === "number" && isFinite(v)) return Number(v); }
     return null;
-  }
-
-  // cooldown – pomiń zapytania, ale zwróć flagę
-  const now = Date.now();
-  if (window.__yahooCooldownUntil && now < window.__yahooCooldownUntil) {
-    console.warn("[yahooQuote] cooldown in effect, skipping fetch");
-    const arr = [];
-    arr._pickPrice = pickPrice;
-    arr._rateLimited = true;
-    return arr;
-  }
-
-  async function safeJson(r) {
-    let j;
-    try { j = await r.json(); }
-    catch { j = JSON.parse(await r.text()); }
-    if (j && j.data) {
-      try { j = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch {}
-    }
-    return j;
   }
 
   async function fetchList(symbolsCsv) {
-    const url = "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols="
-                + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now();
-    try {
-      const r = await fetch(url, { headers: { "Accept": "application/json" } });
-      if (r.status === 429) {
-  const now = Date.now();
-  const prev = window.__yahooCooldownSecs || 60;
-  const next = Math.min(prev * 2, 300); // 60 -> 120 -> 240 -> 300s
-  window.__yahooCooldownSecs = next;
-  window.__yahooCooldownUntil = now + next * 1000;
-  console.warn(`[yahooQuote] 429 rate-limited – cooldown ${next}s`);
-  return { list: [], rateLimited: true };
-}
-
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const j = await safeJson(r);
-      const list = j?.quoteResponse?.result || [];
-      return { list, rateLimited: false };
-    } catch (e) {
-      console.warn("[yahooQuote] fetch fail", e);
-      return { list: [], rateLimited: false };
+    var urls = [
+      "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now(),
+      "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now(),
+      "https://query2.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now()
+    ];
+    for (var k = 0; k < urls.length; k++) {
+      var url = urls[k];
+      try {
+        var r = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        // proxy bywa z 'text/plain' – parsuj bezpiecznie
+        var j;
+        try { j = await r.json(); } catch { j = JSON.parse(await r.text()); }
+        var list = (j && j.quoteResponse && j.quoteResponse.result) || [];
+        if (Array.isArray(list) && list.length) return list;
+        console.warn("[yahooQuote] empty list from", url, j);
+      } catch (e) {
+        console.warn("[yahooQuote] fail", url, e);
+      }
     }
+    return [];
   }
 
-  const chunks = [];
-  for (let i = 0; i < symbolsArr.length; i += CHUNK) {
-    chunks.push(symbolsArr.slice(i, i + CHUNK));
+  var out = [];
+  for (var c = 0; c < chunks.length; c++) {
+    var list = await fetchList(chunks[c].join(","));
+    if (list && list.length) out.push.apply(out, list);
   }
-
-  const out = [];
-  let anyRateLimited = false;
-
-  for (let c = 0; c < chunks.length; c++) {
-    const { list, rateLimited } = await fetchList(chunks[c].join(","));
-    if (rateLimited) { anyRateLimited = true; break; }
-    if (list && list.length) out.push(...list);
-    await sleep(1500 + Math.random() * 800); // jitter
-  }
-
   out._pickPrice = pickPrice;
-  out._rateLimited = anyRateLimited;
   return out;
 }
-// ===== LIVE FX FETCHER (robust) =====
-// Buduje pełną mapę: baseFx[CODE] = PLN za 1 CODE
-// Źródła: 1) exchangerate.host (PRIMARY, base=USD), 2) Yahoo (uzupełnia braki), 3) fallbacki
+
+
+// 4) LIVE FX FETCHER — buduje pełną mapę i PODMIENIA całość
+//    baseFx[CODE] = PLN za 1 CODE (np. EURPLN=X → 4.31)
+// 4) LIVE FX FETCHER — pełna mapa: baseFx[CODE] = PLN za 1 CODE
 async function refreshFxFromApi() {
   try {
-    const next = { PLN: 1 };
+    var bases = ISO.filter(function (c) { return c !== "PLN"; });
+    if (!bases.length) return false;
 
-    // 1) exchangerate.host — PRIMARY (base=USD)
-  async function fetchFxBaseUsd() {
-  const symbols = ISO.join(',');
-  const url = `https://api.exchangerate.host/latest?base=USD&places=6&symbols=${encodeURIComponent(symbols)}`;
-  try {
-    const r = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    try { return await r.json(); } catch { return JSON.parse(await r.text()); }
-  } catch (e) {
-    console.warn("[FXhost] fail (direct)", e);
-    return null;
-  }
-}
+    // 4.1 Yahoo EURPLN=X (proxy-first)
+    var symbolsArr = bases.map(function (c) { return c + "PLN=X"; });
+    var items = await yahooQuote(symbolsArr);
+    var pickPrice = items._pickPrice || (q => q?.regularMarketPrice ?? null);
 
-    const fx = await fetchFxBaseUsd();
-    const rates = fx?.rates || null;
-    const pln_per_usd = Number(rates?.PLN);
-    if (Number.isFinite(pln_per_usd) && pln_per_usd > 0) {
-      // PLN per 1 USD
-      next.USD = +pln_per_usd.toFixed(5);
-      // PLN per 1 CODE = (PLN/USD) / (CODE/USD)
-      ISO.forEach(code => {
-        if (code === "PLN") return;
-        const code_per_usd = Number(rates?.[code]);
-        if (Number.isFinite(code_per_usd) && code_per_usd > 0) {
-          next[code] = +((pln_per_usd / code_per_usd).toFixed(5));
-        }
-      });
+    var next = { PLN: 1 };
+    for (var i = 0; i < items.length; i++) {
+      var q = items[i];
+      var sym = String(q?.symbol || "").toUpperCase(); // np. 'EURPLN=X'
+      var m = sym.match(/^([A-Z]{3})PLN=X$/);
+      var px = pickPrice(q);
+      if (!m || px == null) continue;
+      next[m[1]] = Number(px.toFixed(5));
     }
 
-    // 2) Yahoo — SECONDARY, uzupełnia tylko braki (CODEPLN=X)
-    const missingForYahoo = ISO.filter(c => c !== "PLN" && !Number.isFinite(next[c]));
-    if (missingForYahoo.length) {
-      const symbolsArr = missingForYahoo.map(c => `${c}PLN=X`);
-      const items = await yahooQuote(symbolsArr);
-      const pickPrice = items._pickPrice || (q => q?.regularMarketPrice ?? null);
-      for (let i = 0; i < items.length; i++) {
-        const q = items[i];
-        const sym = String(q?.symbol || "").toUpperCase(); // np. EURPLN=X
-        const m = sym.match(/^([A-Z]{3})PLN=X$/);
-        const px = Number(pickPrice(q));
-        if (m && Number.isFinite(px) && px > 0) {
-          next[m[1]] = +px.toFixed(5); // PLN per 1 CODE
-        }
-      }
-    }
-
-    // 3) Fallback: jeśli nadal brak USD, próbuj base=PLN (odwrotność)
-    if (!Number.isFinite(next.USD) || next.USD <= 0) {
-      try {
-        const urls = [
-          "https://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD",
-          "https://r.jina.ai/http://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD"
+       // 4.2 DOUZUPEŁNIENIE braków z exchangerate.host (direct ⇒ proxy)
+    var missing = ISO.some(function (code) { return !(code in next); });
+    if (missing) {
+      async function fetchFxBaseUsd() {
+        var urls = [
+          "https://api.exchangerate.host/latest?base=USD&places=6",
+          "https://r.jina.ai/http://api.exchangerate.host/latest?base=USD&places=6"
         ];
-        for (let k = 0; k < urls.length; k++) {
+        for (var k = 0; k < urls.length; k++) {
           try {
-            const r = await fetch(urls[k], { headers: { "Accept": "application/json" } });
+            var r = await fetch(urls[k], { headers: { "Accept": "application/json" } });
             if (!r.ok) throw new Error("HTTP " + r.status);
-            const j = await r.json().catch(async () => JSON.parse(await r.text()));
-            const usd_per_pln = Number(j?.rates?.USD); // USD per 1 PLN
-            if (Number.isFinite(usd_per_pln) && usd_per_pln > 0) {
-              next.USD = +(1 / usd_per_pln).toFixed(5); // PLN per 1 USD
-              break;
-            }
-          } catch (e) { /* continue */ }
+            try { return await r.json(); } catch { return JSON.parse(await r.text()); }
+          } catch (e) { console.warn("[FXhost] fail", urls[k], e); }
         }
-      } catch { /* ignore */ }
-    }
-
-    // Domknij brakujące waluty poprzednią mapą
-    ISO.forEach(code => {
-      if (code === "PLN") return;
-      if (!Number.isFinite(next[code]) || next[code] <= 0) {
-        const prev = baseFx?.[code];
-        if (Number.isFinite(prev) && prev > 0) next[code] = prev;
+        throw new Error("FXhost: all URLs failed");
       }
-    });
 
-    // Ostateczny bezpiecznik dla USD
-    if (!Number.isFinite(next.USD) || next.USD <= 0) {
-      next.USD = Number.isFinite(baseFx?.USD) && baseFx.USD > 0 ? baseFx.USD : 4.00;
+      try {
+        var data = await fetchFxBaseUsd();
+        var rates = (data && data.rates) || null;
+        if (rates && typeof rates === 'object') {
+          var pln_per_usd = Number(rates.PLN);
+          if (pln_per_usd) {
+            if (next.USD == null) next.USD = Number(pln_per_usd.toFixed(5));
+            for (var j = 0; j < ISO.length; j++) {
+              var code = ISO[j];
+              if (code === "PLN") continue;
+              if (next[code] != null) continue;
+              var code_per_usd = rates[code];
+              if (!code_per_usd) continue;
+              next[code] = Number((pln_per_usd / code_per_usd).toFixed(5));
+            }
+          } else {
+            console.warn("[refreshFxFromApi] FX host malformed", data);
+          }
+        } else {
+          console.warn("[refreshFxFromApi] FX host: missing rates", data);
+        }
+      } catch (err) {
+        console.warn("[refreshFxFromApi] FX host fatal", err);
+      }
     }
 
-    // Podmiana mapy + odświeżenie UI
-    baseFx = next;
-    const fxSearchEl = document.getElementById("fxSearch");
+
+    // 4.3 Fallback do starych wartości, jeśli coś nadal brak
+    for (var t = 0; t < ISO.length; t++) {
+      var ccode = ISO[t];
+      if (ccode === "PLN") continue;
+      if (next[ccode] == null && baseFx && baseFx[ccode] != null) next[ccode] = baseFx[ccode];
+    }
+
+    baseFx = next; // PODMIANA mapy
+    var fxSearchEl = document.getElementById("fxSearch");
     renderFxList((fxSearchEl && fxSearchEl.value) || "");
     renderPortfolioFx(); renderJars(); renderProfits();
     renderGlobalTrends(currentTrendsMode);
-
-    console.log("[FX MAP READY] USD:", baseFx.USD, baseFx);
     return true;
   } catch (e) {
     console.warn("[refreshFxFromApi] fatal", e);
@@ -2700,46 +1828,36 @@ async function refreshFxFromApi() {
   }
 }
 
-// --- STOCKS (miękkie traktowanie cooldownu) ---
-// --- STOCKS (miękkie traktowanie cooldownu) ---
+
 async function refreshStocksFromApi() {
   try {
-    const ch = activeChild(); if (!ch) return false;
-    const symbolsArr = (ch.stocks || []).map(s => mapToYahoo(s.t));
+    var ch = activeChild(); if (!ch) return false;
+    var symbolsArr = (ch.stocks || []).map(function (s) { return mapToYahoo(s.t); });
     if (!symbolsArr.length) return false;
 
-    const list = await yahooQuote(symbolsArr);
-    const pickPrice = list._pickPrice || (q => q?.regularMarketPrice ?? null);
+    var list = await yahooQuote(symbolsArr);
+    var pickPrice = list._pickPrice || (q => q?.regularMarketPrice ?? null);
+   if (!Array.isArray(list) || !list.length) {
+  console.warn("Stocks: empty response – keeping previous prices");
+  return false; // nie wywalaj błędu, status w UI ustawi się na 'failed', ale bez przerwania cyklu
+}
 
-    // jeśli pusto: sprawdź cooldown i potraktuj jako „ok, tylko zwolnione”
-    const onCooldown = !!(window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil);
-    const rateLimitedFlag = !!list._rateLimited;
-
-    if (!Array.isArray(list) || !list.length) {
-      if (onCooldown || rateLimitedFlag) {
-        console.warn("Stocks: rate-limited – keeping previous prices");
-        return true; // miękko OK (bez „failed”)
-      }
-      console.warn("Stocks: empty response – keeping previous prices");
-      return false;
-    }
-
-    const bySym = Object.create(null);
-    for (let i = 0; i < list.length; i++) {
-      const q = list[i];
+    var bySym = Object.create(null);
+    for (var i = 0; i < list.length; i++) {
+      var q = list[i];
       if (!q || !q.symbol) continue;
       bySym[String(q.symbol).toUpperCase()] = q;
     }
 
-    ch.stocks = ch.stocks.map(s => {
-      const ySym = String(mapToYahoo(s.t)).toUpperCase();
-      const q = bySym[ySym];
-      const px = pickPrice(q);
+    ch.stocks = ch.stocks.map(function (s) {
+      var ySym = String(mapToYahoo(s.t)).toUpperCase();
+      var q = bySym[ySym];
+      var px = pickPrice(q);
       return (px != null) ? Object.assign({}, s, { p: Number(px) }) : s;
     });
 
     save(app);
-    const stSearchEl = document.getElementById("stockSearch");
+    var stSearchEl = document.getElementById("stockSearch");
     renderStocks((stSearchEl && stSearchEl.value) || "");
     renderPortfolioStocks(); renderJars(); renderProfits();
     renderGlobalTrends(currentTrendsMode);
@@ -2750,7 +1868,6 @@ async function refreshStocksFromApi() {
   }
 }
 
-
 // (Timery uruchamiamy/wyłączamy w LIVE MODE wg app.liveMode)
 clearInterval(window.__liveStocksTimer);
 clearInterval(window.__liveFxTimer);
@@ -2758,8 +1875,6 @@ window.__liveStocksTimer = null;
 window.__liveFxTimer = null;
 
 // ====== LIVE DATA FETCHERS (END)
-
-
 
 // ====== SIMULATIONS (offline) ======
 setInterval(() => {
@@ -2772,19 +1887,27 @@ setInterval(() => {
     });
   });
   save(app);
- if (!__qtyTyping) {
   renderStocks(stockSearch?.value || "");
   renderPortfolioStocks();
   renderJars();
   renderProfits();
-  renderBasketStocks();   // ⬅️ NEW
-  renderBasketFx();       // ⬅️ NEW
-}
+}, 2000);
 
+setInterval(() => {
+  if (app.liveMode) return;
+  Object.keys(baseFx).forEach(k => {
+    if (k === "PLN") return;
+    const drift = 1 + (Math.random() - 0.5) * 0.006;
+    baseFx[k] = Number((baseFx[k] * drift).toFixed(5));
+  });
+  renderFxList(document.getElementById('fxSearch')?.value || "");
+  renderPortfolioFx();
+  renderJars();
+  renderProfits();
 }, 2000);
 
 // Odświeżaj Global Trends
-setInterval(() => { renderGlobalTrends(currentTrendsMode); }, app.liveMode ? 20000 : 5000);
+setInterval(() => { renderGlobalTrends(currentTrendsMode); }, app.liveMode ? 15000 : 3000);
 
 // ====== AUTH ======
 let appAuth = loadAuth();
@@ -2836,25 +1959,16 @@ function openLogin() {
 function closeLogin() { loginModal && loginModal.classList.add('hidden'); }
 
 function applyAuthUI() {
-  // --- NEW: ustaw body[data-role] dla CSS (child: ukrycie placeholderów pod słoikami) ---
-  document.body.dataset.role = appAuth?.role || 'guest';
-
   const tr = TT();
   if (isParent()) {
     authBadge && (authBadge.textContent = tr.badgeParent || "Parent");
     loginBtn && loginBtn.classList.add('hidden');
     logoutBtn && logoutBtn.classList.remove('hidden');
   } else if (isChild()) {
-  const ch = activeChild();
-  // czytelny badge: "Child: Imię"
-  const tr = TT();
-  const label = (tr.badgeChild ? tr.badgeChild(ch?.name || "") : `Child: ${ch?.name || ""}`);
-  if (authBadge) authBadge.textContent = label;
-
-  // w trybie dziecka nie pokazujemy "Login" (to myli)
-  if (loginBtn)  loginBtn.classList.add('hidden');
-  if (logoutBtn) logoutBtn.classList.remove('hidden');
-
+    const ch = activeChild();
+    authBadge && (authBadge.textContent = (tr.badgeChild ? tr.badgeChild(ch?.name) : `Child: ${ch?.name || ""}`));
+    loginBtn && loginBtn.classList.add('hidden');
+    logoutBtn && logoutBtn.classList.remove('hidden');
   } else {
     authBadge && (authBadge.textContent = tr.badgeGuest || "Guest");
     loginBtn && loginBtn.classList.remove('hidden');
@@ -2880,9 +1994,6 @@ function applyAuthUI() {
   document.querySelectorAll('.role-parent-only').forEach(el => setHidden(el, hideForNonParent));
 }
 function refreshAuthI18n() { applyAuthUI(); }
-
-// --- NEW: jednorazowe wywołanie, by data-role było ustawione od startu ---
-applyAuthUI();
 
 loginBtn?.addEventListener('click', openLogin);
 loginCancel?.addEventListener('click', closeLogin);
@@ -2922,54 +2033,8 @@ loginSubmit?.addEventListener('click', () => {
 });
 
 logoutBtn?.addEventListener('click', () => {
-  if (isParent()) {
-    // Rodzic -> przełącz na aktywne dziecko (jak było)
-    const kidId = app.activeChildId || (app.childrenOrder?.[0] || null);
-    if (kidId) {
-      app.activeChildId = kidId;
-      save(app);
-      appAuth = { role: 'child', childId: kidId };
-      saveAuth(appAuth);
-      if (document.querySelector('.tab.active')?.dataset.tab === 'parent') {
-        document.querySelector('button[data-tab="invest"]')?.click();
-      }
-      renderAll();
-      const name = app.children?.[kidId]?.name || '';
-      toast(TT().badgeChild ? TT().badgeChild(name) : `Child: ${name}`);
-    } else {
-      appAuth = { role: 'guest' };
-      saveAuth(appAuth);
-      applyAuthUI();
-      toast('Logged out');
-    }
-  } else if (isChild()) {
-    // Dziecko -> pokaż modala logowania z rolą Parent (nie przechodź do Guest)
-    try {
-      // ustaw radio „parent” i pola PIN
-      roleRadios.forEach(r => (r.checked = r.value === 'parent'));
-      childFields && childFields.classList.add('hidden');
-      parentFields && parentFields.classList.remove('hidden');
-      loginPin && (loginPin.value = '');
-      fillLoginChildSelector(); // dla porządku – choć Parent nie używa listy
-      loginModal && loginModal.classList.remove('hidden');
-      refreshAuthI18n();
-      // Uwaga: rola zostaje „child”, dopóki użytkownik nie poda poprawnego PINu w submit
-    } catch {
-      // awaryjnie, gdyby czegoś brakło w DOM – zostaw stare zachowanie
-      appAuth = { role: 'guest' };
-      saveAuth(appAuth);
-      applyAuthUI();
-      toast('Logged out');
-    }
-  } else {
-    // Guest -> bez zmian
-    appAuth = { role: 'guest' };
-    saveAuth(appAuth);
-    applyAuthUI();
-    toast('Logged out');
-  }
+  appAuth = { role: 'guest' }; saveAuth(appAuth); applyAuthUI(); toast('Logged out');
 });
-
 
 document.getElementById('addChildBtn')?.addEventListener('click', () => setTimeout(fillLoginChildSelector, 200));
 document.getElementById('langSelect')?.addEventListener('change', () => setTimeout(refreshAuthI18n, 0));
@@ -2989,7 +2054,6 @@ function renderAll() {
   applyAuthUI();
   updateGlobalTrendsForTab(document.querySelector('.tab.active')?.dataset.tab || 'invest');
 }
-
 
 
 // ===== Parent PIN – storage key =====
@@ -3040,21 +2104,10 @@ setTimeout(() => {
 
   const lb = document.getElementById("loginBtn");
   if (lb && !lb._wired) { lb.addEventListener("click", openLogin); lb._wired = true; }
- 
-}
 
-, 0);
-// ==== REMOVE "Max" buttons from Stock & FX tables ====
-document.addEventListener('DOMContentLoaded', () => {
-  document
-    .querySelectorAll('[data-sell-max], [data-fxmax]')
-    .forEach(btn => btn.remove());
-});
-
-// dodatkowo przy każdym rerenderze (po klikach) – obserwator
-const observer = new MutationObserver(() => {
-  document
-    .querySelectorAll('[data-sell-max], [data-fxmax]')
-    .forEach(btn => btn.remove());
-});
-observer.observe(document.body, { childList: true, subtree: true });
+  const lob = document.getElementById("logoutBtn");
+  if (lob && !lob._wired) {
+    lob.addEventListener("click", () => { appAuth = { role:'guest' }; saveAuth(appAuth); applyAuthUI(); toast('Logged out'); });
+    lob._wired = true;
+  }
+}, 0);
