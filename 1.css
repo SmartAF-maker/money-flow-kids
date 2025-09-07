@@ -2267,3 +2267,38 @@ section#tab-invest #portfolioBody td.space{
   min-width: 72px !important;
   text-align: center;
 }
+/* === Stock Portfolio: delikatne odsunięcie P/L od przycisków === */
+#tab-invest table {
+  table-layout: fixed !important; /* wymuś sztywne proporcje */
+  width: 100% !important;
+}
+
+#tab-invest th:nth-child(6),
+#tab-invest td:nth-child(6) {
+  padding-right: 20px !important;   /* ⬅️ dodatkowy bufor */
+  width: 18% !important;            /* lekko poszerz P/L */
+  box-sizing: border-box;
+  text-align: right;                 /* liczby do prawej */
+}
+
+#tab-invest th:nth-child(7),
+#tab-invest td:nth-child(7) {
+  width: auto !important;           /* guziki zostają jak były */
+}
+/* === Stock Portfolio: odsunięcie wartości P/L od guzików === */
+#tab-invest td:nth-child(6) span {
+  display: inline-block;
+  margin-right: 0px;   /* ⬅️ dostosuj (np. 16–24px) żeby było idealnie */
+}
+/* STOCK PORTFOLIO: dosuń wartości P/L delikatnie w prawo (bez ruszania guzików) */
+section#tab-invest .tableWrap table tr > td:nth-child(6),
+section#tab-invest .tableWrap table tr > th:nth-child(6){
+  text-align: right !important;         /* liczby do prawej krawędzi kolumny */
+  padding-left: 21px !important;        /* odstęp od kolumny Value */
+}
+
+/* jeśli chcesz odsunąć też Value, zostaw to (opcjonalne) */
+section#tab-invest .tableWrap table tr > td:nth-child(5){
+  padding-right: 14px !important;       /* bufor między Value a P/L */
+}
+
