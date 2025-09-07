@@ -2221,3 +2221,49 @@ section#tab-fx td:nth-child(6){ padding-left: 16px !important; }    /* P/L   →
   letter-spacing: 0.3px;
   color: var(--ink) !important;
 }
+
+#portfolioBody td.space .btn,
+#fxBody td.space .btn {
+  margin-left: 2px;      /* odsuń guziki od P/L */
+}
+/* === FX Portfolio: przyciski maksymalnie po prawej === */
+section#tab-fx #fxBody td.space{
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important; /* ⬅️ dociśnij do prawej */
+  gap: 6px !important;
+  padding-right: 12px !important;       /* trochę „oddechu” od krawędzi */
+}
+
+/* daj ostatniej kolumnie więcej miejsca na input + guziki */
+section#tab-fx thead tr > th:last-child,
+section#tab-fx #fxBody tr > td:last-child{
+  width: 180px !important;              /* możesz podbić do 190–200 jeśli trzeba */
+}
+
+/* na wszelki wypadek: elementy w akcji nie rozciągają się */
+section#tab-fx #fxBody td.space > *{
+  flex: 0 0 auto !important;
+}
+
+/* Stock – bez zmian (przypominajka, żeby nic go nie nadpisało) */
+section#tab-invest #portfolioBody td.space{
+  justify-content: flex-start !important;
+}
+/* === Stock Portfolio: wyrównanie Enter + Sell w kolumnie === */
+#tab-invest td.space {
+  display: flex !important;
+  flex-direction: column !important;  /* enter nad Sell */
+  align-items: flex-end !important;   /* ⬅️ całość do prawej */
+  gap: 6px;
+  white-space: nowrap;
+  padding-left: 12px !important;      /* dodatkowy dystans od P/L */
+}
+
+/* węższy input, żeby się nie ściskało */
+#tab-invest td.space input[type="number"],
+#tab-invest td.space .input {
+  width: 72px !important;
+  min-width: 72px !important;
+  text-align: center;
+}
