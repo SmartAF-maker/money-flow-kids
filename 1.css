@@ -2453,6 +2453,11 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
   box-shadow: 0 10px 30px rgba(0,0,0,.45);
   overflow: hidden;
   z-index: 9999;
+  /* === Medium size dla tutoriala === */
+.yt-mini.medium {
+  width: 520px;    /* szerokość */
+  height: 293px;   /* wysokość (16:9) */
+}
 }
 .yt-mini.hidden { display: none; }
 
