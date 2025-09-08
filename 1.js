@@ -197,7 +197,7 @@ function refreshStaticI18n() {
 // ====== STATE ======
 const defaults = {
   childrenOrder: [], children: {}, activeChildId: null, pinHash: null, pinTries: 0, pinLockedUntil: 0,
-  dailyLimit: 50, liveMode: false, trends: { stocks: {}, fx: {} },
+  dailyLimit: 500, liveMode: false, trends: { stocks: {}, fx: {} },
   basket: { stocks: [], fx: [] }  // ⬅️ NEW
 };
 
@@ -1133,11 +1133,12 @@ function setJarFill(amountEl, value) {
   if (!amountEl) return;
   const card = amountEl.closest('.jar-card');
   if (!card) return;
-  const ref = Number((window.app && app.dailyLimit) || 50);
-  const pct = Math.min(90, (value / ref) * 90);
+  const ref = Number((window.app && app.dailyLimit) || 500); // ⬅ było 50
+  const pct = Math.min(100, (value / ref) * 100);
   const withFloor = value > 0 ? Math.max(5, pct) : 0;
   card.style.setProperty('--fill', withFloor.toFixed(2) + '%');
 }
+
 
 // >>> NEW: Available Cash (Savings + Earnings + Donations)
 function renderAvailableCash() {
