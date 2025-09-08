@@ -2440,7 +2440,7 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
   position: fixed;
   right: 16px;
   bottom: 16px;
-  width: 340px;              /* startowa szerokość */
+  width: 340px;           /* startowa szerokość */
   aspect-ratio: 16 / 9;
   background: #000;
   border: 1px solid rgba(255,255,255,.08);
@@ -2448,12 +2448,14 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
   box-shadow: 0 10px 30px rgba(0,0,0,.45);
   overflow: hidden;
   z-index: 9999;
-  /* === Medium size dla tutoriala === */
+}
+
+/* rozmiar „medium” – OSOBNY blok */
 .yt-mini.medium {
-  width: 520px;    /* szerokość */
-  height: 293px;   /* wysokość (16:9) */
+  width: 320px;           /* szerokość */
+  height: 180px;          /* wysokość (16:9) */
 }
-}
+
 .yt-mini.hidden { display: none; }
 
 .yt-mini.max {                 /* powiększony */
