@@ -93,6 +93,52 @@ const STOCK_UNIVERSE = [
   { t: "NVAX", n: "Novavax", p: 12.50 }, { t: "ARM", n: "Arm", p: 110.00 },
   { t: "SQM", n: "SQM", p: 47.00 }, { t: "NIO", n: "NIO", p: 5.20 }
 ];
+// === DODATKOWE POPULARNE AKCJE (offline) – dopasowane do { t, n, p } ===
+// Wklej ten blok tuż po definicji const STOCK_UNIVERSE = [...];
+(function extendStockUniverseWithTop30() {
+  const ADD = {
+    GE:    { name: "General Electric Co.",        price: 168.00 },
+    LIN:   { name: "Linde plc",                   price: 440.00 },
+    JNJ:   { name: "Johnson & Johnson",           price: 160.00 },
+    NYCB: { name: "New York Community Bancorp (Flagstar Bank)", price: 12.00 },
+    
+    AAPL:  { name: "Apple Inc.",                  price: 220.00 },
+    MSFT:  { name: "Microsoft Corp.",             price: 430.00 },
+    GOOGL: { name: "Alphabet Inc. (Class A)",     price: 165.00 },
+    AMZN:  { name: "Amazon.com Inc.",             price: 180.00 },
+    NVDA:  { name: "NVIDIA Corp.",                price: 120.00 }, // po split
+    META:  { name: "Meta Platforms Inc.",         price: 505.00 },
+    TSLA:  { name: "Tesla Inc.",                  price: 240.00 },
+    BRK_B: { name: "Berkshire Hathaway Inc. (B)", price: 440.00 },
+    JPM:   { name: "JPMorgan Chase & Co.",        price: 210.00 },
+    V:     { name: "Visa Inc. (Class A)",         price: 275.00 },
+    MA:    { name: "Mastercard Inc. (Class A)",   price: 460.00 },
+    WMT:   { name: "Walmart Inc.",                price: 73.00 },   // po split
+    PG:    { name: "Procter & Gamble Co.",        price: 170.00 },
+    KO:    { name: "Coca-Cola Co.",               price: 65.00 },
+    PEP:   { name: "PepsiCo Inc.",                price: 170.00 },
+    DIS:   { name: "Walt Disney Co.",             price: 95.00 },
+    NFLX:  { name: "Netflix Inc.",                price: 580.00 },
+    NKE:   { name: "Nike Inc. (Class B)",         price: 95.00 },
+    ORCL:  { name: "Oracle Corp.",                price: 150.00 },
+    INTC:  { name: "Intel Corp.",                 price: 32.00 },
+    IBM:   { name: "International Business Machines", price: 190.00 },
+    XOM:   { name: "Exxon Mobil Corp.",           price: 115.00 },
+    CVX:   { name: "Chevron Corp.",               price: 155.00 },
+    TSM:   { name: "Taiwan Semiconductor (ADR)",  price: 185.00 },
+    BABA:  { name: "Alibaba Group (ADR)",         price: 78.00 },
+    ASML:  { name: "ASML Holding NV (ADR)",       price: 950.00 },
+    SAP:   { name: "SAP SE (ADR)",                price: 200.00 }
+  };
+
+  // Idempotentnie: dodaj tylko te, których nie ma
+  Object.entries(ADD).forEach(([ticker, d]) => {
+    const exists = STOCK_UNIVERSE.some(s => s.t === ticker);
+    if (!exists) {
+      STOCK_UNIVERSE.push({ t: ticker, n: d.name, p: d.price });
+    }
+  });
+})();
 
 // ====== I18N ======
 const tData = {
@@ -410,7 +456,8 @@ function verifyPin(s, pin) {
 
 function ensureExpandedStocks(ch) {
   const have = new Set((ch.stocks || []).map(s => s.t));
-  const target = 30;
+  // const target = 30;            // ❌ usuń/zmień tę linię
+  const target = STOCK_UNIVERSE.length; // ✅ pokaż wszystkie z STOCK_UNIVERSE
   for (const item of STOCK_UNIVERSE) {
     if (ch.stocks.length >= target) break;
     if (!have.has(item.t)) {
@@ -419,6 +466,7 @@ function ensureExpandedStocks(ch) {
     }
   }
 }
+
 // --- Long-only: usuń ujemne/zerowe pozycje z portfeli (migracja starych danych)
 function sanitizePositions(ch){
   // Stocks
@@ -2510,11 +2558,12 @@ window.addEventListener("load", () => openTutorial(false));
 // Mapowanie tickerów do formatu Yahoo (tylko nietypowe przypadki)
 function mapToYahoo(sym) {
   const map = {
-    BRKB: 'BRK-B',    // Berkshire Hathaway B
-    // dodawaj tutaj kolejne mapowania, gdyby coś nie wracało z Yahoo
+    BRKB: 'BRK-B',   // było
+    BRK_B: 'BRK-B',  // ✅ dopisz to, jeśli używasz BRK_B w STOCK_UNIVERSE
   };
   return map[sym] || sym;
 }
+
 
 // ====== LIVE DATA FETCHERS (BEGIN)
 
@@ -3129,4 +3178,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Zapisz, że już wyświetlono tutorial
     localStorage.setItem("tutorialSeen", "1");
   }
+});
+window.addEventListener('DOMContentLoaded', () => {
+  renderAll();
 });
