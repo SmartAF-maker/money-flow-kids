@@ -2452,8 +2452,8 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
 
 /* rozmiar „medium” – OSOBNY blok */
 .yt-mini.medium {
-  width: 320px;           /* szerokość */
-  height: 180px;          /* wysokość (16:9) */
+  width: 370px;           /* szerokość */
+  height: 208px;          /* wysokość (16:9) */
 }
 
 .yt-mini.hidden { display: none; }
