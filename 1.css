@@ -2347,11 +2347,6 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
     white-space: nowrap;
   }
 }
-/* Pokazuj ekranik proszący o obrót tylko w pionie */
-@media (orientation: portrait) {
-  #rotateOverlay { display:flex; }
-  body { overflow:hidden; }
-}
 #rotateOverlay{
   position:fixed; inset:0; z-index:9999;
   display:none; align-items:center; justify-content:center;
@@ -2505,4 +2500,15 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
   right: 16px;
   bottom: 16px;
   top: auto !important;   /* zabij ewentualne top: 12px */
+}
+/* --- UNLOCK SCROLL + ZABIJ ORIENTATION OVERLAY --- */
+#rotateOverlay{ display:none !important; pointer-events:none !important; }
+
+html, body{
+  height:auto !important;
+  min-height:100% !important;
+  overflow-y:auto !important;
+  overflow-x:hidden;                /* poziomy dalej blokujemy */
+  -webkit-overflow-scrolling:touch; /* płynne na iOS */
+  touch-action: pan-y;              /* wymuś pionowy scroll */
 }

@@ -1134,7 +1134,7 @@ function setJarFill(amountEl, value) {
   const card = amountEl.closest('.jar-card');
   if (!card) return;
   const ref = Number((window.app && app.dailyLimit) || 500); // ⬅ było 50
-  const pct = Math.min(100, (value / ref) * 100);
+  const pct = Math.min(90, (value / ref) * 90);
   const withFloor = value > 0 ? Math.max(5, pct) : 0;
   card.style.setProperty('--fill', withFloor.toFixed(2) + '%');
 }
