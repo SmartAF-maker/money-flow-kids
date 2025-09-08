@@ -65,6 +65,40 @@ const CURRENCY_NAMES = {
   BRL: "Brazilian Real", ILS: "Israeli New Shekel", INR: "Indian Rupee", KRW: "South Korean Won",
   SGD: "Singapore Dollar"
 };
+// === DODATKOWE POPULARNE WALUTY (offline) – PLNy za 1 jednostkę ===
+// Wklej ten blok po ISO / baseFx / CURRENCY_NAMES
+(function extendCurrenciesWithPopular() {
+  const ADD = {
+    AED: { name: "UAE Dirham",         pln: 1.06 },
+    SAR: { name: "Saudi Riyal",        pln: 1.04 },
+    QAR: { name: "Qatari Riyal",       pln: 1.07 },
+    KWD: { name: "Kuwaiti Dinar",      pln: 12.70 },
+    BHD: { name: "Bahraini Dinar",     pln: 10.33 },
+    OMR: { name: "Omani Rial",         pln: 10.14 },
+
+    THB: { name: "Thai Baht",          pln: 0.11 },
+    PHP: { name: "Philippine Peso",    pln: 0.07 },
+    MYR: { name: "Malaysian Ringgit",  pln: 0.82 },
+    TWD: { name: "New Taiwan Dollar",  pln: 0.12 },
+
+    RON: { name: "Romanian Leu",       pln: 0.86 },
+    BGN: { name: "Bulgarian Lev",      pln: 2.18 },
+    MAD: { name: "Moroccan Dirham",    pln: 0.38 },
+    EGP: { name: "Egyptian Pound",     pln: 0.08 },
+
+    CLP: { name: "Chilean Peso",       pln: 0.0043 },
+    COP: { name: "Colombian Peso",     pln: 0.0010 },
+    ARS: { name: "Argentine Peso",     pln: 0.0043 },
+    PEN: { name: "Peruvian Sol",       pln: 1.05 },
+  };
+
+  Object.entries(ADD).forEach(([code, d]) => {
+    if (!ISO.includes(code)) ISO.push(code);                 // dodaj kod
+    if (!Number.isFinite(baseFx[code])) baseFx[code] = d.pln; // PLN za 1 code
+    if (!CURRENCY_NAMES[code]) CURRENCY_NAMES[code] = d.name; // nazwa
+  });
+})();
+
 
 // ====== STOCK UNIVERSE ======
 const STOCK_UNIVERSE = [
@@ -101,7 +135,6 @@ const STOCK_UNIVERSE = [
     LIN:   { name: "Linde plc",                   price: 440.00 },
     JNJ:   { name: "Johnson & Johnson",           price: 160.00 },
     NYCB: { name: "New York Community Bancorp (Flagstar Bank)", price: 12.00 },
-    
     AAPL:  { name: "Apple Inc.",                  price: 220.00 },
     MSFT:  { name: "Microsoft Corp.",             price: 430.00 },
     GOOGL: { name: "Alphabet Inc. (Class A)",     price: 165.00 },
