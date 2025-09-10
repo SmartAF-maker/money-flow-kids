@@ -19,6 +19,25 @@
 
 <link rel="stylesheet" href="1.css" />
 
+<!-- BRAND TITLE GRADIENT -->
+<style>
+  :root{
+    --brand-blue:  #3b82f6; /* niebieski jak na screenie */
+    --brand-green: #22c55e; /* zielony jak na screenie */
+  }
+
+  /* Tylko tytuł w topbarze + ewentualnie inne nagłówki z klasą .brand-title */
+  #t-appTitle,
+  .brand-title{
+    background-image: linear-gradient(90deg, var(--brand-blue), var(--brand-green));
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
+    display: inline-block; /* pomaga dla background-clip */
+    font-weight: 800;      /* jak na zrzucie */
+  }
+</style>
 
     <!-- WOW Jars – styl tylko dla słoików (zawsze widoczne) -->
     <style>
@@ -131,7 +150,7 @@
   <body>
     <header class="topbar mfk-topbar" role="banner">
   <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
-  <h1 id="t-appTitle">Money Flow Kids</h1>
+<h1 id="appTitle" class="logo">Money Flow</h1>
 
   <div class="role-switch" id="mfkTopNav">
     <select id="langSelect" title="Language">

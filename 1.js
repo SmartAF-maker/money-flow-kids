@@ -2896,6 +2896,9 @@ const parentSection = document.getElementById('tab-parent');
 const tBtnLoginTop = document.getElementById('t-btnLoginTop');
 const tBtnLogoutTop = document.getElementById('t-btnLogout');
 
+// === App title (nagłówek/logotyp tekstowy) ===
+const appTitleEl = document.getElementById('appTitle'); // <div id="appTitle"></div> w HTML
+
 function fillLoginChildSelector() {
   if (!loginChild) return;
   loginChild.innerHTML = '';
@@ -2922,22 +2925,28 @@ function applyAuthUI() {
   // --- NEW: ustaw body[data-role] dla CSS (child: ukrycie placeholderów pod słoikami) ---
   document.body.dataset.role = appAuth?.role || 'guest';
 
+  // --- NEW: ustaw tytuł aplikacji zależnie od roli ---
+  if (appTitleEl) {
+    if (isChild()) {
+      appTitleEl.textContent = "Money Flow Kids";
+    } else if (isParent()) {
+      appTitleEl.textContent = "Money Flow";
+    } else {
+      appTitleEl.textContent = "Money Flow";
+    }
+  }
+
   const tr = TT();
   if (isParent()) {
     authBadge && (authBadge.textContent = tr.badgeParent || "Parent");
     loginBtn && loginBtn.classList.add('hidden');
     logoutBtn && logoutBtn.classList.remove('hidden');
   } else if (isChild()) {
-  const ch = activeChild();
-  // czytelny badge: "Child: Imię"
-  const tr = TT();
-  const label = (tr.badgeChild ? tr.badgeChild(ch?.name || "") : `Child: ${ch?.name || ""}`);
-  if (authBadge) authBadge.textContent = label;
-
-  // w trybie dziecka nie pokazujemy "Login" (to myli)
-  if (loginBtn)  loginBtn.classList.add('hidden');
-  if (logoutBtn) logoutBtn.classList.remove('hidden');
-
+    const ch = activeChild();
+    const label = (tr.badgeChild ? tr.badgeChild(ch?.name || "") : `Child: ${ch?.name || ""}`);
+    if (authBadge) authBadge.textContent = label;
+    if (loginBtn)  loginBtn.classList.add('hidden');
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
   } else {
     authBadge && (authBadge.textContent = tr.badgeGuest || "Guest");
     loginBtn && loginBtn.classList.remove('hidden');
@@ -2966,6 +2975,7 @@ function refreshAuthI18n() { applyAuthUI(); }
 
 // --- NEW: jednorazowe wywołanie, by data-role było ustawione od startu ---
 applyAuthUI();
+
 
 loginBtn?.addEventListener('click', openLogin);
 loginCancel?.addEventListener('click', closeLogin);
