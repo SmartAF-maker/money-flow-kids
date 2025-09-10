@@ -150,7 +150,7 @@
   <body>
     <header class="topbar mfk-topbar" role="banner">
   <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
-<h1 id="appTitle" class="logo">Money Flow</h1>
+<h1 id="t-appTitle" class="logo brand-title">Money Flow</h1>
 
   <div class="role-switch" id="mfkTopNav">
     <select id="langSelect" title="Language">
@@ -1012,6 +1012,38 @@
   });
 })();
     </script>
+<script>
+/* Dodaj etykiety kolumn do <td>, żeby CSS mobilny mógł je wyświetlać */
+(function () {
+  function labelize(table) {
+    if (!table) return;
+    const heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      Array.from(tr.children).forEach((td, i) => {
+        td.setAttribute('data-label', heads[i] || '');
+      });
+    });
+  }
+
+  function labelizeAll() {
+    document.querySelectorAll('table').forEach(labelize);
+  }
+
+  // 1) na start
+  document.addEventListener('DOMContentLoaded', labelizeAll);
+
+  // 2) oraz gdy JS dopisze nowe wiersze (portfolio / history)
+  const obs = new MutationObserver(muts => {
+    for (const m of muts) {
+      const table = m.target.closest('table');
+      if (table) labelize(table);
+    }
+  });
+  document.querySelectorAll('tbody').forEach(tb => {
+    obs.observe(tb, { childList: true, subtree: true });
+  });
+})();
+</script>
 
   </body>
 </html>

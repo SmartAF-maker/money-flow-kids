@@ -2552,3 +2552,285 @@ html, body{
   display: inline-block;
   font-weight: 800;
 }
+/* == MOBILE MODE (≤640px) – iPKO vibe == */
+@media (max-width: 640px){
+
+  /* 0) Bez poziomego scrolla i bez auto-zooma na inputach */
+  html,body{max-width:100%; overflow-x:hidden;}
+  body{-webkit-text-size-adjust:100%;}
+
+  /* 1) Topbar — prosty, sticky */
+  :root{ --header-h:56px; }
+  .mfk-topbar, .topbar{
+    position: sticky !important;
+    top: 0;
+    z-index: 200;
+    height: var(--header-h);
+    background: rgba(7,11,22,.72) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  /* hamburger widoczny, środkowe menu do szuflady */
+  #mfkTopNav{ display:none !important; }
+  .mfk-nav-toggle{ display:inline-flex !important; }
+
+  /* 2) Pasek mini-KPI — 2 kolumny (czytelnie) */
+  #stickyMiniJars{
+    position: sticky !important;
+    top: var(--header-h);
+    z-index: 150;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 6px 8px;
+    padding: 6px 8px;
+    background: rgba(7,11,22,.72) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  #stickyMiniJars .mini-jar-label{ font-size:.7rem; }
+  #stickyMiniJars .mini-jar-value{ font-size:.9rem; font-weight:800; white-space:nowrap; }
+
+  /* 3) Siatki → jedna kolumna */
+  .grid.g-3,
+  #tab-invest:not(.hidden),
+  #tab-fx:not(.hidden),
+  #tab-profits:not(.hidden),
+  #tab-parent:not(.hidden){
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 4) Listy rynku i koszyki na całą szerokość */
+  #stock-basket, #fx-basket{
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+  }
+
+  /* 5) Portfolio: zamieniamy tabele na „karty” (zero ścisku i nakładek) */
+  #tab-invest .tableWrap, #tab-fx .tableWrap{
+    overflow-x: visible !important;
+  }
+  #tab-invest thead, #tab-fx thead{ display:none !important; }
+
+  #tab-invest tbody tr,
+  #tab-fx    tbody tr{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:6px;
+    padding:10px;
+    margin:0 0 8px;
+    background:#0c1528;
+    border:1px solid var(--panel-b, #334155);
+    border-radius:12px;
+  }
+  #tab-invest td, #tab-fx td{
+    border-top:0 !important;
+    padding:2px 6px !important;
+    text-align:left !important;
+    white-space:normal !important;
+  }
+
+  /* etykiety z nagłówków jako „label” nad wartością */
+  #tab-invest td::before, #tab-fx td::before{
+    content: attr(data-label);
+    display:block;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:2px;
+  }
+
+  /* kolumna z akcjami na pełną szerokość, pod spodem */
+  #tab-invest td.space, #tab-fx td.space{
+    grid-column: 1 / -1;
+    display:flex !important;
+    justify-content:flex-end !important;
+    align-items:center !important;
+    gap:8px !important;
+  }
+
+  /* 6) Tap-targety i inputy (iOS nie powiększa) */
+  button, .btn{ min-height:44px; }
+  input, select{ font-size:16px !important; } /* blokuje auto-zoom na iOS */
+
+  /* 7) Lżejsze przyciski jak w bankowych apkach */
+  :is(button,.btn,.role-switch .tab,.authwrap .tab){
+    background: #1f2937 !important;
+    border:1px solid #334155 !important;
+    color:#e5e7eb !important;
+    box-shadow:none !important;
+    backdrop-filter:none !important;
+  }
+
+  /* 8) Tytuł z gradientem — zostaje */
+  #t-appTitle, .brand-title{
+    background-image: linear-gradient(90deg,#3b82f6,#22c55e) !important;
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent !important; color:transparent !important;
+  }
+}
+/* === MOBILE FINAL FIX PACK (≤640px) === */
+@media (max-width: 640px){
+
+  /* 0) Prawidłowe przewijanie i brak sztucznego poszerzania tabel */
+  .tableWrap{ overflow-x: auto !important; }
+  .tableWrap table{
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important; /* stabilne kolumny */
+  }
+
+  /* 1) STOCK PORTFOLIO – proporcje i bez nakładania na przyciski */
+  #tab-invest th, #tab-invest td{
+    padding: 8px 6px !important;
+    white-space: nowrap !important;
+    text-align: center; vertical-align: middle;
+  }
+  /* kolumny (suma = 100%) */
+  #tab-invest th:nth-child(1), #tab-invest td:nth-child(1){ width: 18% !important; text-align:left; } /* Ticker */
+  #tab-invest th:nth-child(2), #tab-invest td:nth-child(2){ width: 10% !important; }                /* Shares */
+  #tab-invest th:nth-child(3), #tab-invest td:nth-child(3){ width: 14% !important; }                /* Avg */
+  #tab-invest th:nth-child(4), #tab-invest td:nth-child(4){ width: 14% !important; }                /* Price */
+  #tab-invest th:nth-child(5), #tab-invest td:nth-child(5){ width: 14% !important; }                /* Value */
+  #tab-invest th:nth-child(6), #tab-invest td:nth-child(6){ width: 14% !important; padding-right:10px !important; } /* P/L */
+  #tab-invest th:nth-child(7), #tab-invest td:nth-child(7){ width: 16% !important; }                /* Qty + Sell */
+
+  #tab-invest td.space{
+    display:flex !important; gap:6px !important;
+    justify-content:flex-end !important; align-items:center !important;
+  }
+  #tab-invest td.space input[type="number"]{ width:72px !important; min-width:72px !important; }
+
+  /* 2) FX PORTFOLIO – to samo, dopasowane do kolumn */
+  #tab-fx th, #tab-fx td{
+    padding: 8px 6px !important;
+    white-space: nowrap !important;
+    text-align: center; vertical-align: middle;
+  }
+  #tab-fx th:nth-child(1), #tab-fx td:nth-child(1){ width: 22% !important; text-align:left; } /* Pair */
+  #tab-fx th:nth-child(2), #tab-fx td:nth-child(2){ width: 12% !important; }                 /* Amount */
+  #tab-fx th:nth-child(3), #tab-fx td:nth-child(3){ width: 14% !important; }                 /* Avg */
+  #tab-fx th:nth-child(4), #tab-fx td:nth-child(4){ width: 14% !important; }                 /* Rate */
+  #tab-fx th:nth-child(5), #tab-fx td:nth-child(5){ width: 16% !important; }                 /* Value */
+  #tab-fx th:nth-child(6), #tab-fx td:nth-child(6){ width: 12% !important; }                 /* P/L */
+  #tab-fx th:nth-child(7), #tab-fx td:nth-child(7){ width: 10% !important; }                 /* Actions */
+
+  #tab-fx td.space{
+    display:flex !important; gap:6px !important;
+    justify-content:flex-end !important; align-items:center !important;
+  }
+  #tab-fx td.space input[type="number"]{ width:72px !important; min-width:72px !important; }
+
+  /* 3) Strzałki z inputów number – usuń na mobile */
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+  }
+  input[type=number]{ -moz-appearance: textfield !important; appearance: textfield !important; }
+
+  /* 4) Gdy masz ikonki ▲▼ przy liczbach – odsuń je o 4px */
+  .arrow-up, .arrow-down, .arrow-flat{ margin-left: 4px !important; }
+}
+
+/* Zabija globalne wymuszanie szerokości na desktop/mobile, jeśli jeszcze gdzieś działa */
+.tableWrap table{ min-width: 0 !important; }
+/* === MFK — MOBILE/FIX HOTPATCH (2025-09-10) — paste at END === */
+
+/* 0) Ogólne: niech elementy w gridach mogą się zwężać bez ucinania treści */
+#tab-invest > .card,
+#tab-fx > .card,
+#tab-invest .row,
+#tab-fx .row,
+#stockList, #fxList { min-width: 0 !important; overflow: visible !important; }
+
+/* 1) MINI-JARS — telefon: czytelny układ 2 kolumny, mniejsze etykiety */
+@media (max-width: 640px){
+  body #stickyMiniJars,
+  body .mini-jars.sticky{
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 6px 8px !important;
+    padding: 6px 8px !important;
+  }
+  #stickyMiniJars .mini-jar,
+  .mini-jars.sticky .mini-jar{ min-width: 0 !important; text-align: center; }
+  #stickyMiniJars .mini-jar-label,
+  .mini-jars.sticky .mini-jar-label{ font-size: .72rem !important; line-height: 1.1; }
+  #stickyMiniJars .mini-jar-value,
+  .mini-jars.sticky .mini-jar-value{ font-size: .95rem !important; font-weight: 800; white-space: nowrap; }
+}
+
+/* 2) STRZAŁKI przy liczbach nie nachodzą */
+.arrow-up, .arrow-down, .arrow-flat{
+  display:inline-block; vertical-align: baseline; margin-left: 6px !important; font-size: .9em;
+}
+.b-change .arrow-up, .b-change .arrow-down, .b-change .arrow-flat,
+.mini-jar-value .arrow-up, .mini-jar-value .arrow-down, .mini-jar-value .arrow-flat{
+  margin-left: 6px !important;
+}
+
+/* 3) INPUT number — usuń wewnętrzne strzałki (iOS/Android/desktop) */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none !important; margin: 0 !important; }
+input[type=number]{ -moz-appearance: textfield !important; appearance: textfield !important; }
+
+/* 4) Tabele w FX/Stocks — mobilny scroll poziomy + sensowne minimum szerokości */
+#tab-invest .tableWrap,
+#tab-fx .tableWrap{
+  overflow-x: auto !important;       /* przywróć przewijanie poziome */
+  overflow-y: visible !important;
+  -webkit-overflow-scrolling: touch; /* płynnie na iOS */
+}
+#tab-invest .tableWrap table,
+#tab-fx .tableWrap table{
+  min-width: 680px !important;       /* nie ściskaj 7 kolumn do 320px */
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+/* 5) Nagłówki tabel w FX/Stocks — bez sticky (zostaw to dla sekcji Profits) */
+#tab-invest thead th,
+#tab-fx thead th{
+  position: static !important;
+  top: auto !important;
+  background: transparent !important;
+  z-index: auto !important;
+  pointer-events: auto !important;
+}
+
+/* 6) Ostatnia kolumna = miejsce na input + przyciski */
+#tab-invest thead th:last-child,
+#tab-invest tbody td:last-child,
+#tab-fx thead th:last-child,
+#tab-fx tbody td:last-child{
+  width: 180px !important;           /* możesz podbić do 190–200px */
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* 7) Akcje (Qty + przyciski) w jednej linii i przy krawędzi */
+#tab-invest td.space,
+#tab-fx td.space{
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  justify-content: flex-end !important;
+  white-space: nowrap !important;
+  padding-right: 8px !important;
+}
+#tab-invest td.space input[type="number"],
+#tab-fx     td.space input[type="number"]{
+  width: 72px !important; min-width: 72px !important; text-align: center;
+}
+
+/* 8) Odsuń Value ↔ P/L, żeby liczby nie „kleiły się” do akcji */
+#tab-fx  td:nth-child(5){ padding-right: 14px !important; } /* Value */
+#tab-fx  td:nth-child(6){ padding-left:  12px !important; } /* P/L   */
+#tab-invest td:nth-child(6){ padding-right: 16px !important; } /* P/L w akcjach */
+
+/* 9) Telefon — mniejsze paddingi komórek dla czytelności */
+@media (max-width: 640px){
+  #tab-invest th, #tab-invest td,
+  #tab-fx th,     #tab-fx td{ padding: 8px 6px !important; }
+}
