@@ -1315,9 +1315,9 @@ function renderPortfolioStocks() {
       <td>${PLN(value)}</td>
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
-        <input type="number" min="1" max="${qMax}" step="1"
-               value="${userVal}" class="input" style="width:90px"
-               data-sell-q="${t}" placeholder="enter 1–${qMax}">
+       <input type="number" min="1" max="${qMax}" step="1"
+       value="${userVal}" class="input" style="width:100%"
+       data-sell-q="${t}" placeholder="enter 1–${qMax}">
         <button class="btn" data-sell-row="${t}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-sell-max="${t}">Max</button>
       </td>`;
@@ -1550,9 +1550,10 @@ function renderPortfolioFx() {
       <td>${PLN(valueUsd)}</td>
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
-        <input type="number" min="1" max="${qMax}" step="1"
-               value="${userVal}" class="input" style="width:90px"
-               data-fxsell-q="${pair}" placeholder="enter 1–${qMax}">
+       <input type="number" min="1" max="${qMax}" step="1"
+       value="${userVal}" class="input" style="width:100%"
+       data-fxsell-q="${pair}" placeholder="enter 1–${qMax}">
+
         <button class="btn" data-fxsell-row="${pair}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-fxmax="${pair}">Max</button>
       </td>`;
