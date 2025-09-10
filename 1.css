@@ -2949,22 +2949,35 @@ body #stickyMiniJars{
     top: calc(var(--H-TOP) + var(--H-JARS-MOB)) !important;
   }
 }
-/* ===== MOBILE: bez strzałek przy liczbach (≤640px) ===== */
+/* ===== MOBILE KILL-SWITCH for arrows (≤640px) ===== */
 @media (max-width: 640px){
-  /* ukryj wszystkie warianty strzałek */
-  .arrow-up,
-  .arrow-down,
-  .arrow-flat,
-  #tab-invest .arrow-up, #tab-invest .arrow-down, #tab-invest .arrow-flat,
-  #tab-fx     .arrow-up, #tab-fx     .arrow-down, #tab-fx     .arrow-flat,
-  .b-change .arrow-up, .b-change .arrow-down, .b-change .arrow-flat{
+
+  /* 1) Każdy element z klasą zawierającą 'arrow-' znika */
+  [class^="arrow-"],
+  [class*=" arrow-"]{
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 2) Jeśli strzałki są dodane pseudo-elementami */
+  .b-change::before, .b-change::after,
+  .pnl-pos::before, .pnl-pos::after,
+  .pnl-neg::before, .pnl-neg::after,
+  #tab-invest .b-change::before, #tab-invest .b-change::after,
+  #tab-fx     .b-change::before, #tab-fx     .b-change::after{
+    content: none !important;
     display: none !important;
   }
 
-  /* skasuj „oddech” po strzałkach i trzymaj liczby równo */
+  /* 3) Porządek w odstępach po usunięciu ikon */
   .b-change{ gap: 0 !important; }
-  #tab-invest td:nth-child(6),
-  #tab-fx     td:nth-child(6){
-    padding-left: 8px !important;   /* było więcej, bo strzałka miała margines */
+  .b-change *{ margin: 0 !important; }
+
+  /* 4) Dla pewności: nic nie „przykleja” ikon absolutnym pozycjonowaniem */
+  .b-change [class^="arrow-"],
+  .b-change [class*=" arrow-"]{
+    position: static !important;
   }
 }
