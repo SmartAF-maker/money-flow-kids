@@ -2949,3 +2949,22 @@ body #stickyMiniJars{
     top: calc(var(--H-TOP) + var(--H-JARS-MOB)) !important;
   }
 }
+/* ===== MOBILE: bez strzałek przy liczbach (≤640px) ===== */
+@media (max-width: 640px){
+  /* ukryj wszystkie warianty strzałek */
+  .arrow-up,
+  .arrow-down,
+  .arrow-flat,
+  #tab-invest .arrow-up, #tab-invest .arrow-down, #tab-invest .arrow-flat,
+  #tab-fx     .arrow-up, #tab-fx     .arrow-down, #tab-fx     .arrow-flat,
+  .b-change .arrow-up, .b-change .arrow-down, .b-change .arrow-flat{
+    display: none !important;
+  }
+
+  /* skasuj „oddech” po strzałkach i trzymaj liczby równo */
+  .b-change{ gap: 0 !important; }
+  #tab-invest td:nth-child(6),
+  #tab-fx     td:nth-child(6){
+    padding-left: 8px !important;   /* było więcej, bo strzałka miała margines */
+  }
+}
