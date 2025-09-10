@@ -1,4 +1,4 @@
-  /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
+   /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
 
 /* Palette */
 :root{
@@ -232,29 +232,6 @@ input:checked + .slider::before{transform:translateX(26px)}
 .jar-card{display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center}
 .jar-card .title{font-variant-numeric:tabular-nums}
 
-/* CSS+SVG background (optional fallback) */
-:root{ --jar-stroke:%23000; --jar-glass:%23ffffff; --jar-liquid:%2300c853; --jar-lid:%23222; }
-.jar-visual{
-  width:110px; height:140px; background-size:contain; background-repeat:no-repeat; background-position:center;
-  filter:drop-shadow(0 2px 6px rgba(0,0,0,.18)); transition:transform .15s ease;
-}
-.jar-visual:active{transform:scale(.98)}
-@supports (background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'></svg>")){
-  .jar-visual{
-    background-image:url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 200'>\
-  <defs><clipPath id='c'><path d='M45,40 h70 a15,15 0 0 1 15,15 v95 a20,20 0 0 1 -20,20 h-60 a20,20 0 0 1 -20,-20 v-95 a15,15 0 0 1 15,-15 z'/></clipPath></defs>\
-  <rect x='40' y='18' width='80' height='16' rx='5' fill='%23222' stroke='%23000' stroke-width='3'/>\
-  <path d='M45,40 h70 a15,15 0 0 1 15,15 v95 a20,20 0 0 1 -20,20 h-60 a20,20 0 0 1 -20,-20 v-95 a15,15 0 0 1 15,-15 z' fill='%23ffffff' stroke='%23000' stroke-width='3'/>\
-  <g clip-path='url(%23c)'><rect x='30' y='95' width='100' height='80' fill='%2300c853'/></g>\
-</svg>");
-  }
-}
-.jar-savings{--jar-liquid:%2300c853; --jar-lid:%2327ae60}
-.jar-earnings{--jar-liquid:%23ff9800; --jar-lid:%23ef6c00}
-.jar-donations{--jar-liquid:%23e91e63; --jar-lid:%23ad1457}
-.jar-invest{--jar-liquid:%233f51b5; --jar-lid:%23283989}
-@media (max-width:520px){ .jar-visual{width:90px; height:120px} }
 
 /* Photo jars (PNG mask) */
 .jar2{position:relative; width:160px; aspect-ratio:1/1.25; filter:drop-shadow(0 6px 12px rgba(0,0,0,.35)); transition:transform .2s ease, filter .2s ease}
@@ -270,7 +247,11 @@ input:checked + .slider::before{transform:translateX(26px)}
   background:linear-gradient(180deg, var(--liq-top,#41d98a), var(--liq-bottom,#00c853));
   opacity:.95; border-radius:8% 8% 16% 16% / 20% 20% 30% 30%;
 }
-.jar2.savings{--liq-top:#53d941; --liq-bottom:#00c853}
+/* Savings → ice blue */
+.jar2.savings{ --liq-top:#99ffff; --liq-bottom:#99ffff; }
+.jar2.savings .liquid::before{
+  background: linear-gradient(180deg,#99ffff,#99ffff);
+}
 .jar2.earnings{--liq-top:#eef131; --liq-bottom:#ff9800}
 .jar2.donations{--liq-top:#c03065; --liq-bottom:#e91e63}
 .jar2.invest{--liq-top:#152a70; --liq-bottom:#3f51b5}
@@ -590,7 +571,7 @@ td.space {
 }
 
 /* kolory wartości */
-#miniSave  { color:#22c55e; }
+#miniSave  { color:#15f4ee; }
 #miniSpend { color:#f59e0b; }
 #miniGive  { color:#ec4899; }
 #miniInvest{ color:#60a5fa; }
@@ -2513,4 +2494,50 @@ html, body{
   overflow-x:hidden;                /* poziomy dalej blokujemy */
   -webkit-overflow-scrolling:touch; /* płynne na iOS */
   touch-action: pan-y;              /* wymuś pionowy scroll */
+}
+/* === Savings kolor na #99FFFF === */
+.jar-savings{
+  --jar-liquid:#99ffff !important;
+  --jar-lid:#27ae60; /* zostaw albo zmień jeśli chcesz */
+}
+
+.jar2.savings{
+  --liq-top:#99ffff !important;
+  --liq-bottom:#99ffff !important;
+}
+/* === SAVINGS → ICE BLUE (twardy override) === */
+.jar2.savings .liquid::before,
+.jar2.jar-savings .liquid::before {           /* jeśli w HTML masz 'jar-savings' */
+  background: linear-gradient(180deg, #99ffff, #99ffff) !important;
+}
+.jar2.savings,
+.jar2.jar-savings {
+  --liq-top:#99ffff !important;
+  --liq-bottom:#99ffff !important;
+}
+.jar2.savings,
+.jar2.jar-savings{
+  --liq-top:#99ffff; --liq-bottom:#99ffff;
+}
+/* Savings = ICE BLUE */
+.wow-jars .jar-card:nth-child(1) .jar-svg{
+  --liq-top:#15f4ee !important;
+  --liq-bottom:##15f4ee !important;
+   --glow:#99ffff !important;
+  } 
+   /* Net Worth = zielony */
+#netWorth {
+  color: #22c55e !important;   /* zielony jak Savings */
+  font-weight: 800;
+}
+
+/* Available Cash = żółty */
+#availableCash {
+  color: #dee792 !important;   /* 500/600 żółty (Tailwind amber) */
+  font-weight: 800;
+}
+/* Available Cash (mini-jar) = żółty */
+#miniCash {
+  color: #dee792 !important;   /* złoty/żółty */
+  font-weight: 800;
 }
