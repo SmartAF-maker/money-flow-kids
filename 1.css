@@ -2949,35 +2949,53 @@ body #stickyMiniJars{
     top: calc(var(--H-TOP) + var(--H-JARS-MOB)) !important;
   }
 }
-/* ===== MOBILE KILL-SWITCH for arrows (≤640px) ===== */
+/* ===== MOBILE ONLY (≤640px): input + Sell w JEDNYM rzędzie i bez "enter" ===== */
 @media (max-width: 640px){
-
-  /* 1) Każdy element z klasą zawierającą 'arrow-' znika */
-  [class^="arrow-"],
-  [class*=" arrow-"]{
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
+  /* Ostatnia kolumna akcji – w jednym rzędzie */
+  #tab-invest td.space,
+  #tab-fx td.space,
+  #portfolioBody td.space,
+  #fxBody td.space{
+    display: flex !important;
+    flex-direction: row !important;      /* ← poziomo */
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    white-space: nowrap !important;
+    flex-wrap: nowrap !important;
   }
 
-  /* 2) Jeśli strzałki są dodane pseudo-elementami */
-  .b-change::before, .b-change::after,
-  .pnl-pos::before, .pnl-pos::after,
-  .pnl-neg::before, .pnl-neg::after,
-  #tab-invest .b-change::before, #tab-invest .b-change::after,
-  #tab-fx     .b-change::before, #tab-fx     .b-change::after{
-    content: none !important;
-    display: none !important;
+  /* Węższy input, żeby się mieściło obok przycisku */
+  #tab-invest td.space input[type="number"],
+  #tab-fx     td.space input[type="number"]{
+    width: 72px !important;
+    min-width: 72px !important;
+    text-align: center;
   }
 
-  /* 3) Porządek w odstępach po usunięciu ikon */
-  .b-change{ gap: 0 !important; }
-  .b-change *{ margin: 0 !important; }
-
-  /* 4) Dla pewności: nic nie „przykleja” ikon absolutnym pozycjonowaniem */
-  .b-change [class^="arrow-"],
-  .b-change [class*=" arrow-"]{
-    position: static !important;
+  /* Ukryj placeholder "enter" */
+  #tab-invest td.space input::placeholder,
+  #tab-fx     td.space input::placeholder{
+    color: transparent !important;
   }
 }
+/* MOBILE: pole "enter 1" nad przyciskiem Sell, oba na pełną szerokość */
+@media (max-width: 520px) {
+  /* komórka z inputem i guzikami w tabelach portfela */
+  #portfolioBody td.space,
+  #fxBody td.space {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  #portfolioBody td.space input,
+  #portfolioBody td.space .btn,
+  #fxBody td.space input,
+  #fxBody td.space .btn {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
+
