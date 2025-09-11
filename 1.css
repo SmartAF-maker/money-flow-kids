@@ -3246,12 +3246,17 @@ input[type=number] {
     padding: 0 !important;
   }
 }
-/* spacja przed ilością/sumą w stopce koszyka */
-[data-basket-qty],
-[data-basket-amt] { white-space: nowrap; }
+/* Dwie “spacje” między etykietą a liczbą w podsumowaniach koszyka */
+.basket-summary .metric{
+  display: inline-flex;
+  align-items: center;
+  gap: 2ch; /* ~szerokość dwóch znaków */
+}
 
-[data-basket-qty]::before,
-[data-basket-amt]::before { content: "\00a0\00a0"; } /* 2× NBSP */
+.basket-summary .metric .val{
+  /* gdyby gap był nadpisany gdzieś indziej, to i tak dołóż ten margines */
+  margin-left: 0 !important;
+}
 
 
 
