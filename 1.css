@@ -3246,6 +3246,19 @@ input[type=number] {
     padding: 0 !important;
   }
 }
+@media (max-width: 768px) {
+  /* odstęp między etykietą (Quantity/Amount) a wartością */
+  #stock-basket .basket-item strong,
+  #stock-basket .basket-item span,
+  #stock-basket .basket-item div {
+    margin-right: 4px;
+  }
+
+  /* jeśli masz je w jednym wierszu jako "Quantity1" -> rozdziel */
+  #stock-basket .basket-item {
+    word-spacing: 4px; /* dodaje mały odstęp między słowem a liczbą */
+  }
+}
 
 
 
