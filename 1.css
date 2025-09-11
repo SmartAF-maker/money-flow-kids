@@ -3196,24 +3196,29 @@ input[type=number] {
 #fxBody input::placeholder {
   color: transparent !important;
   opacity: 0 !important;
-}/* ==== MOBILE ONLY (≤640px) — usuń strzałki w pasku mini-jars ==== */
-@media (max-width: 640px){
-  #stickyMiniJars .arrow-up,
-  #stickyMiniJars .arrow-down,
-  #stickyMiniJars .arrow-flat,
-  .mini-strip .arrow-up,
-  .mini-strip .arrow-down,
-  .mini-strip .arrow-flat {
-    display: none !important;     /* zabija ikonki <i> lub <svg> */
+}
+/* FINAL OVERRIDE — mobile ≤640px: strzałki ZAWSZE ukryte */
+@media (max-width:640px){
+  #stickyMiniJars .arrow-up,#stickyMiniJars .arrow-down,#stickyMiniJars .arrow-flat,
+  .mini-strip .arrow-up,.mini-strip .arrow-down,.mini-strip .arrow-flat,
+  .kpi .arrow-up,.kpi .arrow-down,.kpi .arrow-flat,
+  [class*="mini-jar"] .arrow-up,[class*="mini-jar"] .arrow-down,[class*="mini-jar"] .arrow-flat{
+    display:none !important;
+    margin:0 !important;
   }
-
-  /* gdyby były wstawiane jako pseudo-elementy */
+  /* gdyby były dodawane jako pseudo-elementy */
   #stickyMiniJars .mini-jar-value::before,
   #stickyMiniJars .mini-jar-value::after,
   .mini-strip .mini-pill b::before,
-  .mini-strip .mini-pill b::after {
-    content: none !important;
-    display: none !important;
+  .mini-strip .mini-pill b::after{
+    content:none !important;
   }
 }
-
+/* tylko desktop/tablet */
+@media (min-width:641px){
+  .arrow-up,.arrow-down,.arrow-flat{
+    display:inline-block !important;
+    margin-left:4px !important;
+    position:relative; top:-1px;
+  }
+}
