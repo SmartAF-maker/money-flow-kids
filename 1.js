@@ -1,4 +1,4 @@
-    // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+     // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 /* Dodaj etykiety i mały podpis pod każdą wartością w tabelach (mobile) */
 (function () {
   function labelize(table){
@@ -3275,4 +3275,5 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('DOMContentLoaded', () => {
   renderAll();
 });
+
 
