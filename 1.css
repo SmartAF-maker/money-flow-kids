@@ -3211,6 +3211,26 @@ input[type=number] {
     visibility: hidden !important;
   }
 }
+/* MOBILE: koszyki – nic się nie nachodzi, lewy "price" znika (mamy kwotę po prawej) */
+@media (max-width:640px){
+  #stock-basket .basket-item, #fx-basket .basket-item{
+    display:grid !important;
+    grid-template-columns: auto 1fr auto auto; /* badge | (elastyczna przerwa) | qty | kwota */
+    align-items:center; gap:8px;
+  }
+  #stock-basket .basket-item > *, #fx-basket .basket-item > *{ min-width:0; }
+
+  /* jeśli pojawia się dodatkowa cena/lewy price – ukryj go na telu */
+  #stock-basket .basket-item .b-price:first-child,
+  #fx-basket   .basket-item .b-price:first-child{
+    display:none !important;
+  }
+
+  /* badge bez pozycji absolutnej */
+  #stock-basket .b-ticker, #fx-basket .b-ticker{
+    position:static !important; white-space:nowrap;
+  }
+}
 
 
 

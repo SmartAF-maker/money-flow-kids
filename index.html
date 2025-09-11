@@ -1002,6 +1002,7 @@
   });
 })();
 </script>
+
 <script>
 // ==== KILL ALL ARROWS ON MOBILE (≤640px) ====
 (function () {
@@ -1051,6 +1052,30 @@
   obs.observe(document.body, { childList: true, subtree: true, characterData: true });
 })();
 </script>
+<script>
+(function () {
+  // usuń z mini-jars i mini-strip WSZYSTKIE znaki strzałek itp. na mobile
+  const isMobile = () => matchMedia('(max-width:640px)').matches;
+  const stripArrows = () => {
+    if (!isMobile()) return;
+    const targets = document.querySelectorAll(
+      '#stickyMiniJars .mini-jar-value, #stickyMiniJars .mini-jar-label, .mini-strip .mini-pill b'
+    );
+    targets.forEach(el => {
+      const t = el.textContent || '';
+      // wytnij ▲ ▼ ↑ ↓ ▴ ▾ + − – — itp.
+      const nt = t.replace(/[▲▼↑↓▴▾↗↘+−–—]/g, '').replace(/\s{2,}/g,' ').trim();
+      if (t !== nt) el.textContent = nt;
+    });
+  };
+
+  // uruchom teraz, po zmianie szerokości i po każdej zmianie DOM (gdy dane się odświeżają)
+  stripArrows();
+  matchMedia('(max-width:640px)').addEventListener('change', stripArrows);
+  new MutationObserver(stripArrows).observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+</script>
+
 
   </body>
 </html>
