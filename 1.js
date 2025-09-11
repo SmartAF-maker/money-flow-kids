@@ -730,18 +730,36 @@ function renderMiniJars(){
   const pnlTotal  = pnlStocks + pnlFx;
 
   // ⬇⬇⬇ ZAMIANA: zamiast +/− doklejamy strzałkę (▲/▼) i zachowujemy kolor liczby
-  if (miniEls.invStocks) {
+ // Mobile-only: bez strzałek w mini-jars
+const isMobileMini = window.matchMedia('(max-width: 768px)').matches;
+
+if (miniEls.invStocks) {
+  if (isMobileMini) {
+    miniEls.invStocks.textContent = USD(valStocks); // bez strzałki
+  } else {
     miniEls.invStocks.innerHTML = `${USD(valStocks)} ${arrowHtml(pnlStocks > 0 ? 1 : pnlStocks < 0 ? -1 : 0)}`;
-    setPnlColor(miniEls.invStocks, pnlStocks);
   }
-  if (miniEls.invFx) {
-    miniEls.invFx.innerHTML     = `${USD(valFx)} ${arrowHtml(pnlFx > 0 ? 1 : pnlFx < 0 ? -1 : 0)}`;
-    setPnlColor(miniEls.invFx, pnlFx);
+  setPnlColor(miniEls.invStocks, pnlStocks);
+}
+
+if (miniEls.invFx) {
+  if (isMobileMini) {
+    miniEls.invFx.textContent = USD(valFx);
+  } else {
+    miniEls.invFx.innerHTML = `${USD(valFx)} ${arrowHtml(pnlFx > 0 ? 1 : pnlFx < 0 ? -1 : 0)}`;
   }
-  if (miniEls.invTotal) {
-    miniEls.invTotal.innerHTML  = `${USD(valTotal)} ${arrowHtml(pnlTotal > 0 ? 1 : pnlTotal < 0 ? -1 : 0)}`;
-    setPnlColor(miniEls.invTotal, pnlTotal);
+  setPnlColor(miniEls.invFx, pnlFx);
+}
+
+if (miniEls.invTotal) {
+  if (isMobileMini) {
+    miniEls.invTotal.textContent = USD(valTotal);
+  } else {
+    miniEls.invTotal.innerHTML = `${USD(valTotal)} ${arrowHtml(pnlTotal > 0 ? 1 : pnlTotal < 0 ? -1 : 0)}`;
   }
+  setPnlColor(miniEls.invTotal, pnlTotal);
+}
+
 
   // === Total earned / Total loss – nadal z + / − ===
   const round2 = v => Math.round(Number(v) * 100) / 100;
