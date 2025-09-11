@@ -3364,23 +3364,27 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
-/* Podpisy POD wartościami tylko w tabelach "Sales History" (Stocks/FX) na mobile */
-@media (max-width: 640px){
-  #tab-profits table td{
+/* --- Mobile: szare podpisy pod wartościami w Sales History --- */
+@media (max-width: 640px) {
+  /* ukryj thead – na mobile robimy "karteczki" */
+  #tab-profits table thead { display: none; }
+
+  /* każdy TD jako blok, wyśrodkuj i zrób odstępy */
+  #tab-profits table tbody td {
+    display: block;
     text-align: center;
+    padding: 10px 8px 6px;
   }
-  /* wyłącz ewentualne wcześniejsze etykiety przed wartością */
-  #tab-profits table td::before{
-    content: none !important;
-  }
-  /* pokaż mały, szary napis POD wartością z atrybutu data-label */
-  #tab-profits table td::after{
+
+  /* SZARY, MAŁY PODPIS POD WARTOŚCIĄ – bierze tekst z data-label */
+  #tab-profits table tbody td::after {
     content: attr(data-label);
     display: block;
-    font-size: 12px;
-    color: #9aa3b2;      /* delikatna szarość */
-    opacity: .85;
-    margin-top: 4px;     /* odstęp od wartości */
+    margin-top: 4px;
+    font-size: 0.78rem;
+    line-height: 1.1;
+    color: #9aa3af;           /* szary */
+    opacity: .9;
   }
 }
 
