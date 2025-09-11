@@ -3246,6 +3246,11 @@ input[type=number] {
     padding: 0 !important;
   }
 }
+/* odstęp między etykietą a wartością w koszyku */
+[data-basket-qty]::before,
+[data-basket-amt]::before {
+  content: "\00A0\00A0"; /* dwie niełamliwe spacje */
+}
 
 
 
