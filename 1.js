@@ -1,4 +1,4 @@
-   // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+    // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 (function lockNetwork() {
   const of = window.fetch;
   const ALLOW_ORIGINS = new Set([
@@ -3226,3 +3226,4 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('DOMContentLoaded', () => {
   renderAll();
 });
+

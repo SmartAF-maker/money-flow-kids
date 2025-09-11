@@ -3180,5 +3180,20 @@ section#tab-fx      #fxBody        td.space .btn{
   min-width: 64px !important;
   text-align: center;
 }
+/* Usunięcie strzałek w input type=number (Chrome, Edge, Safari, Opera) */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
+/* Usunięcie strzałek w Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+#portfolioBody input::placeholder,
+#fxBody input::placeholder {
+  color: transparent !important;
+  opacity: 0 !important;
+}
  
