@@ -355,8 +355,8 @@ amount = toCents(unit * Number(it.qty));
     sumAmt += amount || 0;
   });
 
-  if (qtyEl) qtyEl.textContent = String(sumQty);
-  if (amtEl) amtEl.textContent = USD(sumAmt);
+ if (qtyEl) qtyEl.textContent = ` ${sumQty}`;    // ⬅ spacja na początku
+if (amtEl) amtEl.textContent = ` ${USD(sumAmt)}`; // ⬅ spacja na początku
 
   listEl.onclick = (e) => {
     const btn = e.target.closest('[data-remove-index]');
@@ -1991,10 +1991,11 @@ function renderBasketStocks() {
 
     listEl.appendChild(row);
   });
+const t = basketTotals(items);
+if (qtyEl) qtyEl.textContent = ` ${t.qty}`;     // ⬅ spacja
+if (amtEl) amtEl.textContent = ` ${PLN(t.sum)}`; // ⬅ spacja
 
-  const t = basketTotals(items);
-  if (qtyEl) qtyEl.textContent = String(t.qty);
-  if (amtEl) amtEl.textContent = PLN(t.sum);
+
 }
 
 
@@ -2053,8 +2054,9 @@ function renderBasketFx() {
   });
 
   const t = basketTotals(items);
-  if (qtyEl) qtyEl.textContent = String(t.qty);
-  if (amtEl) amtEl.textContent = PLN(t.sum);
+if (qtyEl) qtyEl.textContent = ` ${t.qty}`;     // ⬅ spacja
+if (amtEl) amtEl.textContent = ` ${PLN(t.sum)}`; // ⬅ spacja
+
 }
 
 // ===== BUY FROM BASKET =====

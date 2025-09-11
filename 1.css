@@ -3246,23 +3246,6 @@ input[type=number] {
     padding: 0 !important;
   }
 }
-@media (max-width: 768px) {
-  /* sztuczna spacja po słowie Quantity */
-  #stock-basket .basket-item:has(:contains("Quantity")) {
-    white-space: pre; /* zachowaj spacje */
-  }
-  #stock-basket .basket-item:has(:contains("Quantity"))::after {
-    content: " ";
-  }
-
-  /* sztuczna spacja po słowie Amount */
-  #stock-basket .basket-item:has(:contains("Amount")) {
-    white-space: pre;
-  }
-  #stock-basket .basket-item:has(:contains("Amount"))::after {
-    content: " ";
-  }
-}
 
 
 
