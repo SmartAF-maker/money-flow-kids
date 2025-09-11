@@ -903,23 +903,37 @@
       })();
 
       // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
-      (function(){
-        const drawer = document.getElementById('mfkMobileDrawer');
-        const backdrop = document.getElementById('mfkBackdrop');
-        const btn = document.getElementById('mfkNavToggle');
-        if(!drawer || !backdrop || !btn) return;
+  (function(){
+  const drawer   = document.getElementById('mfkMobileDrawer');
+  const backdrop = document.getElementById('mfkBackdrop');
+  const btn      = document.getElementById('mfkNavToggle');
+  if(!drawer || !backdrop || !btn) return;
 
-        function close(){
-          drawer.classList.remove('open');
-          backdrop.hidden = true;
-          btn.setAttribute('aria-expanded','false');
-          document.body.style.overflow = '';
-        }
+  function closeDrawer(){
+    drawer.classList.remove('open');
+    backdrop.hidden = true;
+    btn.setAttribute('aria-expanded','false');
+    document.body.style.overflow = '';
+  }
 
-        drawer.addEventListener('click', (e) => {
-          if (e.target.closest('.tab')) close();
-        });
-      })();
+  drawer.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-tab]');
+    if (!item) return;
+
+    e.preventDefault();
+    const tab = item.dataset.tab;
+
+    // wywołaj tę samą logikę co w topbarze
+    const topTabBtn = document.querySelector('.mfk-topbar [data-tab="'+tab+'"]');
+    if (topTabBtn) {
+      topTabBtn.click();
+    } else if (typeof showTab === 'function') {
+      showTab(tab);
+    }
+    closeDrawer();
+  });
+})();
+</script>
 
       // 4b) Synchronizacja child selector (topbar <-> drawer)
       (function(){

@@ -3104,32 +3104,13 @@ section#tab-fx      #fxBody        td.space .btn{
     min-width: 64px !important;
   }
 }
-/* Kompaktowy układ Stock / Currency Portfolio */
-.stock-portfolio,
-.currency-portfolio {
-  line-height: 1.2;   /* mniejsza wysokość wierszy */
-}
+/* Drawer musi być ponad tłem */
+#mfkMobileDrawer,
+.mfk-drawer{ z-index: 5001 !important; }
 
-.stock-portfolio .card,
-.currency-portfolio .card {
-  padding: 6px 10px;  /* ciaśniejsze paddingi wewnątrz */
-}
-
-.stock-portfolio .sell-box,
-.currency-portfolio .sell-box {
-  margin-top: 4px;    /* mniejszy odstęp nad input+button */
-}
-
-.stock-portfolio .sell-box input,
-.currency-portfolio .sell-box input {
-  padding: 4px 6px;   /* ciaśniejszy input */
-  font-size: 0.9em;
-}
-
-.stock-portfolio .sell-box button,
-.currency-portfolio .sell-box button {
-  padding: 4px 8px;
-  font-size: 0.9em;
-}
+#mfkBackdrop,
+.mfk-backdrop{ z-index: 5000 !important; }  /* tło pod spodem */
+/* Kliknięcia mają działać w menu; backdrop tylko zamyka */
+.mfk-drawer, .mfk-drawer * { pointer-events: auto !important; }
 
  
