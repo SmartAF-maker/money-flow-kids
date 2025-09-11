@@ -1944,8 +1944,8 @@ function renderBasketStocks() {
         <span class="b-name">${it.n || ''}</span>
       </div>
       <div class="b-price">${PLN(it.price)}</div>
-      <div class="b-change"><span class="arrow-flat">—</span></div>
-      <div class="b-qty">
+<div class="b-qty">
+
         <input class="input basket-qty" type="number" min="1" step="1" value="${it.qty}">
         <button class="btn" data-act="upd">Set</button>
       </div>
@@ -2004,9 +2004,9 @@ function renderBasketFx() {
         <span class="b-ticker">${it.pair}</span>
         <span class="b-name">${it.n || ''}</span>
       </div>
-      <div class="b-price">${PLN(it.price)}</div>
-      <div class="b-change"><span class="arrow-flat">—</span></div>
-      <div class="b-qty">
+     <div class="b-price">${PLN(it.price)}</div>
+<div class="b-qty">
+
         <input class="input basket-qty" type="number" min="1" step="1" value="${it.qty}">
         <button class="btn" data-act="upd">Set</button>
       </div>
