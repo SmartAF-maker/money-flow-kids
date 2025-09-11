@@ -37,8 +37,13 @@
   document.addEventListener('DOMContentLoaded', labelizeAll);
 
   // Gdy JS dopisze nowe wiersze
-  const obs = new MutationObserver(labelizeAll);
-  obs.observe(document.body, { childList: true, subtree: true });
+let _labTO = null;
+const scope = document.querySelector('#tab-profits, #tab-invest, #tab-fx') || document.body;
+const obs = new MutationObserver(() => {
+  clearTimeout(_labTO);
+  _labTO = setTimeout(labelizeAll, 60);   // throttle
+});
+obs.observe(scope, { childList: true, subtree: true });
 
   // Reakcja na zmianę szerokości (gdy wejdziesz/wyjdziesz z mobile)
   matchMedia('(max-width:640px)').addEventListener('change', labelizeAll);
