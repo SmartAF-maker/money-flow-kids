@@ -3211,40 +3211,30 @@ input[type=number] {
     visibility: hidden !important;
   }
 }
-/* ==== BASKET (mobile) — badge nie przykrywa ceny ==== */
-@media (max-width: 900px){
-  /* siatka + odstępy */
-  #stock-basket .basket-item,
-  #fx-basket   .basket-item{
-    grid-template-columns: 1fr .9fr .7fr auto;
-    grid-template-areas:
-      "asset price  qty subtotal"
-      "asset change qty subtotal";
-    column-gap: 8px;
-    row-gap: 6px;
+/* ==== MOBILE HOTFIX (≤640px): Basket — nic nie zachodzi na siebie ==== */
+@media (max-width: 640px){
+  /* Każdy wiersz w koszyku ustaw jako grid 4-kolumnowy */
+  #stock-basket .basket-list > * ,
+  #fx-basket    .basket-list > * {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto auto; /* [Ticker] [Qty] [Set] [Subtotal] */
+    align-items: center;
+    gap: 8px;
   }
 
-  /* obszary */
-  .b-item-asset{ grid-area: asset; min-width: 0; z-index: 0; }
-  .b-price     { grid-area: price;  position: relative; z-index: 1; }
-  .b-change    { grid-area: change; position: relative; z-index: 1; }
-  .b-qty       { grid-area: qty; }
-  .b-subtotal  { grid-area: subtotal; }
-
-  /* badge może się złamać (np. „GBP/USD”), nie wypycha w prawo */
-  .b-ticker{
-    max-width: 100%;
-    white-space: normal !important;
-    overflow-wrap: anywhere;   /* pozwala łamać nawet przy '/' */
-    word-break: break-word;
-    text-align: center;
-    padding: 6px 10px;
+  /* Schowaj pierwszy „price preview” (to ta liczba pod kapsułką) */
+  #stock-basket .basket-list > * > :first-child,
+  #fx-basket    .basket-list > * > :first-child{
+    display: none !important;
   }
-}
 
-/* bardzo wąskie telefony — mniejsze badge */
-@media (max-width: 360px){
-  .b-ticker{ font-size: 12px; }
+  /* Suma (np. 186.54 USD) trzyma się prawej krawędzi */
+  #stock-basket .basket-list > * > :last-child,
+  #fx-basket    .basket-list > * > :last-child{
+    justify-self: end;
+    font-weight: 800;
+    white-space: nowrap;
+  }
 }
 
 
