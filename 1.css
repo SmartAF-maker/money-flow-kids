@@ -3247,9 +3247,17 @@ input[type=number] {
   }
 }
 @media (max-width: 768px) {
-  .mini-jars { gap: 10px !important; }
-  .mini-jars .label { font-size: 12px !important; line-height: 1.1; }
-  .mini-jars .value { font-size: 16px !important; font-weight: 800; }
+  /* odstęp między etykietą (Quantity/Amount) a wartością */
+  #stock-basket .basket-item strong,
+  #stock-basket .basket-item span,
+  #stock-basket .basket-item div {
+    margin-right: 4px;
+  }
+
+  /* jeśli masz je w jednym wierszu jako "Quantity1" -> rozdziel */
+  #stock-basket .basket-item {
+    word-spacing: 4px; /* dodaje mały odstęp między słowem a liczbą */
+  }
 }
 
 
