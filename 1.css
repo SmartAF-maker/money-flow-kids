@@ -3257,62 +3257,60 @@ input[type=number] {
   /* gdyby gap był nadpisany gdzieś indziej, to i tak dołóż ten margines */
   margin-left: 0 !important;
 }
-/* PROFITS – mobile-only, bez zmian na desktopie */
+/* === MOBILE: Profits – bez poziomego scrolla, czytelne etykiety === */
 @media (max-width: 640px) {
+  /* jedną kolumnę już masz, ale dopinam na wszelki wypadek */
+  #tab-profits { grid-template-columns: 1fr !important; }
 
-  /* 1) kontener: nie przewijaj w poziomie */
+  /* w HTML są inline: overflow:auto; max-height:260px – nadpisujemy */
   #tab-profits .tableWrap {
-    overflow-x: visible !important;
+    overflow: visible !important;
+    max-height: none !important;
   }
 
-  /* 2) zamieniamy tabelę na “karty” */
   #tab-profits table {
-    display: block;
-    width: 100%;
-  }
-  #tab-profits thead {
-    position: absolute;
-    left: -9999px; /* ukryj nagłówek */
-    height: 0;
-    overflow: hidden;
-  }
-  #tab-profits tbody {
-    display: block;
-    width: 100%;
-  }
-  #tab-profits tbody tr {
-    display: block;
-    width: 100%;
-    margin: 10px 0;
-    padding: 10px;
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 12px;
-    background: var(--card-bg, rgba(255,255,255,.03));
-  }
-  #tab-profits tbody td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 4px;
-    width: 100%;
-    /* jeśli gdzieś są sztywne szerokości, zerujemy */
-    max-width: 100%;
-    white-space: normal;
-  }
-  /* 3) pokaż etykiety kolumn z atrybutu data-label
-        (JS już je dopisuje w Twoim kodzie) */
-  #tab-profits tbody td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    opacity: .7;
-    margin-right: 12px;
+    width: 100% !important;
+    border-collapse: collapse;
   }
 
-  /* 4) trochę ciaśniej nagłówki sekcji KPI, żeby było czytelnie */
-  #tab-profits .kpi { padding: 10px; }
-  #tab-profits .kpi > .muted { font-size: .9rem; }
+  /* chowamy nagłówek i robimy “kafelki” z wierszy */
+  #tab-profits thead { display: none !important; }
+
+  #tab-profits tbody,
+  #tab-profits tr,
+  #tab-profits td {
+    display: block;
+    width: 100% !important;
+  }
+
+  #tab-profits tr {
+    margin: 8px 0;
+    padding: 8px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    background: var(--card-bg, rgba(255,255,255,.02));
+  }
+
+  #tab-profits td {
+    padding: 6px 8px;
+    text-align: left !important;
+    white-space: normal !important;   /* łamie długie wartości */
+    word-break: break-word;
+  }
+
+  /* podpis każdej komórki – bierze tekst z atrybutu data-label (JS już go dopisuje) */
+  #tab-profits td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: .85rem;
+    opacity: .65;
+    margin-bottom: 2px;
+  }
+
+  /* na wszelki wypadek wyłącz poziomy scroll w kontenerach */
+  html, body, .container { overflow-x: hidden; }
 }
+/* === END MOBILE: Profits === */
 
 
 
