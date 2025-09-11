@@ -3046,46 +3046,23 @@ body #stickyMiniJars{
 
 /* Na wszelki wypadek: nic nie ucina menu */
 .topbar, .role-switch{ overflow: visible !important; }
-/* ==== HAMBURGER: 3 kreski wypełniają cały placeholder ==== */
-.mfk-nav-toggle{
-  position: relative;
-  width: 48px;                 /* wielkość przycisku – możesz podbić np. 56px */
-  height: 48px;
-  border-radius: 14px;
-  display: block;              /* nie potrzebujemy flexa */
-  color: #e5e7eb;              /* kolor kresek (dziedziczy się jako currentColor) */
+/* ==== Hamburger pełny placeholder ==== */
+.mfk-nav-toggle {
+  width: 44px;               /* kwadratowy przycisk */
+  height: 44px;
+  display: flex;             /* centrowanie kresek */
+  flex-direction: column;    /* układ pionowy */
+  justify-content: center;   /* równe odstępy góra/dół */
+  align-items: center;
+  gap: 5px;                  /* odstęp między kreskami */
+  border-radius: 12px;
 }
 
-/* schowaj to, co było w środku (fa-bars, svg, span itp.) */
-.mfk-nav-toggle > i,
-.mfk-nav-toggle > svg,
-.mfk-nav-toggle > span,
-.mfk-nav-toggle > .icon{
-  opacity: 0 !important;
-}
-
-/* narysuj 3 belki, które wypełniają przycisk */
-.mfk-nav-toggle::before{
-  content:"";
-  position:absolute;
-  left: 12%;                   /* marginesy od krawędzi – dopasuj 8–16% */
-  right:12%;
-  top: 50%;
-  height: 3px;                 /* grubość belki */
-  background: currentColor;    /* kolor = jak tekst */
+.mfk-nav-toggle .bar {
+  width: 70%;                /* długość kreski względem przycisku */
+  height: 3px;               /* grubość */
+  background: #fff;          /* kolor (zmień jeśli chcesz) */
   border-radius: 2px;
-  transform: translateY(-50%);
-
-  /* górna i dolna kreska jako cienie – równe odstępy */
-  box-shadow:
-    0 -10px 0 0 currentColor,  /* górna */
-    0  10px 0 0 currentColor;  /* dolna */
-}
-
-/* na bardzo małych ekranach – ciut cieńsze */
-@media (max-width: 360px){
-  .mfk-nav-toggle{ width:44px; height:44px; }
-  .mfk-nav-toggle::before{ left:14%; right:14%; height:2.5px; box-shadow:0 -9px 0 0 currentColor, 0 9px 0 0 currentColor; }
 }
 
  
