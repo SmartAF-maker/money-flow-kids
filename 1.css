@@ -3257,6 +3257,62 @@ input[type=number] {
   /* gdyby gap był nadpisany gdzieś indziej, to i tak dołóż ten margines */
   margin-left: 0 !important;
 }
+/* PROFITS – mobile-only, bez zmian na desktopie */
+@media (max-width: 640px) {
+
+  /* 1) kontener: nie przewijaj w poziomie */
+  #tab-profits .tableWrap {
+    overflow-x: visible !important;
+  }
+
+  /* 2) zamieniamy tabelę na “karty” */
+  #tab-profits table {
+    display: block;
+    width: 100%;
+  }
+  #tab-profits thead {
+    position: absolute;
+    left: -9999px; /* ukryj nagłówek */
+    height: 0;
+    overflow: hidden;
+  }
+  #tab-profits tbody {
+    display: block;
+    width: 100%;
+  }
+  #tab-profits tbody tr {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    background: var(--card-bg, rgba(255,255,255,.03));
+  }
+  #tab-profits tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    width: 100%;
+    /* jeśli gdzieś są sztywne szerokości, zerujemy */
+    max-width: 100%;
+    white-space: normal;
+  }
+  /* 3) pokaż etykiety kolumn z atrybutu data-label
+        (JS już je dopisuje w Twoim kodzie) */
+  #tab-profits tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    opacity: .7;
+    margin-right: 12px;
+  }
+
+  /* 4) trochę ciaśniej nagłówki sekcji KPI, żeby było czytelnie */
+  #tab-profits .kpi { padding: 10px; }
+  #tab-profits .kpi > .muted { font-size: .9rem; }
+}
 
 
 
