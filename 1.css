@@ -3112,5 +3112,13 @@ section#tab-fx      #fxBody        td.space .btn{
 .mfk-backdrop{ z-index: 5000 !important; }  /* tło pod spodem */
 /* Kliknięcia mają działać w menu; backdrop tylko zamyka */
 .mfk-drawer, .mfk-drawer * { pointer-events: auto !important; }
+/* === MOBILE HEADER FIT (≤640px) — taller bar === */
+@media (max-width: 640px){
+  :root{ --H-TOP: 68px !important; }   /* wyższy pasek + auto-kompensacja paddingu body */
+  .topbar{
+    height: var(--H-TOP) !important;
+    padding: 10px 12px !important;
+  }
+}
 
  
