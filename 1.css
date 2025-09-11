@@ -3120,5 +3120,27 @@ section#tab-fx      #fxBody        td.space .btn{
     padding: 10px 12px !important;
   }
 }
+/* === Basket: ticker + USD czytelnie, bez nakładania === */
+#stock-basket .b-ticker,
+#fx-basket    .b-ticker{
+  display: inline-flex;
+  flex-wrap: wrap;                 /* pozwól spaść do 2. linii */
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: normal !important;  /* nadpisuje globalne nowrap */
+  line-height: 1.1;
+  padding: 4px 8px;
+  min-width: 88px;                 /* żeby kształt się nie „zapadał” */
+}
+
+/* Drugi „wyraz” (USD) jako mała linia pod spodem */
+#stock-basket .b-ticker > span:last-child,
+#fx-basket    .b-ticker > span:last-child{
+  flex: 0 0 100%;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
 
  
