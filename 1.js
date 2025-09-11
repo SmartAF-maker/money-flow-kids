@@ -355,8 +355,9 @@ amount = toCents(unit * Number(it.qty));
     sumAmt += amount || 0;
   });
 
- if (qtyEl) qtyEl.textContent = ` ${sumQty}`;    // ⬅ spacja na początku
-if (amtEl) amtEl.textContent = ` ${USD(sumAmt)}`; // ⬅ spacja na początku
+if (qtyEl) qtyEl.textContent = `  ${sumQty}`;      // dwie spacje
+if (amtEl) amtEl.textContent = `  ${USD(sumAmt)}`; // dwie spacje
+
 
   listEl.onclick = (e) => {
     const btn = e.target.closest('[data-remove-index]');
@@ -1991,12 +1992,10 @@ function renderBasketStocks() {
 
     listEl.appendChild(row);
   });
-const t = basketTotals(items);
-if (qtyEl) qtyEl.textContent = `  ${t.qty}`;      // ⬅️ dwie spacje
-if (amtEl) amtEl.textContent = `  ${PLN(t.sum)}`; // ⬅️ dwie spacje
 
-
-
+ const t = basketTotals(items);
+if (qtyEl) qtyEl.textContent = `  ${t.qty}`;       // dwie spacje
+if (amtEl) amtEl.textContent = `  ${PLN(t.sum)}`;  // dwie spacje
 }
 
 
@@ -2055,10 +2054,8 @@ function renderBasketFx() {
   });
 
   const t = basketTotals(items);
-if (qtyEl) qtyEl.textContent = `  ${t.qty}`;      // ⬅️ dwie spacje
-if (amtEl) amtEl.textContent = `  ${PLN(t.sum)}`; // ⬅️ dwie spacje
-
-
+if (qtyEl) qtyEl.textContent = `  ${t.qty}`;       // dwie spacje
+if (amtEl) amtEl.textContent = `  ${PLN(t.sum)}`;  // dwie spacje
 }
 
 // ===== BUY FROM BASKET =====
