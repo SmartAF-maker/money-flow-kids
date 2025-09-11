@@ -1,4 +1,4 @@
-   /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
+     /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
 
 /* Palette */
 :root{
@@ -3211,31 +3211,7 @@ input[type=number] {
     visibility: hidden !important;
   }
 }
-/* ==== MOBILE HOTFIX (≤640px): Basket — nic nie zachodzi na siebie ==== */
-@media (max-width: 640px){
-  /* Każdy wiersz w koszyku ustaw jako grid 4-kolumnowy */
-  #stock-basket .basket-list > * ,
-  #fx-basket    .basket-list > * {
-    display: grid !important;
-    grid-template-columns: auto 1fr auto auto; /* [Ticker] [Qty] [Set] [Subtotal] */
-    align-items: center;
-    gap: 8px;
-  }
 
-  /* Schowaj pierwszy „price preview” (to ta liczba pod kapsułką) */
-  #stock-basket .basket-list > * > :first-child,
-  #fx-basket    .basket-list > * > :first-child{
-    display: none !important;
-  }
-
-  /* Suma (np. 186.54 USD) trzyma się prawej krawędzi */
-  #stock-basket .basket-list > * > :last-child,
-  #fx-basket    .basket-list > * > :last-child{
-    justify-self: end;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-}
 
 
 
