@@ -3189,7 +3189,8 @@ input[type=number]::-webkit-outer-spin-button {
 
 /* Usunięcie strzałek w Firefox */
 input[type=number] {
-  -moz-appearance: textfield;
+  appearance: textfield;       /* standard */
+  -moz-appearance: textfield;  /* Firefox */
 }
 #portfolioBody input::placeholder,
 #fxBody input::placeholder {
