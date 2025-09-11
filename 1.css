@@ -3120,60 +3120,49 @@ section#tab-fx      #fxBody        td.space .btn{
     padding: 10px 12px !important;
   }
 }
-/* ===== Basket: para/ticker z jednostką pod spodem ===== */
-
-/* 1) wspólny styl pigułki (FX i Stocks) */
-.b-ticker,
-.pair-pill,
-#fx-basket .b-ticker,
-#stock-basket .b-ticker {
-  display: inline-grid !important;
-  grid-auto-flow: row;
-  align-items: center;
-  justify-items: start;
-  line-height: 1.05;
-  gap: 2px;              /* odstęp między nazwą a USD */
-  padding: 6px 10px;     /* standard dla kapsułki */
-  white-space: normal !important;   /* pozwól łamać wiersz */
-}
-
-/* jeśli USD jest osobnym elementem */
-.b-ticker .unit,
-.pair-pill .unit {
-  display: block !important;
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
-  letter-spacing: .2px;
-  line-height: 1.05;
-}
-
-/* jeśli USD było dorzucane pseudo-elementem ::after (bez zmiany HTML) */
-.b-ticker::after,
-.pair-pill::after {
-  content: attr(data-unit);           /* np. data-unit="USD"; gdy brak — nic nie pokaże */
-  display: block !important;
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
-  margin-top: 2px;
-}
-
-/* 2) na bardzo wąskich ekranach — wymuś brak ścisku */
+/* === Basket tickers/pairs: żadnego nakładania się waluty na telefonie === */
 @media (max-width: 640px){
+  /* 1) Kapsułka z tickerem/parą – pozwól na dwa wiersze */
   .b-ticker,
-  .pair-pill{
-    max-width: 140px;                 /* żeby kapsułka nie była zbyt szeroka */
+  #fx-basket .b-ticker,
+  #stock-basket .b-ticker,
+  #fx-basket .pair-badge,
+  #stock-basket .pair-badge {
+    position: relative;
+    display: inline-flex !important;
+    flex-direction: column;              /* ticker w 1. wierszu, waluta w 2. */
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 10px !important;
+    min-width: 92px;                     /* żeby kapsułka się nie ściskała */
+    line-height: 1.05;
+    white-space: normal !important;      /* pozwól łamać wiersz */
   }
-}
 
-/* 3) wyłącz ewentualne stare „nowrap/ellipsis”, które powodowały nakładanie */
-.b-ticker,
-.pair-pill,
-.b-ticker *{
-  white-space: normal !important;
-  text-overflow: clip !important;
-  overflow: visible !important;
+  /* 2a) Jeśli „USD” jest pseudo-elementem (np. ::after) – przenieś go POD spód */
+  .b-ticker::after,
+  #fx-basket .pair-badge::after,
+  #stock-basket .pair-badge::after {
+    position: static !important;         /* nie absolute */
+    transform: none !important;
+    display: block !important;
+    margin: 0 !important;
+    opacity: .9;
+    font-size: 12px;                     /* mniejsza waluta */
+  }
+
+  /* 2b) Jeśli masz osobny element waluty (np. <span class="cur">USD</span>) */
+  .b-ticker .cur,
+  #fx-basket .pair-badge .cur {
+    display: block !important;
+    font-size: 12px !important;
+    opacity: .9;
+    margin: 0 !important;
+  }
+
+  /* 3) Gdy wcześniej dodaliśmy odstęp na prawo pod pseudo-element – wyłącz go */
+  .b-ticker{ padding-right: 10px !important; }
 }
 
  
