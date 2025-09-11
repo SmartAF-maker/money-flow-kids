@@ -126,6 +126,45 @@
       #globalTrendsCard { display: block; }
       .hidden { display: none !important; }
     </style>
+<!-- MOBILE: etykiety kolumn w wierszach tabel (Sales History) -->
+<style id="mobile-table-labels">
+  /* ukryj nagłówki na małych ekranach, każdy wiersz = “karta” */
+  @media (max-width: 640px){
+    .tableWrap table thead { display:none; }
+
+    .tableWrap table tbody tr {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      background: var(--card-bg, rgba(255,255,255,.03));
+      margin-bottom: 10px;
+    }
+
+    /* każda komórka z własną etykietą z data-label */
+    .tableWrap table tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .tableWrap table tbody td:last-child {
+      border-bottom: 0;
+    }
+
+    .tableWrap table tbody td::before{
+      content: attr(data-label);
+      color: #9aa4b2;            /* “muted” */
+      font-size: .86rem;
+      margin-right: 10px;
+      text-transform: none;
+      letter-spacing: .2px;
+    }
+  }
+</style>
 
     <!-- CSP: allow live data endpoints for fetch() (Tylko w <head>) -->
     <meta http-equiv="Content-Security-Policy" content="
