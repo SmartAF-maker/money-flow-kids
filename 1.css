@@ -3231,6 +3231,21 @@ input[type=number] {
     position:static !important; white-space:nowrap;
   }
 }
+/* Mini-jars: ukryj strzałki TYLKO na mobile */
+@media (max-width: 768px) {
+  .mini-jars .delta,
+  .mini-jars .arrow,
+  .mini-jars .trend,
+  .wow-jars .delta,
+  .wow-jars .arrow,
+  .kpi .delta,
+  .kpi .arrow {
+    display: none !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
 
 
 
