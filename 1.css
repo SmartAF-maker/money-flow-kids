@@ -3104,5 +3104,32 @@ section#tab-fx      #fxBody        td.space .btn{
     min-width: 64px !important;
   }
 }
+/* Kompaktowy układ Stock / Currency Portfolio */
+.stock-portfolio,
+.currency-portfolio {
+  line-height: 1.2;   /* mniejsza wysokość wierszy */
+}
+
+.stock-portfolio .card,
+.currency-portfolio .card {
+  padding: 6px 10px;  /* ciaśniejsze paddingi wewnątrz */
+}
+
+.stock-portfolio .sell-box,
+.currency-portfolio .sell-box {
+  margin-top: 4px;    /* mniejszy odstęp nad input+button */
+}
+
+.stock-portfolio .sell-box input,
+.currency-portfolio .sell-box input {
+  padding: 4px 6px;   /* ciaśniejszy input */
+  font-size: 0.9em;
+}
+
+.stock-portfolio .sell-box button,
+.currency-portfolio .sell-box button {
+  padding: 4px 8px;
+  font-size: 0.9em;
+}
 
  
