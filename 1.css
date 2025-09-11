@@ -3120,27 +3120,60 @@ section#tab-fx      #fxBody        td.space .btn{
     padding: 10px 12px !important;
   }
 }
-/* === Basket: ticker + USD czytelnie, bez nakładania === */
-#stock-basket .b-ticker,
-#fx-basket    .b-ticker{
-  display: inline-flex;
-  flex-wrap: wrap;                 /* pozwól spaść do 2. linii */
+/* ===== Basket: para/ticker z jednostką pod spodem ===== */
+
+/* 1) wspólny styl pigułki (FX i Stocks) */
+.b-ticker,
+.pair-pill,
+#fx-basket .b-ticker,
+#stock-basket .b-ticker {
+  display: inline-grid !important;
+  grid-auto-flow: row;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  white-space: normal !important;  /* nadpisuje globalne nowrap */
-  line-height: 1.1;
-  padding: 4px 8px;
-  min-width: 88px;                 /* żeby kształt się nie „zapadał” */
+  justify-items: start;
+  line-height: 1.05;
+  gap: 2px;              /* odstęp między nazwą a USD */
+  padding: 6px 10px;     /* standard dla kapsułki */
+  white-space: normal !important;   /* pozwól łamać wiersz */
 }
 
-/* Drugi „wyraz” (USD) jako mała linia pod spodem */
-#stock-basket .b-ticker > span:last-child,
-#fx-basket    .b-ticker > span:last-child{
-  flex: 0 0 100%;
-  font-size: 11px;
+/* jeśli USD jest osobnym elementem */
+.b-ticker .unit,
+.pair-pill .unit {
+  display: block !important;
+  font-size: 12px;
   color: var(--muted);
-  text-align: center;
+  font-weight: 600;
+  letter-spacing: .2px;
+  line-height: 1.05;
+}
+
+/* jeśli USD było dorzucane pseudo-elementem ::after (bez zmiany HTML) */
+.b-ticker::after,
+.pair-pill::after {
+  content: attr(data-unit);           /* np. data-unit="USD"; gdy brak — nic nie pokaże */
+  display: block !important;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* 2) na bardzo wąskich ekranach — wymuś brak ścisku */
+@media (max-width: 640px){
+  .b-ticker,
+  .pair-pill{
+    max-width: 140px;                 /* żeby kapsułka nie była zbyt szeroka */
+  }
+}
+
+/* 3) wyłącz ewentualne stare „nowrap/ellipsis”, które powodowały nakładanie */
+.b-ticker,
+.pair-pill,
+.b-ticker *{
+  white-space: normal !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
 }
 
  
