@@ -3246,11 +3246,12 @@ input[type=number] {
     padding: 0 !important;
   }
 }
-/* odstęp między etykietą a wartością w koszyku */
+/* spacja przed ilością/sumą w stopce koszyka */
+[data-basket-qty],
+[data-basket-amt] { white-space: nowrap; }
+
 [data-basket-qty]::before,
-[data-basket-amt]::before {
-  content: "\00A0\00A0"; /* dwie niełamliwe spacje */
-}
+[data-basket-amt]::before { content: "\00a0\00a0"; } /* 2× NBSP */
 
 
 

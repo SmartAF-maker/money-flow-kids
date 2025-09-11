@@ -2054,10 +2054,9 @@ function renderBasketFx() {
     listEl.appendChild(row);
   });
 
-const t = basketTotals(items);
-if (qtyEl) qtyEl.textContent = '\u00A0\u00A0' + t.qty;
-if (amtEl) amtEl.textContent = '\u00A0\u00A0' + PLN(t.sum);
-
+  const t = basketTotals(items);
+if (qtyEl) qtyEl.textContent = `  ${t.qty}`;       // dwie spacje
+if (amtEl) amtEl.textContent = `  ${PLN(t.sum)}`;  // dwie spacje
 }
 
 // ===== BUY FROM BASKET =====
