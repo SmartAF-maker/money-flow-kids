@@ -3364,29 +3364,6 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
-/* --- Mobile: szare podpisy pod wartościami w Sales History --- */
-@media (max-width: 640px) {
-  /* ukryj thead – na mobile robimy "karteczki" */
-  #tab-profits table thead { display: none; }
-
-  /* każdy TD jako blok, wyśrodkuj i zrób odstępy */
-  #tab-profits table tbody td {
-    display: block;
-    text-align: center;
-    padding: 10px 8px 6px;
-  }
-
-  /* SZARY, MAŁY PODPIS POD WARTOŚCIĄ – bierze tekst z data-label */
-  #tab-profits table tbody td::after {
-    content: attr(data-label);
-    display: block;
-    margin-top: 4px;
-    font-size: 0.78rem;
-    line-height: 1.1;
-    color: #9aa3af;           /* szary */
-    opacity: .9;
-  }
-}
 
 
 
