@@ -3364,6 +3364,27 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
+/* Domyślnie (desktop/tablet) nie pokazuj podpisów */
+.mfk-cap { display: none; }
+
+/* Tylko mobile */
+@media (max-width: 640px) {
+  /* Każda komórka staje się "wartość + podpis" w dwóch wierszach */
+  td { padding-top: 6px; padding-bottom: 6px; }
+  td .mfk-val { font-weight: 600; }
+  td .mfk-cap {
+    display: block;
+    font-size: 12px;
+    line-height: 1.1;
+    color: var(--muted, #9ca3af);
+    text-align: right;       /* podpis po prawej, jak chciałaś */
+    margin-top: 2px;
+  }
+
+  /* Opcjonalnie: wiersz z P/L – zachowaj zielony/czerwony kolor wartości */
+  td.pnl-pos .mfk-val { color: var(--ok, #22c55e); }
+  td.pnl-neg .mfk-val { color: var(--warn, #ef4444); }
+}
 
 
 
