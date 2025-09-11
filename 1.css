@@ -3364,37 +3364,23 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
-/* ===== Mobile: pokaż mały opis pod wartością w komórkach tabel ===== */
-@media (max-width: 640px) {
-  /* ukryj thead, zrób wiersze „kartami” (jeśli jeszcze nie masz takiej sekcji) */
-  table thead { display: none; }
-  table, tbody, tr, td, th { display: block; width: 100%; }
-
-  tbody tr {
-    margin: 8px 0;
-    padding: 8px 10px;
-    border: 1px solid rgba(255,255,255,.06);
-    border-radius: 10px;
-    background: var(--card-bg, rgba(255,255,255,.03));
+/* Podpisy POD wartościami tylko w tabelach "Sales History" (Stocks/FX) na mobile */
+@media (max-width: 640px){
+  #tab-profits table td{
+    text-align: center;
   }
-
-  /* najważniejsze: wartość u góry, a pod nią mała etykieta */
-  tbody td {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    padding: 10px 12px 14px;
+  /* wyłącz ewentualne wcześniejsze etykiety przed wartością */
+  #tab-profits table td::before{
+    content: none !important;
   }
-
-  tbody td::after {
-    content: attr(data-label);       /* np. "Date", "Qty", "P/L" */
+  /* pokaż mały, szary napis POD wartością z atrybutu data-label */
+  #tab-profits table td::after{
+    content: attr(data-label);
+    display: block;
     font-size: 12px;
-    line-height: 1.2;
-    color: var(--muted, #9aa4ad);    /* szary */
+    color: #9aa3b2;      /* delikatna szarość */
     opacity: .85;
-    margin-top: 4px;
-    order: 2;                        /* etykieta pod wartością */
+    margin-top: 4px;     /* odstęp od wartości */
   }
 }
 
