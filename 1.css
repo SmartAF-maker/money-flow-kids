@@ -3246,21 +3246,22 @@ input[type=number] {
     padding: 0 !important;
   }
 }
-/* odstęp między etykietą "Quantity"/"Amount" a liczbą */
-[data-basket-qty],
-[data-basket-amt] {
-  margin-left: .4rem;      /* ~6–7 px */
-  display: inline-block;   /* gwarantuje, że margin zadziała */
-}
-
-/* (opcjonalnie) tylko w widoku mobilnym */
 @media (max-width: 768px) {
-  [data-basket-qty],
-  [data-basket-amt] { margin-left: .5rem; }
-}
-[data-basket-qty]::before,
-[data-basket-amt]::before {
-  content: " ";
+  /* sztuczna spacja po słowie Quantity */
+  #stock-basket .basket-item:has(:contains("Quantity")) {
+    white-space: pre; /* zachowaj spacje */
+  }
+  #stock-basket .basket-item:has(:contains("Quantity"))::after {
+    content: " ";
+  }
+
+  /* sztuczna spacja po słowie Amount */
+  #stock-basket .basket-item:has(:contains("Amount")) {
+    white-space: pre;
+  }
+  #stock-basket .basket-item:has(:contains("Amount"))::after {
+    content: " ";
+  }
 }
 
 
