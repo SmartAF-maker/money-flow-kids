@@ -3346,6 +3346,24 @@ html, body { overflow-x: hidden; }
   #tab-profits .kpi { padding: 10px; }
   #tab-profits .kpi > .muted { font-size: .9rem; }
 }
+/* PROFITS (mobile): zero poziomego scrolla i nic nie wystaje */
+@media (max-width: 640px){
+  #tab-profits .card,
+  #tab-profits .tableWrap{ 
+    overflow-x: hidden !important; 
+    max-width: 100% !important;
+  }
+  #tab-profits .tableWrap table{
+    min-width: 0 !important;     /* zabija wymuszoną szerokość tabeli */
+    width: 100% !important;
+    table-layout: fixed !important;
+    display: block;              /* pewniak na brak paska */
+  }
+  #tab-profits .tableWrap *{
+    max-width: 100% !important;  /* żaden potomek nie rozpycha */
+    white-space: normal !important;
+  }
+}
 
 
 
