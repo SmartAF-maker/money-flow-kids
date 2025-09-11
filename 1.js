@@ -3226,3 +3226,40 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('DOMContentLoaded', () => {
   renderAll();
 });
+/* ==== MINI-JARS: remove arrows on mobile only (≤640px) ==== */
+(function miniArrowsMobileKiller(){
+  const MQ = window.matchMedia('(max-width: 640px)');
+
+  function stripArrowsIn(el){
+    if (!el) return;
+    // 1) usuń elementy ikon
+    el.querySelectorAll('i.arrow-up, i.arrow-down, i.arrow-flat, [class*="arrow-"]').forEach(n => n.remove());
+    // 2) usuń znaki trójkątów, gdy są tekstem (▲ ▼ △ ▽ ▴ ▾ ▵ ▿)
+    el.querySelectorAll('.mini-jar-value, .mini-jar-amt, .mini-pill b, .mini-pill .val')
+      .forEach(node => {
+        node.textContent = node.textContent.replace(/[▲△▴▵▼▽▾▿]/g, '').replace(/\s{2,}/g,' ').trim();
+      });
+  }
+
+  function run(){
+    if (!MQ.matches) return; // działa tylko na telefonie
+    stripArrowsIn(document.getElementById('stickyMiniJars'));
+    document.querySelectorAll('.mini-strip').forEach(stripArrowsIn);
+  }
+
+  // uruchom przy starcie i na zmianę rozmiaru/orientacji
+  window.addEventListener('DOMContentLoaded', run);
+  window.addEventListener('load', run);
+  MQ.addEventListener?.('change', run);
+  window.addEventListener('resize', run);
+  window.addEventListener('orientationchange', run);
+
+  // jeśli liczby w pasku są aktualizowane dynamicznie → pilnuj zmian
+  const watch = (root) => {
+    if (!root) return;
+    const mo = new MutationObserver(run);
+    mo.observe(root, { childList: true, subtree: true, characterData: true });
+  };
+  watch(document.getElementById('stickyMiniJars'));
+  document.querySelectorAll('.mini-strip').forEach(watch);
+})();

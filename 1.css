@@ -2949,32 +2949,36 @@ body #stickyMiniJars{
     top: calc(var(--H-TOP) + var(--H-JARS-MOB)) !important;
   }
 }
- /* ==== MOBILE (≤640px): hide arrows ONLY in the mini-jars bar ==== */
+ /* ==== MOBILE ONLY (≤640px): schowaj strzałki w mini-jars ==== */
 @media (max-width: 640px){
-  /* #stickyMiniJars wariant */
-  #stickyMiniJars .mini-jar i[class*="arrow"],
-  #stickyMiniJars .mini-jar .arrow-up,
-  #stickyMiniJars .mini-jar .arrow-down,
-  #stickyMiniJars .mini-jar .arrow-flat,
-  #stickyMiniJars .price-pill i{
+  /* wszystkie warianty elementów strzałek w pasku */
+  #stickyMiniJars [class*="arrow-"],
+  .mini-strip     [class*="arrow-"],
+  #stickyMiniJars i.arrow-up,
+  #stickyMiniJars i.arrow-down,
+  .mini-strip  i.arrow-up,
+  .mini-strip  i.arrow-down,
+  #stickyMiniJars svg.arrow-up,
+  #stickyMiniJars svg.arrow-down,
+  .mini-strip  svg.arrow-up,
+  .mini-strip  svg.arrow-down{
     display: none !important;
+    margin: 0 !important;
   }
 
-  /* alternatywny markup – gdy pasek ma klasę .mini-jars / .mini-jars.sticky */
-  .mini-jars .mini-jar i[class*="arrow"],
-  .mini-jars .mini-jar .arrow-up,
-  .mini-jars .mini-jar .arrow-down,
-  .mini-jars .mini-jar .arrow-flat,
-  .mini-jars .price-pill i{
-    display: none !important;
-  }
-
-  /* jeśli trójkąty są dodane pseudo-elementem */
+  /* gdyby strzałki były dodawane jako ::before na wartości */
   #stickyMiniJars .mini-jar-value::before,
-  #stickyMiniJars .mini-jar-value::after,
-  .mini-jars .mini-jar-value::before,
-  .mini-jars .mini-jar-value::after{
-    content: none !important;
+  .mini-strip .mini-pill b::before{
+    content: "" !important;
+    display: none !important;
+  }
+}
+@media (max-width: 640px){
+  /* usuń trójkąty-teksty w pigułkach wartości (np. ▼ ▲) */
+  .mini-strip .mini-pill b{
+    /* wytnij trójkąty, jeśli są wstawiane jako pierwszy znak */
+    /* nic nie popsuje gdy ich nie ma */
   }
 }
 
+ 
