@@ -3064,5 +3064,45 @@ body #stickyMiniJars{
   background: #fff;          /* kolor (zmień jeśli chcesz) */
   border-radius: 2px;
 }
+/* === FIX: input + Sell w jednej linii (mobile & desktop) === */
+section#tab-invest #portfolioBody td.space,
+section#tab-fx      #fxBody        td.space{
+  display: flex !important;
+  flex-direction: row !important;     /* ⬅️ jedna linia */
+  align-items: center !important;
+  justify-content: flex-end !important; /* przycisk po prawej */
+  gap: 8px !important;
+  white-space: nowrap !important;
+}
+
+/* kompaktowe inputy, żeby wszystko się mieściło obok siebie */
+section#tab-invest #portfolioBody td.space input[type="number"],
+section#tab-fx      #fxBody        td.space input[type="number"],
+section#tab-invest #portfolioBody td.space .input,
+section#tab-fx      #fxBody        td.space .input{
+  width: 72px !important;
+  min-width: 72px !important;
+  text-align: center;
+}
+
+/* przycisk nie zawija tekstu */
+section#tab-invest #portfolioBody td.space .btn,
+section#tab-fx      #fxBody        td.space .btn{
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+
+/* na bardzo wąskich telefonach: jeszcze ciaśniej */
+@media (max-width: 360px){
+  section#tab-invest #portfolioBody td.space,
+  section#tab-fx      #fxBody        td.space{
+    gap: 6px !important;
+  }
+  section#tab-invest #portfolioBody td.space input[type="number"],
+  section#tab-fx      #fxBody        td.space input[type="number"]{
+    width: 64px !important;
+    min-width: 64px !important;
+  }
+}
 
  
