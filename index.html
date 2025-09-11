@@ -1002,5 +1002,55 @@
   });
 })();
 </script>
+<script>
+// ==== KILL ALL ARROWS ON MOBILE (≤640px) ====
+(function () {
+  if (!window.matchMedia("(max-width: 640px)").matches) return;
+
+  // wszystkie znaki-strzałki jakie zwykle się pojawiają
+  const ARROWS = /[▲▼↑↓⮝⮟⇧⇩⬆⬇↗↘↕↔⏶⏷🡑🡓🡅🡇]/g;
+
+  // usuń strzałki z tekstu (węzły tekstowe)
+  function stripArrowsInText(node) {
+    if (node.nodeType === 3) { // Text
+      const t = node.nodeValue;
+      const nt = t.replace(ARROWS, "").replace(/\s{2,}/g, " ");
+      if (nt !== t) node.nodeValue = nt.trim();
+    }
+  }
+
+  function purge(root) {
+    // 1) usuń elementy-ikonki (i/svg/span) oznaczone klasami arrow-*
+    root.querySelectorAll('[class*="arrow-"]').forEach(el => el.remove());
+
+    // 2) usuń pseudo-ikonki dorabiane contentem ::before/::after (zabij je font-size:0)
+    root.querySelectorAll("*").forEach(el => {
+      // tekst węzłów
+      el.childNodes.forEach(stripArrowsInText);
+      // ukryj ewentualne ::before/::after
+      el.style.setProperty("--_no-arrows", "1");
+    });
+  }
+
+  // start
+  purge(document.body);
+
+  // obserwuj zmiany i wycinaj na bieżąco
+  const obs = new MutationObserver(muts => {
+    for (const m of muts) {
+      if (m.type === "characterData") {
+        stripArrowsInText(m.target);
+      } else if (m.addedNodes && m.addedNodes.length) {
+        m.addedNodes.forEach(n => {
+          if (n.nodeType === 1) purge(n);       // element
+          else if (n.nodeType === 3) stripArrowsInText(n); // tekst
+        });
+      }
+    }
+  });
+  obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+</script>
+
   </body>
 </html>

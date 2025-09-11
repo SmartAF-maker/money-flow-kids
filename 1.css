@@ -3211,6 +3211,41 @@ input[type=number] {
     visibility: hidden !important;
   }
 }
+/* ==== BASKET (mobile) — badge nie przykrywa ceny ==== */
+@media (max-width: 900px){
+  /* siatka + odstępy */
+  #stock-basket .basket-item,
+  #fx-basket   .basket-item{
+    grid-template-columns: 1fr .9fr .7fr auto;
+    grid-template-areas:
+      "asset price  qty subtotal"
+      "asset change qty subtotal";
+    column-gap: 8px;
+    row-gap: 6px;
+  }
+
+  /* obszary */
+  .b-item-asset{ grid-area: asset; min-width: 0; z-index: 0; }
+  .b-price     { grid-area: price;  position: relative; z-index: 1; }
+  .b-change    { grid-area: change; position: relative; z-index: 1; }
+  .b-qty       { grid-area: qty; }
+  .b-subtotal  { grid-area: subtotal; }
+
+  /* badge może się złamać (np. „GBP/USD”), nie wypycha w prawo */
+  .b-ticker{
+    max-width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere;   /* pozwala łamać nawet przy '/' */
+    word-break: break-word;
+    text-align: center;
+    padding: 6px 10px;
+  }
+}
+
+/* bardzo wąskie telefony — mniejsze badge */
+@media (max-width: 360px){
+  .b-ticker{ font-size: 12px; }
+}
 
 
 
