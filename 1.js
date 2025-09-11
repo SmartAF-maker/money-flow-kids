@@ -3226,4 +3226,30 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('DOMContentLoaded', () => {
   renderAll();
 });
+// ==== REMOVE ARROWS in mini-jars (mobile only) ====
+(function(){
+  if (window.matchMedia("(max-width: 640px)").matches) {
+    const roots = [document.getElementById("stickyMiniJars"), document.querySelector(".mini-strip")].filter(Boolean);
+
+    function killArrows(root){
+      if (!root) return;
+      // usuń elementy <i>/<svg> z klasą arrow-*
+      root.querySelectorAll(".arrow-up, .arrow-down, .arrow-flat").forEach(el => el.remove());
+      // usuń znaki strzałek w tekście
+      root.querySelectorAll(".mini-jar-value, .mini-pill b").forEach(el=>{
+        el.textContent = el.textContent.replace(/[▲▼↑↓⮝⮟⇧⇩⬆️⬇️]/g,"").trim();
+      });
+    }
+
+    function run(){
+      roots.forEach(killArrows);
+    }
+
+    // od razu
+    run();
+    // i obserwuj zmiany (bo wartości się aktualizują)
+    const obs = new MutationObserver(run);
+    roots.forEach(r => obs.observe(r, {childList:true, subtree:true, characterData:true}));
+  }
+})();
 

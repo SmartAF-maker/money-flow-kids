@@ -2702,7 +2702,12 @@ body[data-role="child"] .jar-card { gap: 6px !important; } /* zgrabne odstępy *
   #stickyMiniJars .mini-jar-value{ font-size: .9rem !important; white-space: nowrap !important; }
 }
 
-
+/* === ARROWS przy liczbach: nigdy na tekście === */
+.arrow-up,.arrow-down,.arrow-flat{
+  display:inline-block !important;
+  margin-left: 4px !important;
+  position: relative; top: -1px;
+}
 
 /* === FX & STOCKS: mobile – nie rozjeżdża się, prawa kolumna wchodzi === */
 @media (max-width: 640px){
@@ -3192,31 +3197,20 @@ input[type=number] {
   color: transparent !important;
   opacity: 0 !important;
 }
-/* ==== MOBILE ONLY (≤640px) – ZABIJ STRZAŁKI NA MINI-JARS ==== */
+/* MOBILE: awaryjne ukrycie pseudo-ikonek ::before/::after */
 @media (max-width: 640px){
-  #stickyMiniJars .arrow-up,
-  #stickyMiniJars .arrow-down,
-  #stickyMiniJars .arrow-flat,
-  .mini-strip .arrow-up,
-  .mini-strip .arrow-down,
-  .mini-strip .arrow-flat {
-    display: none !important;     /* usuwa <i>, <svg> itd. */
-    visibility: hidden !important;
-    margin: 0 !important;
-    width: 0 !important;
-    height: 0 !important;
-    font-size: 0 !important;
-    line-height: 0 !important;
-  }
-
-  /* jeśli są pseudo-elementami (::before/::after) */
-  #stickyMiniJars .mini-jar-value::before,
-  #stickyMiniJars .mini-jar-value::after,
-  .mini-strip .mini-pill b::before,
-  .mini-strip .mini-pill b::after {
+  [style*="--_no-arrows"]::before,
+  [style*="--_no-arrows"]::after{
     content: none !important;
     display: none !important;
   }
+
+  /* oraz wszelkie elementy z klasami arrow-* (gdyby JS ich nie zdążył usunąć) */
+  [class*="arrow-"]{
+    display: none !important;
+    visibility: hidden !important;
+  }
 }
+
 
 
