@@ -3046,22 +3046,22 @@ body #stickyMiniJars{
 
 /* Na wszelki wypadek: nic nie ucina menu */
 .topbar, .role-switch{ overflow: visible !important; }
-/* ==== Hamburger pełny placeholder ==== */
+/* ==== Hamburger: kreski wypełniają cały placeholder ==== */
 .mfk-nav-toggle {
-  width: 44px;               /* kwadratowy przycisk */
+  width: 44px;      /* wielkość całego kwadratu */
   height: 44px;
-  display: flex;             /* centrowanie kresek */
-  flex-direction: column;    /* układ pionowy */
-  justify-content: center;   /* równe odstępy góra/dół */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;  /* równe odstępy góra/dół */
   align-items: center;
-  gap: 5px;                  /* odstęp między kreskami */
+  padding: 6px;    /* mały margines, żeby nie dotykały krawędzi */
   border-radius: 12px;
 }
 
 .mfk-nav-toggle .bar {
-  width: 70%;                /* długość kreski względem przycisku */
-  height: 3px;               /* grubość */
-  background: #fff;          /* kolor (zmień jeśli chcesz) */
+  width: 100%;      /* kreska prawie na całą szerokość */
+  height: 3px;      /* grubość */
+  background: #fff; /* kolor kresek */
   border-radius: 2px;
 }
 
