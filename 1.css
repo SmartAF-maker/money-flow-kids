@@ -3364,22 +3364,17 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
-/* PROFITS (mobile): etykiety pod każdą daną */
-@media (max-width: 640px){
-  #tab-profits tbody td{
-    display: flex;
-    flex-direction: column;     /* układ pionowy */
-    align-items: flex-start;    /* teksty do lewej */
-    gap: 2px;                   /* mały odstęp */
-    padding: 6px 4px;
-  }
-  #tab-profits tbody td::before{
-    content: attr(data-label);  /* pobiera opis z nagłówka */
-    font-size: 11px;
-    color: var(--muted);
-    font-weight: 500;
-    opacity: 0.75;
-  }
+/* Małe opisy POD każdą komórką – tylko w zakładce Profits */
+#tab-profits table td{
+  display: flex;
+  flex-direction: column;     /* wartość, a pod nią opis */
+  align-items: flex-start;
+}
+#tab-profits table td::after{
+  content: attr(data-label);  /* bierze tekst z <th> – JS już nadaje data-label */
+  font-size: 11px;
+  opacity: .6;
+  margin-top: 2px;
 }
 
 
