@@ -1,4 +1,4 @@
-    /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
+   /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
 
 /* Palette */
 :root{
@@ -3197,4 +3197,32 @@ input[type=number] {
   color: transparent !important;
   opacity: 0 !important;
 }
- 
+/* --- ARROWS: pokaż je tylko na ≥641px --- */
+@media (min-width: 641px){
+  .arrow-up,.arrow-down,.arrow-flat{
+    display:inline-block !important;
+    margin-left:4px !important;
+    position:relative; top:-1px;
+  }
+}
+
+/* --- MOBILE KILL (≤640px) — globalnie, niezależnie od miejsca --- */
+@media (max-width: 640px){
+  :where(.arrow-up,.arrow-down,.arrow-flat){
+    display:none !important;
+    visibility:hidden !important;
+    margin:0 !important;
+    width:0 !important; height:0 !important;
+    font-size:0 !important; line-height:0 !important;
+  }
+
+  /* gdyby były dodawane pseudo-elementami */
+  [class*="mini-jar-value"]::before,
+  [class*="mini-jar-value"]::after,
+  .mini-strip .mini-pill b::before,
+  .mini-strip .mini-pill b::after{
+    content:none !important; display:none !important;
+  }
+}
+
+
