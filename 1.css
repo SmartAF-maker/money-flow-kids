@@ -1,4 +1,4 @@
-   /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
+    /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
 
 /* Palette */
 :root{
@@ -3197,26 +3197,4 @@ input[type=number] {
   color: transparent !important;
   opacity: 0 !important;
 }
-/* ==== HARD KILL STRZAŁEK (tylko mobile ≤640px) ==== */
-@media (max-width: 640px){
-  #stickyMiniJars .arrow-up,
-  #stickyMiniJars .arrow-down,
-  #stickyMiniJars .arrow-flat,
-  .mini-strip .arrow-up,
-  .mini-strip .arrow-down,
-  .mini-strip .arrow-flat {
-    display: none !important;
-    visibility: hidden !important;
-    font-size: 0 !important;
-    line-height: 0 !important;
-  }
-
-  /* jeśli strzałki są wstawiane jako pseudo-elementy */
-  #stickyMiniJars .mini-jar-value::before,
-  #stickyMiniJars .mini-jar-value::after,
-  .mini-strip .mini-pill b::before,
-  .mini-strip .mini-pill b::after {
-    content: "" !important;
-    display: none !important;
-  }
-}
+ 
