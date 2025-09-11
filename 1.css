@@ -2993,5 +2993,58 @@ body #stickyMiniJars{
     display: none !important;
   }
 }
+/* ==== 1) HAMBURGER – większy target i ikona ==== */
+.mfk-nav-toggle{
+  width: 44px !important;
+  height: 44px !important;
+  padding: 8px !important;
+  border-radius: 12px !important;
+}
+
+/* jeśli to <svg> lub <i> w środku */
+.mfk-nav-toggle svg,
+.mfk-nav-toggle i,
+.mfk-nav-toggle .icon{
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 24px !important;
+}
+
+/* jeśli hamburger jest z <span class="bar"> */
+.mfk-nav-toggle .bar{
+  display:block;
+  width: 24px !important;
+  height: 3px !important;
+  border-radius: 2px;
+  margin: 4px 0 !important;
+}
+
+/* ==== 2) MENU NA PIERWSZYM PLANIE (ponad topbar + mini-jars) ==== */
+/* Drawer/backdrop */
+.mfk-drawer,
+.mfk-backdrop{
+  position: fixed !important;
+  z-index: 5000 !important;          /* > topbar (1000) i mini-jars (900) */
+}
+
+/* Gdy używasz osobnego kontenera np. #mfkMobileDrawer */
+#mfkMobileDrawer{
+  position: fixed !important;
+  inset: 0 auto 0 0 !important;      /* lewy off-canvas */
+  z-index: 5000 !important;
+}
+
+/* Jeśli masz rozwijane menu (dropdown) pod hamburgerem */
+.mfk-mobile-menu,                      /* podmień, jeśli masz inny selektor */
+#mfkDropMenu{
+  position: fixed !important;
+  top: var(--H-TOP, 56px) !important;  /* tuż pod topbarem */
+  left: 8px !important;
+  right: 8px !important;
+  z-index: 5001 !important;
+}
+
+/* Na wszelki wypadek: nic nie ucina menu */
+.topbar, .role-switch{ overflow: visible !important; }
 
  
