@@ -2702,12 +2702,7 @@ body[data-role="child"] .jar-card { gap: 6px !important; } /* zgrabne odstępy *
   #stickyMiniJars .mini-jar-value{ font-size: .9rem !important; white-space: nowrap !important; }
 }
 
-/* === ARROWS przy liczbach: nigdy na tekście === */
-.arrow-up,.arrow-down,.arrow-flat{
-  display:inline-block !important;
-  margin-left: 4px !important;
-  position: relative; top: -1px;
-}
+
 
 /* === FX & STOCKS: mobile – nie rozjeżdża się, prawa kolumna wchodzi === */
 @media (max-width: 640px){
