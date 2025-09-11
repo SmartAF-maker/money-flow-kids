@@ -1992,8 +1992,9 @@ function renderBasketStocks() {
     listEl.appendChild(row);
   });
 const t = basketTotals(items);
-if (qtyEl) qtyEl.textContent = ` ${t.qty}`;     // ⬅ spacja
-if (amtEl) amtEl.textContent = ` ${PLN(t.sum)}`; // ⬅ spacja
+if (qtyEl) qtyEl.textContent = `  ${t.qty}`;      // ⬅️ dwie spacje
+if (amtEl) amtEl.textContent = `  ${PLN(t.sum)}`; // ⬅️ dwie spacje
+
 
 
 }
@@ -2054,8 +2055,9 @@ function renderBasketFx() {
   });
 
   const t = basketTotals(items);
-if (qtyEl) qtyEl.textContent = ` ${t.qty}`;     // ⬅ spacja
-if (amtEl) amtEl.textContent = ` ${PLN(t.sum)}`; // ⬅ spacja
+if (qtyEl) qtyEl.textContent = `  ${t.qty}`;      // ⬅️ dwie spacje
+if (amtEl) amtEl.textContent = `  ${PLN(t.sum)}`; // ⬅️ dwie spacje
+
 
 }
 
