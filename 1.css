@@ -3046,5 +3046,23 @@ body #stickyMiniJars{
 
 /* Na wszelki wypadek: nic nie ucina menu */
 .topbar, .role-switch{ overflow: visible !important; }
+/* ==== Hamburger pełny placeholder ==== */
+.mfk-nav-toggle {
+  width: 44px;               /* kwadratowy przycisk */
+  height: 44px;
+  display: flex;             /* centrowanie kresek */
+  flex-direction: column;    /* układ pionowy */
+  justify-content: center;   /* równe odstępy góra/dół */
+  align-items: center;
+  gap: 5px;                  /* odstęp między kreskami */
+  border-radius: 12px;
+}
+
+.mfk-nav-toggle .bar {
+  width: 70%;                /* długość kreski względem przycisku */
+  height: 3px;               /* grubość */
+  background: #fff;          /* kolor (zmień jeśli chcesz) */
+  border-radius: 2px;
+}
 
  
