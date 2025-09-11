@@ -3164,5 +3164,21 @@ section#tab-fx      #fxBody        td.space .btn{
   /* 3) Gdy wcześniej dodaliśmy odstęp na prawo pod pseudo-element – wyłącz go */
   .b-ticker{ padding-right: 10px !important; }
 }
+/* === FIX: Basket ticker + input quantity === */
+
+/* 1) Usuń kreseczkę pod tickerem */
+#stock-basket .b-ticker::after,
+#fx-basket   .b-ticker::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* 2) Zwęż input ilości w koszyku (Stocks + FX) */
+#stock-basket .b-qty .input,
+#fx-basket   .b-qty .input {
+  width: 64px !important;   /* było 80px+ → teraz ciaśniej */
+  min-width: 64px !important;
+  text-align: center;
+}
 
  
