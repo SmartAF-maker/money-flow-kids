@@ -3257,60 +3257,39 @@ input[type=number] {
   /* gdyby gap był nadpisany gdzieś indziej, to i tak dołóż ten margines */
   margin-left: 0 !important;
 }
-/* === MOBILE: Profits – bez poziomego scrolla, czytelne etykiety === */
-@media (max-width: 640px) {
-  /* jedną kolumnę już masz, ale dopinam na wszelki wypadek */
-  #tab-profits { grid-template-columns: 1fr !important; }
+/* --- GLOBAL FIX (bezpieczne dla całej apki) --- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: hidden; }
 
-  /* w HTML są inline: overflow:auto; max-height:260px – nadpisujemy */
-  #tab-profits .tableWrap {
-    overflow: visible !important;
-    max-height: none !important;
-  }
+/* --- Profits: niech nic nie wychodzi poza kartę --- */
+#tab-profits .card { overflow: hidden; }
+#tab-profits .card > * { max-width: 100%; }
 
-  #tab-profits table {
-    width: 100% !important;
-    border-collapse: collapse;
-  }
-
-  /* chowamy nagłówek i robimy “kafelki” z wierszy */
-  #tab-profits thead { display: none !important; }
-
-  #tab-profits tbody,
-  #tab-profits tr,
-  #tab-profits td {
-    display: block;
-    width: 100% !important;
-  }
-
-  #tab-profits tr {
-    margin: 8px 0;
-    padding: 8px;
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 10px;
-    background: var(--card-bg, rgba(255,255,255,.02));
-  }
-
-  #tab-profits td {
-    padding: 6px 8px;
-    text-align: left !important;
-    white-space: normal !important;   /* łamie długie wartości */
-    word-break: break-word;
-  }
-
-  /* podpis każdej komórki – bierze tekst z atrybutu data-label (JS już go dopisuje) */
-  #tab-profits td::before {
-    content: attr(data-label);
-    display: block;
-    font-size: .85rem;
-    opacity: .65;
-    margin-bottom: 2px;
-  }
-
-  /* na wszelki wypadek wyłącz poziomy scroll w kontenerach */
-  html, body, .container { overflow-x: hidden; }
+/* Kafelek/sekcja w historii – 100% szerokości bez wycieku przez border/padding */
+#tab-profits .history-card,
+#tab-profits .fx-sale,
+#tab-profits .st-sale,
+#tab-profits .tableWrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
-/* === END MOBILE: Profits === */
+
+/* Jeżeli masz w historii wiersze jako "label : value" */
+#tab-profits .row-line { 
+  display: grid;
+  grid-template-columns: 120px 1fr; 
+  gap: 6px;
+}
+@media (max-width: 640px) {
+  #tab-profits .row-line { grid-template-columns: 1fr; }
+}
+
+/* Dodatkowo: długie słowa/liczby niech się łamią, a nie pchają layoutu */
+#tab-profits, #tab-profits * {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
 
 
 
