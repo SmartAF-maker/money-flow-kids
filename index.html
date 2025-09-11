@@ -903,81 +903,25 @@
       })();
 
       // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
-  (function(){
-  const drawer   = document.getElementById('mfkMobileDrawer');
-  const backdrop = document.getElementById('mfkBackdrop');
-  const btn      = document.getElementById('mfkNavToggle');
-  if(!drawer || !backdrop || !btn) return;
-
-  function closeDrawer(){
-    drawer.classList.remove('open');
-    backdrop.hidden = true;
-    btn.setAttribute('aria-expanded','false');
-    document.body.style.overflow = '';
-  }
-
-  drawer.addEventListener('click', (e) => {
-    const item = e.target.closest('[data-tab]');
-    if (!item) return;
-
-    e.preventDefault();
-    const tab = item.dataset.tab;
-
-    // wywołaj tę samą logikę co w topbarze
-    const topTabBtn = document.querySelector('.mfk-topbar [data-tab="'+tab+'"]');
-    if (topTabBtn) {
-      topTabBtn.click();
-    } else if (typeof showTab === 'function') {
-      showTab(tab);
-    }
-    closeDrawer();
-  });
-})();
-</script>
-
-      // 4b) Synchronizacja child selector (topbar <-> drawer)
       (function(){
-        const mainSel = document.getElementById('childSelector');
-        const drawSel = document.getElementById('childSelectorDrawer');
-        if(!mainSel || !drawSel) return;
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        const btn = document.getElementById('mfkNavToggle');
+        if(!drawer || !backdrop || !btn) return;
 
-        function copyOptions(){
-          drawSel.innerHTML = mainSel.innerHTML;
-          drawSel.value = mainSel.value;
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
         }
-        copyOptions();
 
-        mainSel.addEventListener('change', ()=>{
-          drawSel.value = mainSel.value;
-          drawSel.dispatchEvent(new Event('change'));
+        drawer.addEventListener('click', (e) => {
+          if (e.target.closest('.tab')) close();
         });
-        drawSel.addEventListener('change', ()=>{
-          mainSel.value = drawSel.value;
-          mainSel.dispatchEvent(new Event('change'));
-        });
-
-        new MutationObserver(copyOptions).observe(mainSel, { childList:true, subtree:true });
       })();
 
-           // 4c) Logowanie w drawerze – przekieruj kliknięcia
-      document.getElementById('drawerLogin')?.addEventListener('click', ()=>{
-        document.getElementById('loginBtn')?.click();
-      });
-      document.getElementById('drawerLogout')?.addEventListener('click', ()=>{
-        document.getElementById('logoutBtn')?.click();
-      });
-
-      // 4d) Dynamiczny padding-top względem realnej wysokości topbara
-      (function(){
-        function apply(){
-          const h = document.querySelector('.mfk-topbar') || document.querySelector('.topbar');
-          if(h) document.documentElement.style.setProperty('--header-h', h.getBoundingClientRect().height + 'px');
-        }
-        document.addEventListener('DOMContentLoaded', apply);
-        window.addEventListener('resize', apply, {passive:true});
-        window.addEventListener('orientationchange', apply, {passive:true});
-      })();
-     
+           
       /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
 (function () {
   const drawerTut = document.getElementById('drawerTutorial');
