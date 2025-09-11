@@ -2973,11 +2973,24 @@ body #stickyMiniJars{
     display: none !important;
   }
 }
+/* ==== MOBILE ONLY (≤640px) — usuń strzałki w pasku mini-jars ==== */
 @media (max-width: 640px){
-  /* usuń trójkąty-teksty w pigułkach wartości (np. ▼ ▲) */
-  .mini-strip .mini-pill b{
-    /* wytnij trójkąty, jeśli są wstawiane jako pierwszy znak */
-    /* nic nie popsuje gdy ich nie ma */
+  #stickyMiniJars .arrow-up,
+  #stickyMiniJars .arrow-down,
+  #stickyMiniJars .arrow-flat,
+  .mini-strip .arrow-up,
+  .mini-strip .arrow-down,
+  .mini-strip .arrow-flat {
+    display: none !important;     /* zabija ikonki <i> lub <svg> */
+  }
+
+  /* gdyby były wstawiane jako pseudo-elementy */
+  #stickyMiniJars .mini-jar-value::before,
+  #stickyMiniJars .mini-jar-value::after,
+  .mini-strip .mini-pill b::before,
+  .mini-strip .mini-pill b::after {
+    content: none !important;
+    display: none !important;
   }
 }
 
