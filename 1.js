@@ -28,25 +28,19 @@
     });
   }
 
-  function labelizeAll(){
-    // tabele w zakładce Profits + portfele (jeśli chcesz, można zawęzić tylko do Profits)
-    document.querySelectorAll('#tab-profits table, #tab-invest table, #tab-fx table')
-      .forEach(labelize);
+ function applyLabelizeIfMobile() {
+  if (window.matchMedia('(max-width:640px)').matches) {
+    labelizeAll();   // tylko na mobile
   }
+}
 
-  document.addEventListener('DOMContentLoaded', labelizeAll);
+document.addEventListener('DOMContentLoaded', applyLabelizeIfMobile);
 
-  // Gdy JS dopisze nowe wiersze
-let _labTO = null;
-const scope = document.querySelector('#tab-profits, #tab-invest, #tab-fx') || document.body;
-const obs = new MutationObserver(() => {
-  clearTimeout(_labTO);
-  _labTO = setTimeout(labelizeAll, 60);   // throttle
-});
-obs.observe(scope, { childList: true, subtree: true });
+const obs = new MutationObserver(applyLabelizeIfMobile);
+obs.observe(document.body, { childList: true, subtree: true });
 
-  // Reakcja na zmianę szerokości (gdy wejdziesz/wyjdziesz z mobile)
-  matchMedia('(max-width:640px)').addEventListener('change', labelizeAll);
+matchMedia('(max-width:640px)').addEventListener('change', applyLabelizeIfMobile);
+
 })();
 
 
