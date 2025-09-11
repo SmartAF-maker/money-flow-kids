@@ -3364,17 +3364,38 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
-/* Małe opisy POD każdą komórką – tylko w zakładce Profits */
-#tab-profits table td{
-  display: flex;
-  flex-direction: column;     /* wartość, a pod nią opis */
-  align-items: flex-start;
-}
-#tab-profits table td::after{
-  content: attr(data-label);  /* bierze tekst z <th> – JS już nadaje data-label */
-  font-size: 11px;
-  opacity: .6;
-  margin-top: 2px;
+/* ===== Mobile: pokaż mały opis pod wartością w komórkach tabel ===== */
+@media (max-width: 640px) {
+  /* ukryj thead, zrób wiersze „kartami” (jeśli jeszcze nie masz takiej sekcji) */
+  table thead { display: none; }
+  table, tbody, tr, td, th { display: block; width: 100%; }
+
+  tbody tr {
+    margin: 8px 0;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 10px;
+    background: var(--card-bg, rgba(255,255,255,.03));
+  }
+
+  /* najważniejsze: wartość u góry, a pod nią mała etykieta */
+  tbody td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 12px 14px;
+  }
+
+  tbody td::after {
+    content: attr(data-label);       /* np. "Date", "Qty", "P/L" */
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--muted, #9aa4ad);    /* szary */
+    opacity: .85;
+    margin-top: 4px;
+    order: 2;                        /* etykieta pod wartością */
+  }
 }
 
 
