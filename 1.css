@@ -2949,3 +2949,32 @@ body #stickyMiniJars{
     top: calc(var(--H-TOP) + var(--H-JARS-MOB)) !important;
   }
 }
+ /* ==== MOBILE (≤640px): hide arrows ONLY in the mini-jars bar ==== */
+@media (max-width: 640px){
+  /* #stickyMiniJars wariant */
+  #stickyMiniJars .mini-jar i[class*="arrow"],
+  #stickyMiniJars .mini-jar .arrow-up,
+  #stickyMiniJars .mini-jar .arrow-down,
+  #stickyMiniJars .mini-jar .arrow-flat,
+  #stickyMiniJars .price-pill i{
+    display: none !important;
+  }
+
+  /* alternatywny markup – gdy pasek ma klasę .mini-jars / .mini-jars.sticky */
+  .mini-jars .mini-jar i[class*="arrow"],
+  .mini-jars .mini-jar .arrow-up,
+  .mini-jars .mini-jar .arrow-down,
+  .mini-jars .mini-jar .arrow-flat,
+  .mini-jars .price-pill i{
+    display: none !important;
+  }
+
+  /* jeśli trójkąty są dodane pseudo-elementem */
+  #stickyMiniJars .mini-jar-value::before,
+  #stickyMiniJars .mini-jar-value::after,
+  .mini-jars .mini-jar-value::before,
+  .mini-jars .mini-jar-value::after{
+    content: none !important;
+  }
+}
+
