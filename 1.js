@@ -1,49 +1,20 @@
     // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
-/* Dodaj etykiety i mały podpis pod każdą wartością w tabelach (mobile) */
-(function () {
-  function labelize(table){
-    if (!table) return;
-    const heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
-    table.querySelectorAll('tbody tr').forEach(tr => {
-      Array.from(tr.children).forEach((td, i) => {
-        const label = heads[i] || '';
-        // a) atrybut data-label (zostawiamy, jeśli gdzieś używasz w CSS)
-        td.setAttribute('data-label', label);
-
-        // b) mały podpis: <div class="mfk-val">…</div><div class="mfk-cap">Label</div>
-        if (!td.querySelector('.mfk-val')) {
-          const val = document.createElement('div');
-          val.className = 'mfk-val';
-          while (td.firstChild) val.appendChild(td.firstChild); // przenieś zawartość
-          const cap = document.createElement('div');
-          cap.className = 'mfk-cap';
-          cap.textContent = label || '';
-          td.append(val, cap);
-        } else {
-          // odśwież podpis, gdyby kolumny się zmieniły
-          const cap = td.querySelector('.mfk-cap');
-          if (cap) cap.textContent = label || '';
-        }
-      });
-    });
-  }
-
-  function labelizeAll(){
-    // tabele w zakładce Profits + portfele (jeśli chcesz, można zawęzić tylko do Profits)
-    document.querySelectorAll('#tab-profits table, #tab-invest table, #tab-fx table')
-      .forEach(labelize);
-  }
-
-  document.addEventListener('DOMContentLoaded', labelizeAll);
-
-  // Gdy JS dopisze nowe wiersze
-  const obs = new MutationObserver(labelizeAll);
-  obs.observe(document.body, { childList: true, subtree: true });
-
-  // Reakcja na zmianę szerokości (gdy wejdziesz/wyjdziesz z mobile)
-  matchMedia('(max-width:640px)').addEventListener('change', labelizeAll);
+(function lockNetwork() {
+  const of = window.fetch;
+  const ALLOW_ORIGINS = new Set([
+    location.origin,
+    'https://api.exchangerate.host',
+       'https://r.jina.ai' // ✅ CORS/GDPR-safe fallback proxy
+  ]);
+  window.fetch = async function(resource, init) {
+    const urlStr = resource instanceof Request ? resource.url : String(resource);
+    const u = new URL(urlStr, location.href);
+    if (!ALLOW_ORIGINS.has(u.origin)) {
+      throw new Error('External fetch blocked: ' + u.origin);
+    }
+    return of.apply(this, arguments);
+  };
 })();
-
 
 // ====== UTIL ======
 const DB_KEY = "kidmoney_multi_fx_live_i18n_v1";
