@@ -3364,42 +3364,41 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
-/* === SALES HISTORY: etykiety po prawej stronie === */
-@media (max-width: 820px) {
-  #tradeHistoryBody td,
-  #fxHistoryBody td {
-    position: relative;
-    padding-right: 110px !important; /* miejsce na napis po prawej */
-    overflow: visible;
-  }
-
-  #tradeHistoryBody td::after,
-  #fxHistoryBody td::after {
-    position: absolute;
-    right: 10px;              /* przylepione do prawej krawędzi */
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    color: #9ca3af;
-    white-space: nowrap;
-    pointer-events: none;
-    content: ""; /* podmieniane poniżej */
-  }
-
-  /* ---- Stocks ---- */
-  #tradeHistoryBody td:nth-child(1)::after { content: "Date"; }
-  #tradeHistoryBody td:nth-child(2)::after { content: "Ticker"; }
-  #tradeHistoryBody td:nth-child(3)::after { content: "Qty"; }
-  #tradeHistoryBody td:nth-child(4)::after { content: "Price"; }
-  #tradeHistoryBody td:nth-child(5)::after { content: "Avg. cost"; }
-  #tradeHistoryBody td:nth-child(6)::after { content: "P/L"; }
-
-  /* ---- FX ---- */
-  #fxHistoryBody td:nth-child(1)::after { content: "Date"; }
-  #fxHistoryBody td:nth-child(2)::after { content: "Pair"; }
-  #fxHistoryBody td:nth-child(3)::after { content: "Qty"; }
-  #fxHistoryBody td:nth-child(4)::after { content: "Rate"; }
-  #fxHistoryBody td:nth-child(5)::after { content: "Avg. rate"; }
-  #fxHistoryBody td:nth-child(6)::after { content: "P/L"; }
+/* POKAŻ OPISEK PO PRAWEJ W KAŻDEJ KOMÓRCE (NA KAŻDEJ SZEROKOŚCI) */
+#tradeHistoryBody td,
+#fxHistoryBody td {
+  position: relative;
+  padding-right: 110px !important; /* miejsce na etykietę po prawej */
+  overflow: visible;
 }
+
+#tradeHistoryBody td::after,
+#fxHistoryBody td::after {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+  pointer-events: none;
+  content: "";
+}
+
+/* ---- Sales History (Stocks) ---- */
+#tradeHistoryBody td:nth-child(1)::after { content: "Date"; }
+#tradeHistoryBody td:nth-child(2)::after { content: "Ticker"; }
+#tradeHistoryBody td:nth-child(3)::after { content: "Qty"; }
+#tradeHistoryBody td:nth-child(4)::after { content: "Price"; }
+#tradeHistoryBody td:nth-child(5)::after { content: "Avg. cost"; }
+#tradeHistoryBody td:nth-child(6)::after { content: "P/L"; }
+
+/* ---- Sales History (FX) ---- */
+#fxHistoryBody td:nth-child(1)::after { content: "Date"; }
+#fxHistoryBody td:nth-child(2)::after { content: "Pair"; }
+#fxHistoryBody td:nth-child(3)::after { content: "Qty"; }
+#fxHistoryBody td:nth-child(4)::after { content: "Rate"; }
+#fxHistoryBody td:nth-child(5)::after { content: "Avg. rate"; }
+#fxHistoryBody td:nth-child(6)::after { content: "P/L"; }
+
 
