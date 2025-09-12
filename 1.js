@@ -3274,43 +3274,5 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('DOMContentLoaded', () => {
   renderAll();
 });
-(function addMobileCaps(){
-  // Działa tylko na telefonie
-  if (!window.matchMedia('(max-width: 768px)').matches) return;
-
-  // Mapy etykiet dla kart (dopasuj selektory do swoich kontenerów)
-  const LABELS_STOCK = ["Date", "Symbol", "Shares", "Sell Price", "Buy Price", "Profit/Loss"];
-  const LABELS_FX    = ["Date", "Pair",   "Units", "Sell Rate", "Buy Rate",  "Profit/Loss"];
-
-  // Każda karta ma 6 wierszy (jak na screenie) – bierzemy bezpośrednie dzieci <div>
-  function labelizeCards(cardSelector, labels){
-    document.querySelectorAll(cardSelector).forEach(card => {
-      const rows = Array.from(card.children).filter(el => el.tagName === 'DIV');
-      rows.forEach((row, i) => {
-        // uniknij duplikatów
-        if (row.classList.contains('profit-row')) return;
-
-        row.classList.add('profit-row');
-
-        // opakuj obecną wartość w span.val
-        const val = document.createElement('span');
-        val.className = 'val';
-        while (row.firstChild) val.appendChild(row.firstChild);
-        row.appendChild(val);
-
-        // dodaj podpis po prawej
-        const cap = document.createElement('span');
-        cap.className = 'cap';
-        cap.textContent = labels[i] || '';
-        row.appendChild(cap);
-      });
-    });
-  }
-
-  // Dostosuj selektory do swoich kart:
-  // przykład: .sales-card.stock  i  .sales-card.fx
-  labelizeCards('.sales-card.stock', LABELS_STOCK);
-  labelizeCards('.sales-card.fx',    LABELS_FX);
-})();
 
 
