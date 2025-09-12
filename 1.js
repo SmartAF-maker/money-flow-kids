@@ -1,46 +1,63 @@
      // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
-/* Dodaj etykiety i mały podpis pod każdą wartością w tabelach (mobile) */
+/* === Mobile labels for Sales History (Stocks & FX) — FIX === */
 (function () {
-  function labelize(table){
+  // Główna funkcja: bierze <table> i dokleja podpisy
+  function labelize(table, fallbackLabels) {
     if (!table) return;
-    const heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+
+    // nagłówki z <thead>, a jak go nie ma — użyj fallbackLabels
+    let heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    if (!heads.length && Array.isArray(fallbackLabels)) heads = fallbackLabels;
+
     table.querySelectorAll('tbody tr').forEach(tr => {
       Array.from(tr.children).forEach((td, i) => {
         const label = heads[i] || '';
-        // a) atrybut data-label (zostawiamy, jeśli gdzieś używasz w CSS)
         td.setAttribute('data-label', label);
 
-        // b) mały podpis: <div class="mfk-val">…</div><div class="mfk-cap">Label</div>
         if (!td.querySelector('.mfk-val')) {
           const val = document.createElement('div');
           val.className = 'mfk-val';
-          while (td.firstChild) val.appendChild(td.firstChild); // przenieś zawartość
+          while (td.firstChild) val.appendChild(td.firstChild);
+
           const cap = document.createElement('div');
           cap.className = 'mfk-cap';
-          cap.textContent = label || '';
+          cap.textContent = label;
+
           td.append(val, cap);
         } else {
-          // odśwież podpis, gdyby kolumny się zmieniły
           const cap = td.querySelector('.mfk-cap');
-          if (cap) cap.textContent = label || '';
+          if (cap) cap.textContent = label;
         }
       });
     });
   }
 
- function applyLabelizeIfMobile() {
-  if (window.matchMedia('(max-width:640px)').matches) {
-    labelizeAll();   // tylko na mobile
+  // Etykietuj obie tabele historii (akcje + FX)
+  function labelizeAll() {
+    if (!window.matchMedia('(max-width:640px)').matches) return; // tylko mobile
+
+    // Historia akcji
+    const tStocks = document.getElementById('tradeHistoryBody')?.closest('table') || null;
+    const L_ST = ["Date", "Symbol", "Shares", "Sell Price", "Buy Price", "Profit/Loss"];
+    if (tStocks) labelize(tStocks, L_ST);
+
+    // Historia FX
+    const tFx = document.getElementById('fxHistoryBody')?.closest('table') || null;
+    const L_FX = ["Date", "Pair", "Units", "Sell Rate", "Buy Rate", "Profit/Loss"];
+    if (tFx) labelize(tFx, L_FX);
   }
-}
 
-document.addEventListener('DOMContentLoaded', applyLabelizeIfMobile);
+  // Uruchamianie
+  document.addEventListener('DOMContentLoaded', labelizeAll);
+  const obs = new MutationObserver(labelizeAll);
+  obs.observe(document.body, { childList: true, subtree: true });
+  matchMedia('(max-width:640px)').addEventListener('change', labelizeAll);
 
-const obs = new MutationObserver(applyLabelizeIfMobile);
-obs.observe(document.body, { childList: true, subtree: true });
-
-matchMedia('(max-width:640px)').addEventListener('change', applyLabelizeIfMobile);
-
+  // Po każdym przerysowaniu sekcji „Profits” (tam zmieniają się tabele)
+  const _renderProfits = window.renderProfits;
+  window.renderProfits = function () {
+    try { _renderProfits && _renderProfits(); } finally { labelizeAll(); }
+  };
 })();
 
 
