@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -6,8 +6,38 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Money Flow Kids</title>
+<title>Money Flow Kids</title>
 
-    <link rel="stylesheet" href="1.css" />
+<link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
+<link rel="preconnect" href="https://s.ytimg.com" crossorigin>
+<link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+<link rel="preconnect" href="https://r4---sn.googlevideo.com" crossorigin>
+<link rel="dns-prefetch" href="//www.youtube-nocookie.com">
+<link rel="dns-prefetch" href="//s.ytimg.com">
+<link rel="dns-prefetch" href="//i.ytimg.com">
+<link rel="dns-prefetch" href="//googlevideo.com">
+
+<link rel="stylesheet" href="1.css" />
+
+<!-- BRAND TITLE GRADIENT -->
+<style>
+  :root{
+    --brand-blue:  #3b82f6; /* niebieski jak na screenie */
+    --brand-green: #22c55e; /* zielony jak na screenie */
+  }
+
+  /* Tylko tytuł w topbarze + ewentualnie inne nagłówki z klasą .brand-title */
+  #t-appTitle,
+  .brand-title{
+    background-image: linear-gradient(90deg, var(--brand-blue), var(--brand-green));
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
+    display: inline-block; /* pomaga dla background-clip */
+    font-weight: 800;      /* jak na zrzucie */
+  }
+</style>
 
     <!-- WOW Jars – styl tylko dla słoików (zawsze widoczne) -->
     <style>
@@ -97,27 +127,32 @@
       .hidden { display: none !important; }
     </style>
 
+</style>
+
     <!-- CSP: allow live data endpoints for fetch() (Tylko w <head>) -->
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self';
-      script-src  'self' 'unsafe-inline';
-      style-src   'self' 'unsafe-inline';
-      img-src     'self' data: blob:;
-      font-src    'self' data:;
-      connect-src 'self'
-                   https://api.exchangerate.host
-                   https://query1.finance.yahoo.com
-                   https://query2.finance.yahoo.com
-                   https://r.jina.ai;
-      frame-src   'none';
-      base-uri    'self';
-      form-action 'self'">
+  default-src 'self';
+  script-src  'self' 'unsafe-inline' https://www.youtube.com https://www.youtube-nocookie.com https://s.ytimg.com;
+  style-src   'self' 'unsafe-inline';
+  img-src     'self' data: blob: https://i.ytimg.com https://img.youtube.com;
+  font-src    'self' data:;
+  media-src   'self' blob: https://*.googlevideo.com;
+  connect-src 'self'
+               https://api.exchangerate.host
+               https://query1.finance.yahoo.com
+               https://query2.finance.yahoo.com
+               https://r.jina.ai;
+  frame-src   'self' https://www.youtube.com https://www.youtube-nocookie.com;
+  frame-ancestors 'self';
+  worker-src  'self';
+  base-uri    'self';
+  form-action 'self'">
   </head>
 
   <body>
     <header class="topbar mfk-topbar" role="banner">
   <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
-  <h1 id="t-appTitle">Money Flow Kids</h1>
+<h1 id="t-appTitle" class="logo brand-title">Money Flow</h1>
 
   <div class="role-switch" id="mfkTopNav">
     <select id="langSelect" title="Language">
@@ -773,7 +808,6 @@
             </div>
           </div>
         </div>
-
         <div class="card">
           <div class="title" data-i18n="ledgerTitle">History (allowance / expenses)</div>
           <div class="row" style="margin-bottom: 8px">
@@ -787,30 +821,24 @@
           <ul id="ledger"></ul>
         </div>
       </section>
+    <div id="ytMini" class="yt-mini medium hidden" aria-label="Tutorial video" aria-live="polite">
+  <div class="yt-controls" aria-label="Video controls">
+    <button id="ytToggleSize" class="yt-btn" title="Powiększ / Zmniejsz">⤢</button>
+    <button id="ytClose" class="yt-btn danger" title="Zamknij">×</button>
+  </div>
+<iframe id="ytFrame"
+  src="https://www.youtube-nocookie.com/embed/UvLx-u7k8uk?rel=0&modestbranding=1&playsinline=1"
+  title="Money Flow Kids — tutorial"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  allowfullscreen>
+</iframe>
+
+
+</div>
     </main>
-
     <footer class="footer"><small id="t-footerNote"> </small></footer>
-
-    <!-- Tutorial modal -->
-    <div id="tutorialModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialText">
-      <div class="modal-content">
-        <div class="tutorial-controls" aria-label="Tutorial controls">
-          <button id="prevStep" type="button" title="Previous step">←</button>
-          <button id="nextStep" type="button" title="Next step">→</button>
-          <button id="closeTutorial" type="button" class="danger" title="Close">×</button>
-        </div>
-        <div class="tut-head">
-          <div id="tutorialIcon" class="tut-icon" aria-hidden="true">📘</div>
-          <div><h2 id="tutorialTitle">Tutorial</h2><p id="tutorialText" class="muted"></p></div>
-        </div>
-        <div class="tut-image-wrap">
-          <img id="tutorialImage" src="piggy.png" alt="Tutorial image" />
-          <div id="tutCaption" class="muted" role="note"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Login modal -->
+     <!-- Login modal -->
     <div id="loginModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
       <div class="modal-content">
         <h2 id="loginTitle" class="title" style="margin-bottom:12px">Login</h2>
@@ -895,59 +923,16 @@
         });
       })();
 
-      // 4b) Synchronizacja child selector (topbar <-> drawer)
-      (function(){
-        const mainSel = document.getElementById('childSelector');
-        const drawSel = document.getElementById('childSelectorDrawer');
-        if(!mainSel || !drawSel) return;
-
-        function copyOptions(){
-          drawSel.innerHTML = mainSel.innerHTML;
-          drawSel.value = mainSel.value;
-        }
-        copyOptions();
-
-        mainSel.addEventListener('change', ()=>{
-          drawSel.value = mainSel.value;
-          drawSel.dispatchEvent(new Event('change'));
-        });
-        drawSel.addEventListener('change', ()=>{
-          mainSel.value = drawSel.value;
-          mainSel.dispatchEvent(new Event('change'));
-        });
-
-        new MutationObserver(copyOptions).observe(mainSel, { childList:true, subtree:true });
-      })();
-
-           // 4c) Logowanie w drawerze – przekieruj kliknięcia
-      document.getElementById('drawerLogin')?.addEventListener('click', ()=>{
-        document.getElementById('loginBtn')?.click();
-      });
-      document.getElementById('drawerLogout')?.addEventListener('click', ()=>{
-        document.getElementById('logoutBtn')?.click();
-      });
-
-      // 4d) Dynamiczny padding-top względem realnej wysokości topbara
-      (function(){
-        function apply(){
-          const h = document.querySelector('.mfk-topbar') || document.querySelector('.topbar');
-          if(h) document.documentElement.style.setProperty('--header-h', h.getBoundingClientRect().height + 'px');
-        }
-        document.addEventListener('DOMContentLoaded', apply);
-        window.addEventListener('resize', apply, {passive:true});
-        window.addEventListener('orientationchange', apply, {passive:true});
-      })();
-     
+           
       /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
 (function () {
-  const drawerTut  = document.getElementById('drawerTutorial');
+  const drawerTut = document.getElementById('drawerTutorial');
   if (!drawerTut) return;
 
-  const drawer     = document.getElementById('mfkMobileDrawer');
-  const backdrop   = document.getElementById('mfkBackdrop');
-  const navBtn     = document.getElementById('mfkNavToggle');
-  const topBtn     = document.getElementById('tutorialBtn');
-  const modal      = document.getElementById('tutorialModal');
+  const drawer   = document.getElementById('mfkMobileDrawer');
+  const backdrop = document.getElementById('mfkBackdrop');
+  const navBtn   = document.getElementById('mfkNavToggle');
+  const ytMini   = document.getElementById('ytMini');
 
   function closeDrawer() {
     if (drawer)   drawer.classList.remove('open');
@@ -956,21 +941,142 @@
     document.body.style.overflow = '';
   }
 
-  function openTutorial() {
-    if (topBtn) {
-      topBtn.click();               // użyj istniejącej logiki otwierania
-    } else if (modal) {
-      modal.classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'auto' });
-    }
+  function openYT() {
+    if (ytMini) ytMini.classList.remove('hidden');
   }
 
   drawerTut.addEventListener('click', function () {
     closeDrawer();
-    // pozwól DOM-owi się odmalować po zamknięciu szuflady
-    setTimeout(openTutorial, 0);
+    setTimeout(openYT, 150);
+  });
+})();
+
+/* === Mini-YT: powiększ / zamknij === */
+(function () {
+  const mini   = document.getElementById('ytMini');
+  const btnXL  = document.getElementById('ytToggleSize');
+  const btnX   = document.getElementById('ytClose');
+  const frame  = document.getElementById('ytFrame');
+  if (!mini || !btnXL || !btnX) return;
+
+  // Powiększ / zmniejsz
+  btnXL.addEventListener('click', () => {
+    mini.classList.toggle('large');
+    btnXL.title = mini.classList.contains('large') ? 'Zmniejsz' : 'Powiększ';
+  });
+
+  // Zamknij i zatrzymaj odtwarzanie
+  btnX.addEventListener('click', () => {
+    mini.classList.add('hidden');
+    if (frame) frame.src = frame.src; // reset iframe, żeby zatrzymać film
   });
 })();
     </script>
+<script>
+/* Dodaj etykiety kolumn do <td>, żeby CSS mobilny mógł je wyświetlać */
+(function () {
+  function labelize(table) {
+    if (!table) return;
+    const heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      Array.from(tr.children).forEach((td, i) => {
+        td.setAttribute('data-label', heads[i] || '');
+      });
+    });
+  }
+
+  function labelizeAll() {
+    document.querySelectorAll('table').forEach(labelize);
+  }
+
+  // 1) na start
+  document.addEventListener('DOMContentLoaded', labelizeAll);
+
+  // 2) oraz gdy JS dopisze nowe wiersze (portfolio / history)
+  const obs = new MutationObserver(muts => {
+    for (const m of muts) {
+      const table = m.target.closest('table');
+      if (table) labelize(table);
+    }
+  });
+  document.querySelectorAll('tbody').forEach(tb => {
+    obs.observe(tb, { childList: true, subtree: true });
+  });
+})();
+</script>
+
+<script>
+// ==== KILL ALL ARROWS ON MOBILE (≤640px) ====
+(function () {
+  if (!window.matchMedia("(max-width: 640px)").matches) return;
+
+  // wszystkie znaki-strzałki jakie zwykle się pojawiają
+  const ARROWS = /[▲▼↑↓⮝⮟⇧⇩⬆⬇↗↘↕↔⏶⏷🡑🡓🡅🡇]/g;
+
+  // usuń strzałki z tekstu (węzły tekstowe)
+  function stripArrowsInText(node) {
+    if (node.nodeType === 3) { // Text
+      const t = node.nodeValue;
+      const nt = t.replace(ARROWS, "").replace(/\s{2,}/g, " ");
+      if (nt !== t) node.nodeValue = nt.trim();
+    }
+  }
+
+  function purge(root) {
+    // 1) usuń elementy-ikonki (i/svg/span) oznaczone klasami arrow-*
+    root.querySelectorAll('[class*="arrow-"]').forEach(el => el.remove());
+
+    // 2) usuń pseudo-ikonki dorabiane contentem ::before/::after (zabij je font-size:0)
+    root.querySelectorAll("*").forEach(el => {
+      // tekst węzłów
+      el.childNodes.forEach(stripArrowsInText);
+      // ukryj ewentualne ::before/::after
+      el.style.setProperty("--_no-arrows", "1");
+    });
+  }
+
+  // start
+  purge(document.body);
+
+  // obserwuj zmiany i wycinaj na bieżąco
+  const obs = new MutationObserver(muts => {
+    for (const m of muts) {
+      if (m.type === "characterData") {
+        stripArrowsInText(m.target);
+      } else if (m.addedNodes && m.addedNodes.length) {
+        m.addedNodes.forEach(n => {
+          if (n.nodeType === 1) purge(n);       // element
+          else if (n.nodeType === 3) stripArrowsInText(n); // tekst
+        });
+      }
+    }
+  });
+  obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+</script>
+<script>
+(function () {
+  // usuń z mini-jars i mini-strip WSZYSTKIE znaki strzałek itp. na mobile
+  const isMobile = () => matchMedia('(max-width:640px)').matches;
+  const stripArrows = () => {
+    if (!isMobile()) return;
+    const targets = document.querySelectorAll(
+      '#stickyMiniJars .mini-jar-value, #stickyMiniJars .mini-jar-label, .mini-strip .mini-pill b'
+    );
+    targets.forEach(el => {
+      const t = el.textContent || '';
+      // wytnij ▲ ▼ ↑ ↓ ▴ ▾ + − – — itp.
+      const nt = t.replace(/[▲▼↑↓▴▾↗↘+−–—]/g, '').replace(/\s{2,}/g,' ').trim();
+      if (t !== nt) el.textContent = nt;
+    });
+  };
+
+  // uruchom teraz, po zmianie szerokości i po każdej zmianie DOM (gdy dane się odświeżają)
+  stripArrows();
+  matchMedia('(max-width:640px)').addEventListener('change', stripArrows);
+  new MutationObserver(stripArrows).observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+</script>
+
   </body>
 </html>
