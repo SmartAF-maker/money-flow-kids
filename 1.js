@@ -1,4 +1,4 @@
-     // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+      // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 /* Dodaj etykiety i mały podpis pod każdą wartością w tabelach (mobile) */
 (function () {
   function labelize(table){
@@ -369,7 +369,7 @@ function refreshStaticI18n() {
 const defaults = {
   childrenOrder: [], children: {}, activeChildId: null, pinHash: null, pinTries: 0, pinLockedUntil: 0,
   dailyLimit: 500, liveMode: false, trends: { stocks: {}, fx: {} },
-  basket: { stocks: [], fx: [] }  // ⬅️ NEW
+  basket: { stocks: [], fx: [] }  //⬅️ NEW
 };
 
 /* === BASKETS ENGINE (stocks + fx) === */
@@ -3360,5 +3360,6 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('DOMContentLoaded', () => {
   renderAll();
 });
+
 
 

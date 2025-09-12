@@ -1,4 +1,4 @@
-/* ==========================================================================
+ /* ==========================================================================
  * Money Flow Kids — Local Auth (Register/Login per user)
  * Front-only, Live Server friendly, hashed secrets via Web Crypto.
  * ========================================================================== */
@@ -237,3 +237,4 @@ function ensureAuthUI(){
     $("#btnLogout")?.classList.add("hidden");
   }
 }
+
