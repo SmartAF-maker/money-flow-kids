@@ -1,20 +1,48 @@
-  // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
-(function lockNetwork() {
-  const of = window.fetch;
-  const ALLOW_ORIGINS = new Set([
-    location.origin,
-    'https://api.exchangerate.host',
-       'https://r.jina.ai' // ✅ CORS/GDPR-safe fallback proxy
-  ]);
-  window.fetch = async function(resource, init) {
-    const urlStr = resource instanceof Request ? resource.url : String(resource);
-    const u = new URL(urlStr, location.href);
-    if (!ALLOW_ORIGINS.has(u.origin)) {
-      throw new Error('External fetch blocked: ' + u.origin);
-    }
-    return of.apply(this, arguments);
-  };
+     // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+/* Dodaj etykiety i mały podpis pod każdą wartością w tabelach (mobile) */
+(function () {
+  function labelize(table){
+    if (!table) return;
+    const heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      Array.from(tr.children).forEach((td, i) => {
+        const label = heads[i] || '';
+        // a) atrybut data-label (zostawiamy, jeśli gdzieś używasz w CSS)
+        td.setAttribute('data-label', label);
+
+        // b) mały podpis: <div class="mfk-val">…</div><div class="mfk-cap">Label</div>
+        if (!td.querySelector('.mfk-val')) {
+          const val = document.createElement('div');
+          val.className = 'mfk-val';
+          while (td.firstChild) val.appendChild(td.firstChild); // przenieś zawartość
+          const cap = document.createElement('div');
+          cap.className = 'mfk-cap';
+          cap.textContent = label || '';
+          td.append(val, cap);
+        } else {
+          // odśwież podpis, gdyby kolumny się zmieniły
+          const cap = td.querySelector('.mfk-cap');
+          if (cap) cap.textContent = label || '';
+        }
+      });
+    });
+  }
+
+ function applyLabelizeIfMobile() {
+  if (window.matchMedia('(max-width:640px)').matches) {
+    labelizeAll();   // tylko na mobile
+  }
+}
+
+document.addEventListener('DOMContentLoaded', applyLabelizeIfMobile);
+
+const obs = new MutationObserver(applyLabelizeIfMobile);
+obs.observe(document.body, { childList: true, subtree: true });
+
+matchMedia('(max-width:640px)').addEventListener('change', applyLabelizeIfMobile);
+
 })();
+
 
 // ====== UTIL ======
 const DB_KEY = "kidmoney_multi_fx_live_i18n_v1";
@@ -40,6 +68,10 @@ const FX = v =>
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const nowISO = () => { const d = new Date(); return d.toISOString().slice(0, 10) + "T" + d.toTimeString().slice(0, 8); };
 
+// ========== helper: licz jak „do grosza” ==========
+const toCents = v => Math.round(Number(v || 0) * 100) / 100;
+
+
 // ====== FX CONFIG ======
 const ISO = ["PLN", "USD", "EUR", "GBP", "CHF", "JPY", "AUD", "CAD", "NOK", "SEK", "DKK", "CZK", "HUF", "UAH", "RUB", "TRY", "ZAR", "CNY", "HKD", "NZD", "MXN", "BRL", "ILS", "INR", "KRW", "SGD"];
 
@@ -61,6 +93,40 @@ const CURRENCY_NAMES = {
   BRL: "Brazilian Real", ILS: "Israeli New Shekel", INR: "Indian Rupee", KRW: "South Korean Won",
   SGD: "Singapore Dollar"
 };
+// === DODATKOWE POPULARNE WALUTY (offline) – PLNy za 1 jednostkę ===
+// Wklej ten blok po ISO / baseFx / CURRENCY_NAMES
+(function extendCurrenciesWithPopular() {
+  const ADD = {
+    AED: { name: "UAE Dirham",         pln: 1.06 },
+    SAR: { name: "Saudi Riyal",        pln: 1.04 },
+    QAR: { name: "Qatari Riyal",       pln: 1.07 },
+    KWD: { name: "Kuwaiti Dinar",      pln: 12.70 },
+    BHD: { name: "Bahraini Dinar",     pln: 10.33 },
+    OMR: { name: "Omani Rial",         pln: 10.14 },
+
+    THB: { name: "Thai Baht",          pln: 0.11 },
+    PHP: { name: "Philippine Peso",    pln: 0.07 },
+    MYR: { name: "Malaysian Ringgit",  pln: 0.82 },
+    TWD: { name: "New Taiwan Dollar",  pln: 0.12 },
+
+    RON: { name: "Romanian Leu",       pln: 0.86 },
+    BGN: { name: "Bulgarian Lev",      pln: 2.18 },
+    MAD: { name: "Moroccan Dirham",    pln: 0.38 },
+    EGP: { name: "Egyptian Pound",     pln: 0.08 },
+
+    CLP: { name: "Chilean Peso",       pln: 0.0043 },
+    COP: { name: "Colombian Peso",     pln: 0.0010 },
+    ARS: { name: "Argentine Peso",     pln: 0.0043 },
+    PEN: { name: "Peruvian Sol",       pln: 1.05 },
+  };
+
+  Object.entries(ADD).forEach(([code, d]) => {
+    if (!ISO.includes(code)) ISO.push(code);                 // dodaj kod
+    if (!Number.isFinite(baseFx[code])) baseFx[code] = d.pln; // PLN za 1 code
+    if (!CURRENCY_NAMES[code]) CURRENCY_NAMES[code] = d.name; // nazwa
+  });
+})();
+
 
 // ====== STOCK UNIVERSE ======
 const STOCK_UNIVERSE = [
@@ -89,6 +155,51 @@ const STOCK_UNIVERSE = [
   { t: "NVAX", n: "Novavax", p: 12.50 }, { t: "ARM", n: "Arm", p: 110.00 },
   { t: "SQM", n: "SQM", p: 47.00 }, { t: "NIO", n: "NIO", p: 5.20 }
 ];
+// === DODATKOWE POPULARNE AKCJE (offline) – dopasowane do { t, n, p } ===
+// Wklej ten blok tuż po definicji const STOCK_UNIVERSE = [...];
+(function extendStockUniverseWithTop30() {
+  const ADD = {
+    GE:    { name: "General Electric Co.",        price: 168.00 },
+    LIN:   { name: "Linde plc",                   price: 440.00 },
+    JNJ:   { name: "Johnson & Johnson",           price: 160.00 },
+    NYCB: { name: "New York Community Bancorp (Flagstar Bank)", price: 12.00 },
+    AAPL:  { name: "Apple Inc.",                  price: 220.00 },
+    MSFT:  { name: "Microsoft Corp.",             price: 430.00 },
+    GOOGL: { name: "Alphabet Inc. (Class A)",     price: 165.00 },
+    AMZN:  { name: "Amazon.com Inc.",             price: 180.00 },
+    NVDA:  { name: "NVIDIA Corp.",                price: 120.00 }, // po split
+    META:  { name: "Meta Platforms Inc.",         price: 505.00 },
+    TSLA:  { name: "Tesla Inc.",                  price: 240.00 },
+    BRK_B: { name: "Berkshire Hathaway Inc. (B)", price: 440.00 },
+    JPM:   { name: "JPMorgan Chase & Co.",        price: 210.00 },
+    V:     { name: "Visa Inc. (Class A)",         price: 275.00 },
+    MA:    { name: "Mastercard Inc. (Class A)",   price: 460.00 },
+    WMT:   { name: "Walmart Inc.",                price: 73.00 },   // po split
+    PG:    { name: "Procter & Gamble Co.",        price: 170.00 },
+    KO:    { name: "Coca-Cola Co.",               price: 65.00 },
+    PEP:   { name: "PepsiCo Inc.",                price: 170.00 },
+    DIS:   { name: "Walt Disney Co.",             price: 95.00 },
+    NFLX:  { name: "Netflix Inc.",                price: 580.00 },
+    NKE:   { name: "Nike Inc. (Class B)",         price: 95.00 },
+    ORCL:  { name: "Oracle Corp.",                price: 150.00 },
+    INTC:  { name: "Intel Corp.",                 price: 32.00 },
+    IBM:   { name: "International Business Machines", price: 190.00 },
+    XOM:   { name: "Exxon Mobil Corp.",           price: 115.00 },
+    CVX:   { name: "Chevron Corp.",               price: 155.00 },
+    TSM:   { name: "Taiwan Semiconductor (ADR)",  price: 185.00 },
+    BABA:  { name: "Alibaba Group (ADR)",         price: 78.00 },
+    ASML:  { name: "ASML Holding NV (ADR)",       price: 950.00 },
+    SAP:   { name: "SAP SE (ADR)",                price: 200.00 }
+  };
+
+  // Idempotentnie: dodaj tylko te, których nie ma
+  Object.entries(ADD).forEach(([ticker, d]) => {
+    const exists = STOCK_UNIVERSE.some(s => s.t === ticker);
+    if (!exists) {
+      STOCK_UNIVERSE.push({ t: ticker, n: d.name, p: d.price });
+    }
+  });
+})();
 
 // ====== I18N ======
 const tData = {
@@ -193,8 +304,140 @@ function refreshStaticI18n() {
 // ====== STATE ======
 const defaults = {
   childrenOrder: [], children: {}, activeChildId: null, pinHash: null, pinTries: 0, pinLockedUntil: 0,
-  dailyLimit: 50, liveMode: false, trends: { stocks: {}, fx: {} }
+  dailyLimit: 500, liveMode: false, trends: { stocks: {}, fx: {} },
+  basket: { stocks: [], fx: [] }  // ⬅️ NEW
 };
+
+/* === BASKETS ENGINE (stocks + fx) === */
+function addToBasketStock(ticker, price, qty) {
+  if (!app.basket) app.basket = { stocks: [], fx: [] };
+  const it = app.basket.stocks.find(x => x.t === ticker && Number.isFinite(x.price));
+  if (it) {
+    it.qty = Math.max(1, (Number(it.qty) || 0) + Number(qty || 0));
+    it.price = Number(price || it.price);
+  } else {
+    app.basket.stocks.push({ t: ticker, price: Number(price||0), qty: Math.max(1, Number(qty||1)) });
+  }
+  save(app);
+  renderBasketStocks();
+}
+
+function addToBasketFx(pair, priceUsd, qty) {
+  if (!app.basket) app.basket = { stocks: [], fx: [] };
+  const it = app.basket.fx.find(x => x.pair === pair && Number.isFinite(x.priceUsd));
+  if (it) {
+    it.qty = Math.max(1, (Number(it.qty) || 0) + Number(qty || 0));
+    it.priceUsd = Number(priceUsd || it.priceUsd);
+  } else {
+    app.basket.fx.push({ pair, priceUsd: Number(priceUsd||0), qty: Math.max(1, Number(qty||1)) });
+  }
+  save(app);
+  renderBasketFx();
+}
+
+function renderBasket(which) {
+  const listEl = document.querySelector(`[data-basket-list="${which}"]`);
+  const qtyEl  = document.querySelector(`[data-basket-qty="${which}"]`);
+  const amtEl  = document.querySelector(`[data-basket-amt="${which}"]`);
+  if (!listEl) return;
+
+  const items = (app.basket && app.basket[which]) ? app.basket[which] : [];
+  listEl.innerHTML = '';
+
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'basket-empty';
+    empty.textContent = 'No items in basket.';
+    listEl.appendChild(empty);
+    if (qtyEl) qtyEl.textContent = '0';
+    if (amtEl) amtEl.textContent = '0.00 USD';
+    return;
+  }
+
+  let sumQty = 0, sumAmt = 0;
+
+  items.forEach((it, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'basket-item row';
+    let left = '', amount = 0;
+
+    if (which === 'stocks') {
+      amount = Number(it.price) * Number(it.qty);
+      left = `<div><strong>${it.t}</strong> × ${it.qty}<br><span class="muted" style="font-size:12px">Price: ${USD(it.price).replace(' USD','')}</span></div>`;
+    } else {
+      const unit = toCents(which === 'stocks' ? it.price : it.priceUsd);
+amount = toCents(unit * Number(it.qty));
+      left = `<div><strong>${it.pair}</strong> × ${it.qty}<br><span class="muted" style="font-size:12px">Rate (USD/base): ${FX(it.priceUsd)}</span></div>`;
+    }
+
+    const right = `
+      <div class="right" style="text-align:right; display:flex; align-items:center; gap:8px">
+        <div class="val" style="min-width:120px; font-weight:700">${USD(amount)}</div>
+        <button class="btn danger" data-remove-index="${i}">×</button>
+      </div>`;
+
+    wrap.innerHTML = left + right;
+    listEl.appendChild(wrap);
+
+    sumQty += Number(it.qty) || 0;
+    sumAmt += amount || 0;
+  });
+
+if (qtyEl) qtyEl.textContent = '\u00A0\u00A0' + sumQty;      // NBSP×2
+if (amtEl) amtEl.textContent = '\u00A0\u00A0' + USD(sumAmt); // NBSP×2
+
+
+  listEl.onclick = (e) => {
+    const btn = e.target.closest('[data-remove-index]');
+    if (!btn) return;
+    const idx = parseInt(btn.getAttribute('data-remove-index'), 10);
+    if (!Number.isFinite(idx)) return;
+    items.splice(idx, 1);
+    save(app);
+    renderBasket(which);
+  };
+}
+
+function renderBasketStocks(){ renderBasket('stocks'); }
+function renderBasketFx(){ renderBasket('fx'); }
+
+function buyBasket(which) {
+  const ch = activeChild(); if (!ch) return;
+  const items = (app.basket && app.basket[which]) ? app.basket[which] : [];
+  if (!items.length) return toast('Basket is empty.');
+
+  const total = items.reduce((s, it) => {
+    const px = (which === 'stocks') ? Number(it.price) : Number(it.priceUsd);
+    const q  = Number(it.qty);
+    return s + (px * q);
+  }, 0);
+
+  if (total > ch.jars.save) {
+    return toast(TT().needFunds ? TT().needFunds(USD(total)) : `Not enough funds in Savings (need ${USD(total)})`);
+  }
+
+  if (which === 'stocks') {
+    items.forEach(it => {
+      selectedStock = it.t;
+      if (qtyInput) qtyInput.value = it.qty;
+      lastStockUiPrice = Number(it.price);
+      buyStock(); // użyje lastStockUiPrice
+    });
+    app.basket.stocks = [];
+    renderBasketStocks();
+  } else {
+    items.forEach(it => {
+      selectedFxPair = it.pair;
+      if (fxQty) fxQty.value = it.qty;
+      lastFxUiPrice = Number(it.priceUsd);
+      buyFx(); // użyje lastFxUiPrice
+    });
+    app.basket.fx = [];
+    renderBasketFx();
+  }
+
+  save(app);
+}
 
 function newChild(name) {
   return {
@@ -235,9 +478,11 @@ function load() {
 if (!parsed.trends) parsed.trends = { stocks: {}, fx: {} };
 Object.values(parsed.children || {}).forEach(ch => {
   ensureExpandedStocks(ch);
-  sanitizePositions(ch); //⬅️ ważne
+  sanitizePositions(ch); // ⬅️ ważne
 });
+if (!parsed.basket) parsed.basket = { stocks: [], fx: [] }; // ⬅️ NEW
 return parsed;
+
 }
 
 function save(s) { localStorage.setItem(DB_KEY, JSON.stringify(s)); }
@@ -273,7 +518,8 @@ function verifyPin(s, pin) {
 
 function ensureExpandedStocks(ch) {
   const have = new Set((ch.stocks || []).map(s => s.t));
-  const target = 30;
+  // const target = 30;            // ❌ usuń/zmień tę linię
+  const target = STOCK_UNIVERSE.length; // ✅ pokaż wszystkie z STOCK_UNIVERSE
   for (const item of STOCK_UNIVERSE) {
     if (ch.stocks.length >= target) break;
     if (!have.has(item.t)) {
@@ -282,6 +528,7 @@ function ensureExpandedStocks(ch) {
     }
   }
 }
+
 // --- Long-only: usuń ujemne/zerowe pozycje z portfeli (migracja starych danych)
 function sanitizePositions(ch){
   // Stocks
@@ -401,7 +648,7 @@ function makeSteps() {
     {
       icon: "🧮",
       title: "How transfers work",
-      text: "Here you’ll explore how pocket money, savings, and challenges build money skills. You’ll learn the role of jars, how to trade, try stocks and currencies, and grow step by step. Each choice brings you closer to leading your financial story. This journey is safe, exciting, and designed for you to explore, test ideas, and grow with confidence!",
+      text: "Transfers move money between your jars. Buying sends funds from Savings into Investments, where you purchase stocks or currencies. Selling moves profits into Earnings, which you can spend or return to Savings. Each transfer teaches how choices shape results. Practicing this flow step by step shows how real money systems work safely!",
       img: IMG_TRADE,
     },
     {
@@ -446,13 +693,35 @@ const addChildBtn = $("#addChildBtn");
 
 // ===== MINI-JARS (sticky pasek) =====
 const miniEls = {
-  cash:  document.getElementById('miniCash'),   // ⬅ upewnij się, że w HTML masz <div id="miniCash">
-  save:  document.getElementById('miniSave'),
-  spend: document.getElementById('miniSpend'),
-  give:  document.getElementById('miniGive'),
-  invest:document.getElementById('miniInvest')
+  cash:        document.getElementById('miniCash'),
+  save:        document.getElementById('miniSave'),
+  spend:       document.getElementById('miniSpend'),
+  give:        document.getElementById('miniGive'),
+  invest:      document.getElementById('miniInvest'),
+  invFx:       document.getElementById('miniInvFx'),
+  invStocks:   document.getElementById('miniInvStocks'),
+  invTotal:    document.getElementById('miniInvTotal'),
+  // NEW: Profits in sticky bar
+  totalEarned: document.getElementById('miniTotalEarned'),
+  totalLoss:   document.getElementById('miniTotalLoss')
 };
 
+function setPnlColor(el, pnl){
+  if (!el) return;
+  el.classList?.remove('pnl-pos','pnl-neg');
+  el.style.color = '';
+  if (pnl > 0) el.classList?.add('pnl-pos');
+  else if (pnl < 0) el.classList?.add('pnl-neg');
+}
+
+// helper: USD ze znakiem dla earned/loss
+function fmtSignedUSD(amount, direction){
+  const sign = direction > 0 ? '+' : direction < 0 ? '−' : '';
+  const absTxt = USD(Math.abs(Number(amount || 0)));
+  return sign ? `${sign} ${absTxt}` : absTxt;
+}
+
+// zsumowane „wolne” środki (bez Investments)
 function computeAvailableCashFromJars(jars){
   return Number(jars?.save || 0) + Number(jars?.spend || 0) + Number(jars?.give || 0);
 }
@@ -460,19 +729,91 @@ function computeAvailableCashFromJars(jars){
 function renderMiniJars(){
   const ch = activeChild?.();
   if (!ch) {
-    // wyczyść pasek gdy brak dziecka
-    Object.values(miniEls).forEach(el => { if (el) el.textContent = '0.00 USD'; });
+    Object.values(miniEls).forEach(el => {
+      if (!el) return;
+      el.textContent = '0.00 USD';
+      el.classList?.remove('pnl-pos','pnl-neg');
+      el.style && (el.style.color = '');
+    });
     return;
   }
+
   const j = ch.jars || { save:0, spend:0, give:0, invest:0 };
   const cash = computeAvailableCashFromJars(j);
 
-  if (miniEls.cash)  miniEls.cash.textContent  = USD(cash);
-  if (miniEls.save)  miniEls.save.textContent  = USD(j.save);
-  if (miniEls.spend) miniEls.spend.textContent = USD(j.spend);
-  if (miniEls.give)  miniEls.give.textContent  = USD(j.give);
-  if (miniEls.invest)miniEls.invest.textContent= USD(j.invest);
+  // podstawowe słoiki
+  if (miniEls.cash)   miniEls.cash.textContent   = USD(cash);
+  if (miniEls.save)   miniEls.save.textContent   = USD(j.save);
+  if (miniEls.spend)  miniEls.spend.textContent  = USD(j.spend);
+  if (miniEls.give)   miniEls.give.textContent   = USD(j.give);
+  if (miniEls.invest) miniEls.invest.textContent = USD(j.invest);
+
+  // wartości portfeli
+  const valStocks = portfolioValueStocks(ch);
+  const valFx     = portfolioValueFx(ch);
+  const valTotal  = valStocks + valFx;
+
+  // niezrealizowane P/L do koloru i strzałki
+  const pnlStocks = unrealizedStocks(ch);
+  const pnlFx     = unrealizedFx(ch);
+  const pnlTotal  = pnlStocks + pnlFx;
+
+  // ⬇⬇⬇ ZAMIANA: zamiast +/− doklejamy strzałkę (▲/▼) i zachowujemy kolor liczby
+ // Mobile-only: bez strzałek w mini-jars
+const isMobileMini = window.matchMedia('(max-width: 768px)').matches;
+
+if (miniEls.invStocks) {
+  if (isMobileMini) {
+    miniEls.invStocks.textContent = USD(valStocks); // bez strzałki
+  } else {
+    miniEls.invStocks.innerHTML = `${USD(valStocks)} ${arrowHtml(pnlStocks > 0 ? 1 : pnlStocks < 0 ? -1 : 0)}`;
+  }
+  setPnlColor(miniEls.invStocks, pnlStocks);
 }
+
+if (miniEls.invFx) {
+  if (isMobileMini) {
+    miniEls.invFx.textContent = USD(valFx);
+  } else {
+    miniEls.invFx.innerHTML = `${USD(valFx)} ${arrowHtml(pnlFx > 0 ? 1 : pnlFx < 0 ? -1 : 0)}`;
+  }
+  setPnlColor(miniEls.invFx, pnlFx);
+}
+
+if (miniEls.invTotal) {
+  if (isMobileMini) {
+    miniEls.invTotal.textContent = USD(valTotal);
+  } else {
+    miniEls.invTotal.innerHTML = `${USD(valTotal)} ${arrowHtml(pnlTotal > 0 ? 1 : pnlTotal < 0 ? -1 : 0)}`;
+  }
+  setPnlColor(miniEls.invTotal, pnlTotal);
+}
+
+
+  // === Total earned / Total loss – nadal z + / − ===
+  const round2 = v => Math.round(Number(v) * 100) / 100;
+  let totalEarned = 0, totalLoss = 0;
+
+  (ch.tradeLedgerStocks || []).forEach(tx => {
+    if (tx.pnl > 0) totalEarned += round2(tx.pnl);
+    else if (tx.pnl < 0) totalLoss += round2(tx.pnl);
+  });
+  (ch.tradeLedgerFx || []).forEach(tx => {
+    if (tx.pnl > 0) totalEarned += round2(tx.pnl);
+    else if (tx.pnl < 0) totalLoss += round2(tx.pnl);
+  });
+  totalLoss = Math.abs(totalLoss);
+
+  if (miniEls.totalEarned) {
+    miniEls.totalEarned.textContent = fmtSignedUSD(totalEarned, totalEarned); // + przy >0
+    setPnlColor(miniEls.totalEarned, totalEarned);
+  }
+  if (miniEls.totalLoss) {
+    miniEls.totalLoss.textContent = fmtSignedUSD(totalLoss, -totalLoss);      // − przy >0
+    setPnlColor(miniEls.totalLoss, totalLoss > 0 ? -1 : 0);
+  }
+}
+
 
 // Jars / KPI
 const saveAmt = $("#saveAmt");
@@ -543,8 +884,6 @@ function getDataModeSection() {
 }
 function setHidden(el, hidden) { if (!el) return; el.classList.toggle('hidden', !!hidden); }
 
-
-
 // ====== APP ======
 let app = load();
 if (app.pinHash == null) setPin(app, "1234");
@@ -568,24 +907,38 @@ setInterval(() => {
   });
   save(app);
   if (!__qtyTyping) {
-    renderStocks(stockSearch?.value || "");
-    renderPortfolioStocks();
-    renderJars();
-    renderProfits();
-  }
+  renderStocks(stockSearch?.value || "");
+  renderPortfolioStocks();
+  renderJars();
+  renderProfits();
+  renderBasketStocks();   // ⬅️ NEW
+  renderBasketFx();       // ⬅️ NEW
+}
+
 }, 2000);
 
 let __qtyTyping = false;
+
 document.addEventListener('focusin',  e => {
-  if (e.target && (e.target.matches('input[data-fxsell-q]') || e.target.matches('input[data-sell-q]'))) {
+  if (e.target && (
+      e.target.matches('input[data-fxsell-q]') ||
+      e.target.matches('input[data-sell-q]')   ||
+      e.target.matches('.basket-qty')          // ⬅️ DODANE
+    )) {
     __qtyTyping = true;
   }
 });
+
 document.addEventListener('focusout', e => {
-  if (e.target && (e.target.matches('input[data-fxsell-q]') || e.target.matches('input[data-sell-q]'))) {
+  if (e.target && (
+      e.target.matches('input[data-fxsell-q]') ||
+      e.target.matches('input[data-sell-q]')   ||
+      e.target.matches('.basket-qty')          // ⬅️ DODANE
+    )) {
     __qtyTyping = false;
   }
 });
+
 
 
 let stockExpanded = false;
@@ -602,6 +955,26 @@ document.getElementById('stockAddPopular')?.addEventListener('click', () => {
 
 let lastFxUiPrice = null;
 let lastStockUiPrice = null;
+setInterval(() => {
+  if (app.liveMode) return;
+  Object.values(app.children).forEach(ch => {
+    ch.stocks = ch.stocks.map(s => {
+      const drift = 1 + (Math.random() - 0.5) * 0.01;
+      const np = clamp(s.p * drift, 1, 9999);
+      return { ...s, p: Number(np.toFixed(2)) };
+    });
+  });
+  save(app);
+  if (!__qtyTyping) {
+  renderStocks(stockSearch?.value || "");
+  renderPortfolioStocks();
+  renderJars();
+  renderProfits();
+  renderBasketStocks();   // ⬅️ NEW
+  renderBasketFx();       // ⬅️ NEW
+}
+
+}, 2000);
 
 // ====== TREND HELPERS ======
 function ensureTrends() { if (!app.trends) app.trends = { stocks: {}, fx: {} }; }
@@ -888,11 +1261,12 @@ function setJarFill(amountEl, value) {
   if (!amountEl) return;
   const card = amountEl.closest('.jar-card');
   if (!card) return;
-  const ref = Number((window.app && app.dailyLimit) || 50);
+  const ref = Number((window.app && app.dailyLimit) || 500); // ⬅ było 50
   const pct = Math.min(90, (value / ref) * 90);
   const withFloor = value > 0 ? Math.max(5, pct) : 0;
   card.style.setProperty('--fill', withFloor.toFixed(2) + '%');
 }
+
 
 // >>> NEW: Available Cash (Savings + Earnings + Donations)
 function renderAvailableCash() {
@@ -988,9 +1362,9 @@ function renderPortfolioStocks() {
       <td>${PLN(value)}</td>
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
-        <input type="number" min="1" max="${qMax}" step="1"
-               value="${userVal}" class="input" style="width:90px"
-               data-sell-q="${t}" placeholder="enter 1–${qMax}">
+       <input type="number" min="1" max="${qMax}" step="1"
+       value="${userVal}" class="input" style="width:100%"
+       data-sell-q="${t}" placeholder="enter 1–${qMax}">
         <button class="btn" data-sell-row="${t}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-sell-max="${t}">Max</button>
       </td>`;
@@ -1000,7 +1374,8 @@ function renderPortfolioStocks() {
 
   const has = Object.keys(ch.portfolio).length > 0;
   portfolioEmpty && (portfolioEmpty.style.display = has ? 'none' : 'block');
-  tableWrapStocks && (tableWrapStocks.style.display = has ? 'block' : 'none');
+ tableWrapStocks && (tableWrapStocks.style.display = has ? '' : 'none');
+
 
   // ➜ Klik w wierszu: klamrujemy qty do [1..max]
   portfolioBody.onclick = (e) => {
@@ -1222,9 +1597,10 @@ function renderPortfolioFx() {
       <td>${PLN(valueUsd)}</td>
       <td class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${PLN(pnl)}</td>
       <td class="space">
-        <input type="number" min="1" max="${qMax}" step="1"
-               value="${userVal}" class="input" style="width:90px"
-               data-fxsell-q="${pair}" placeholder="enter 1–${qMax}">
+       <input type="number" min="1" max="${qMax}" step="1"
+       value="${userVal}" class="input" style="width:100%"
+       data-fxsell-q="${pair}" placeholder="enter 1–${qMax}">
+
         <button class="btn" data-fxsell-row="${pair}">${TT().sell || 'Sell'}</button>
         <button class="btn" data-fxmax="${pair}">Max</button>
       </td>`;
@@ -1234,7 +1610,7 @@ function renderPortfolioFx() {
 
   const has = Object.keys(ch.fxPortfolio).length > 0;
   fxEmpty && (fxEmpty.style.display = has ? 'none' : 'block');
-  tableWrapFx && (tableWrapFx.style.display = has ? 'block' : 'none');
+  tableWrapFx && (tableWrapFx.style.display = has ? '' : 'none');
 
   // ➜ Klik w wierszu: klamrujemy qty do [1..max]
   fxBody.onclick = (e) => {
@@ -1294,7 +1670,7 @@ function ensureSellButtons() {
       const qty = Math.max(1, parseInt(document.getElementById('qty').value || "1", 10));
       sellStock(selectedStock, qty);
     });
-  }
+    }
   const fxBuyBtn = document.getElementById('fxBuyBtn');
   const fxCancel = document.getElementById('fxCancelTrade');
   if (fxBuyBtn && !document.getElementById('fxSellBtn')) {
@@ -1309,34 +1685,21 @@ function ensureSellButtons() {
       const qty = Math.max(1, parseFloat(document.getElementById('fxQty').value || "1"));
       sellFx(selectedFxPair, qty);
     });
+  
+
   }
 }
-
 // ====== TRADE — Stocks ======
 function updateTradeBox() {
   ensureSellButtons();
-
   const ch = activeChild();
-  if (!tradeBox || !ch || !selectedStock) {
-    if (tradeBox) tradeBox.style.display = "none";
-    return;
-  }
-
+  if (!tradeBox || !ch || !selectedStock) { tradeBox && (tradeBox.style.display = "none"); return; }
   const s = ch.stocks.find(x => x.t === selectedStock);
-  if (!s) {
-    tradeBox.style.display = "none";
-    return;
-  }
-
-  const qty = Math.max(1, parseInt((qtyInput?.value || "1"), 10));
+  const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
   lastStockUiPrice = s.p;
-
   if (tradeTitle) tradeTitle.textContent = `Trade ${s.t}`;
-  if (costEl)     costEl.textContent     = PLN(qty * s.p);
-  tradeBox.style.display = "block";
-
-  // ⬇️ aktualizacja stanu przycisku Sell – MUSI BYĆ W ŚRODKU FUNKCJI
-  const sellBtn = document.getElementById('sellBtn');
+  if (costEl) costEl.textContent = PLN(qty * s.p);
+  tradeBox.style.display = "block";  const sellBtn = document.getElementById('sellBtn');
   if (sellBtn) {
     const pos = ch.portfolio?.[s.t];
     const canSell = !!(pos && pos.s > 0);
@@ -1344,7 +1707,7 @@ function updateTradeBox() {
     sellBtn.title = canSell ? "" : "You have 0 shares to sell";
   }
 }
-
+  
 function buyStock() {
   const ch = activeChild(); if (!ch || !selectedStock) return;
   const s = ch.stocks.find(x => x.t === selectedStock);
@@ -1376,17 +1739,16 @@ function buyStock() {
   else { ch.portfolio[s.t] = { s: Number(pos.s), b: Number(pos.b.toFixed(5)) }; }
 
   save(app);
-  if (costEl) costEl.textContent = PLN(cost);
+  costEl && (costEl.textContent = PLN(cost));
   toast(TT().bought(qty, s.t));
   renderJars();
   renderPortfolioStocks();
   renderProfits();
 }
-
 function sellStock(t, qty) {
   qty = Math.max(1, parseInt(qty || "1", 10));
 
-  const ch = activeChild();
+  const ch = activeChild(); 
   if (!ch) return;
 
   const pos = ch.portfolio?.[t];
@@ -1420,36 +1782,24 @@ function sellStock(t, qty) {
   renderPortfolioStocks();
   renderProfits();
 }
-
-
 // ====== TRADE — FX (WERSJA USD) ======
 function updateFxTradeBox() {
   ensureSellButtons();
-
-  if (!fxTradeBox || !selectedFxPair) {
-    if (fxTradeBox) fxTradeBox.style.display = "none";
-    return;
-  }
-
-  const ch = activeChild();
+  if (!fxTradeBox || !selectedFxPair) { fxTradeBox && (fxTradeBox.style.display = "none"); return; }
   const rUsd = rateUsdFromPair(selectedFxPair);
   lastFxUiPrice = rUsd;
-
   const qty = Math.max(1, parseFloat(fxQty.value || "1"));
   if (fxTradeTitle) fxTradeTitle.textContent = `FX Trade ${selectedFxPair}`;
-  if (fxCost) fxCost.textContent = PLN(rUsd * qty);
+  if (fxCost) fxCost.textContent = PLN(rUsd * qty); // koszt w USD
   fxTradeBox.style.display = "block";
-
-  // 🔒 stan przycisku SELL zależny od posiadanej pozycji
+}
   const fxSellBtn = document.getElementById('fxSellBtn');
   if (fxSellBtn) {
-    const pos = ch?.fxPortfolio?.[selectedFxPair];
+    const pos = activeChild()?.fxPortfolio?.[selectedFxPair];
     const canSell = !!(pos && pos.q > 0);
     fxSellBtn.disabled = !canSell;
     fxSellBtn.title = canSell ? "" : "You have 0 units to sell";
   }
-}
-
 
 function buyFx() {
   const ch = activeChild(); if (!ch || !selectedFxPair) return;
@@ -1525,9 +1875,284 @@ function sellFx(pair, qty) {
   renderProfits();
 }
 
-
-
 // ====== LEDGER / TABS / PARENT GUARD / QUICK ACTIONS / EVENTS ======
+// ====== BASKET (stocks + fx) ======
+function findBasketItem(list, key) {
+  return (list || []).find(x => x.key === key) || null;
+}
+
+// --- add to basket: STOCKS
+function addToBasketStocks(sym, name, price, qty) {
+  qty = Math.max(1, parseInt(qty || "1", 10));
+  price = Number(price || 0);
+  if (!sym || !qty || price <= 0) return;
+
+  if (!app.basket) app.basket = { stocks: [], fx: [] };
+
+  const it = findBasketItem(app.basket.stocks, sym);
+  if (it) {
+    it.qty += qty;
+    it.price = price;       // aktualizuj do bieżącej ceny
+  } else {
+    app.basket.stocks.push({ key: sym, t: sym, n: name || sym, price, qty });
+  }
+  save(app);
+  renderBasketStocks();
+  toast(`Added to basket: ${qty} × ${sym}`);
+}
+
+// --- add to basket: FX (para bazowa vs USD)
+function addToBasketFx(pair, priceUsd, qty) {
+  qty = Math.max(1, parseFloat(qty || "1"));
+
+  // 1) weź liczbę i ZAOKRĄGLIJ do 2 miejsc (centy)
+  let px = Number(priceUsd || 0);
+  if (!pair || !qty || !(px > 0)) return;
+  const px2 = Math.round(px * 100) / 100;   // <- 1.1278 -> 1.13
+
+  if (!app.basket) app.basket = { stocks: [], fx: [] };
+
+  // 2) wyszukaj po kluczu (pair)
+  const it = findBasketItem(app.basket.fx, pair);
+
+  if (it) {
+    it.qty = Number(it.qty || 0) + qty;
+    it.price = px2;                         // <- zapisujemy już 2-miejscową cenę
+  } else {
+    const [base] = pair.split("/");
+    const baseName = (CURRENCY_NAMES[base] || base) + " vs USD";
+    app.basket.fx.push({ key: pair, pair, n: baseName, price: px2, qty });
+  }
+
+  save(app);
+  renderBasketFx();
+  toast(`Added to basket: ${qty} × ${pair}`);
+}
+
+// --- remove
+function removeFromBasketStocks(sym) {
+  if (!app?.basket?.stocks) return;
+  app.basket.stocks = app.basket.stocks.filter(x => x.t !== sym);
+  save(app);
+  renderBasketStocks();
+}
+
+function removeFromBasketFx(pair) {
+  if (!app?.basket?.fx) return;
+  app.basket.fx = app.basket.fx.filter(x => x.pair !== pair);
+  save(app);
+  renderBasketFx();
+}
+
+// --- totals
+function basketTotals(list) {
+  let q = 0, sum = 0;
+  (list || []).forEach(it => {
+    const qty = Number(it.qty || 0);
+    const unit = toCents(Number(it.price || it.priceUsd || 0)); // ⬅️ najpierw 2 dp
+    q += qty;
+    sum = toCents(sum + toCents(qty * unit));
+  });
+  return { qty: q, sum: toCents(sum) };
+}
+
+
+
+// === RENDER: STOCK BASKET (dopasowane do Twojego HTML) ===
+// HTML:
+// <div id="stock-basket">
+//   <div class="basket-list">…</div>
+//   <strong data-basket-qty="stocks"></strong>
+//   <strong data-basket-amt="stocks"></strong>
+// </div>
+function renderBasketStocks() {
+  const wrap = document.getElementById('stock-basket');
+  if (!wrap) return;
+
+  const listEl  = wrap.querySelector('.basket-list') || wrap;
+  const emptyEl = listEl.querySelector('.basket-empty');
+  const qtyEl   = wrap.querySelector('[data-basket-qty="stocks"]');
+  const amtEl   = wrap.querySelector('[data-basket-amt="stocks"]');
+
+  const items = app?.basket?.stocks || [];
+
+  if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
+
+  // wyczyść listę
+  listEl.querySelectorAll('.basket-item').forEach(n => n.remove());
+
+  // wiersze
+  items.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'basket-item';
+    row.innerHTML = `
+      <div class="b-item-asset">
+        <span class="b-ticker">${it.t}</span>
+        <span class="b-name">${it.n || ''}</span>
+      </div>
+      <div class="b-price">${PLN(it.price)}</div>
+      <div class="b-change"><span class="arrow-flat">—</span></div>
+      <div class="b-qty">
+        <input class="input basket-qty" type="number" min="1" step="1" value="${it.qty}">
+        <button class="btn" data-act="upd">Set</button>
+      </div>
+      <div class="b-subtotal">${PLN(toCents(it.qty * it.price))}</div>
+      <div class="b-remove"><button class="btn danger" data-act="rm">×</button></div>
+    `;
+
+    const inp = row.querySelector('input');
+
+    // Enter = klik "Set"
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        row.querySelector('[data-act="upd"]')?.click();
+      }
+    });
+
+    row.querySelector('[data-act="upd"]').addEventListener('click', () => {
+      it.qty = Math.max(1, parseInt(inp.value || "1", 10));
+      save(app);
+      renderBasketStocks();
+    });
+
+ row.querySelector('[data-act="rm"]').addEventListener('click', () => removeFromBasketStocks(it.t));
+
+    listEl.appendChild(row);
+  });
+
+const t = basketTotals(items);
+if (qtyEl) qtyEl.textContent = '\u00A0\u00A0' + t.qty;
+if (amtEl) amtEl.textContent = '\u00A0\u00A0' + PLN(t.sum);
+
+}
+
+
+// === RENDER: FX BASKET (dopasowane do Twojego HTML) ===
+function renderBasketFx() {
+  const wrap = document.getElementById('fx-basket');
+  if (!wrap) return;
+
+  const listEl  = wrap.querySelector('.basket-list') || wrap;
+  const emptyEl = listEl.querySelector('.basket-empty');
+  const qtyEl   = wrap.querySelector('[data-basket-qty="fx"]');
+  const amtEl   = wrap.querySelector('[data-basket-amt="fx"]');
+
+  const items = app?.basket?.fx || [];
+
+  if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
+
+  listEl.querySelectorAll('.basket-item').forEach(n => n.remove());
+
+  items.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'basket-item';
+    row.innerHTML = `
+      <div class="b-item-asset">
+        <span class="b-ticker">${it.pair}</span>
+        <span class="b-name">${it.n || ''}</span>
+      </div>
+      <div class="b-price">${PLN(it.price)}</div>
+      <div class="b-change"><span class="arrow-flat">—</span></div>
+      <div class="b-qty">
+        <input class="input basket-qty" type="number" min="1" step="1" value="${it.qty}">
+        <button class="btn" data-act="upd">Set</button>
+      </div>
+      <div class="b-subtotal">${PLN(toCents(it.qty * it.price))}</div>
+      <div class="b-remove"><button class="btn danger" data-act="rm">×</button></div>
+    `;
+
+    const inp = row.querySelector('input');
+
+    // Enter = klik "Set"
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        row.querySelector('[data-act="upd"]')?.click();
+      }
+    });
+
+    row.querySelector('[data-act="upd"]').addEventListener('click', () => {
+      it.qty = Math.max(1, parseFloat(inp.value || "1"));
+      save(app);
+      renderBasketFx();
+    });
+
+   row.querySelector('[data-act="rm"]').addEventListener('click', () => removeFromBasketFx(it.pair));
+    listEl.appendChild(row);
+  });
+
+  const t = basketTotals(items);
+if (qtyEl) qtyEl.textContent = '\u00A0\u00A0' + t.qty;
+if (amtEl) amtEl.textContent = '\u00A0\u00A0' + PLN(t.sum);
+}
+
+// ===== BUY FROM BASKET =====
+function buyBasketStocks() {
+  const ch = activeChild(); if (!ch) return;
+  const items = app?.basket?.stocks || [];
+  if (!items.length) return toast('Basket is empty');
+
+const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty||0) * Number(it.price||0))), 0));
+
+  if (total > ch.jars.save) return toast(TT().needFunds(PLN(total)));
+
+  ch.jars.save   -= total;
+  ch.jars.invest += total;
+
+  items.forEach(it => {
+    const t = it.t; const qty = Number(it.qty||0); const price = Number(it.price||0);
+    if (!t || qty<=0 || price<=0) return;
+    let pos = ch.portfolio[t] || { s:0, b:price };
+    const newS = pos.s + qty;
+    pos.b = ((pos.s * pos.b) + (qty * price)) / newS;
+    pos.s = newS;
+    ch.portfolio[t] = { s: Number(pos.s), b: Number(pos.b.toFixed(5)) };
+  });
+
+  app.basket.stocks = [];
+  save(app);
+  renderBasketStocks();
+  renderJars();
+  renderPortfolioStocks();
+  toast('Bought all stock items from basket');
+}
+
+function buyBasketFx() {
+  const ch = activeChild(); if (!ch) return;
+  const items = app?.basket?.fx || [];
+  if (!items.length) return toast('Basket is empty');
+
+const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty||0) * Number(it.price||0))), 0));
+
+  if (total > ch.jars.save) return toast(TT().needFunds(PLN(total)));
+
+  ch.jars.save   -= total;
+  ch.jars.invest += total;
+
+  items.forEach(it => {
+    const pair = it.pair || it.key; const qty = Number(it.qty||0); const rUsd = Number(it.price||0);
+    if (!pair || qty<=0 || rUsd<=0) return;
+    let pos = ch.fxPortfolio[pair] || { q:0, b:rUsd };
+    const newQ = pos.q + qty;
+    pos.b = ((pos.q * pos.b) + (qty * rUsd)) / newQ;
+    pos.q = newQ;
+    ch.fxPortfolio[pair] = { q: Number(pos.q), b: Number(pos.b.toFixed(5)) };
+  });
+
+  app.basket.fx = [];
+  save(app);
+  renderBasketFx();
+  renderJars();
+  renderPortfolioFx();
+  toast('Bought all FX items from basket');
+}
+
+// --- podpięcie przycisków „Buy (investment cash)” w kartach koszyka
+document.querySelector('[data-basket-buy="stocks"]')?.addEventListener('click', buyBasketStocks);
+document.querySelector('[data-basket-buy="fx"]')?.addEventListener('click', buyBasketFx);
+
+
 function addLedger(type, amount, note) {
   const ch = activeChild(); if (!ch) return;
   const id = crypto.randomUUID ? crypto.randomUUID() : String(Math.random());
@@ -1547,13 +2172,14 @@ document.querySelectorAll('.tab').forEach(b => {
     updateGlobalTrendsForTab(t);
   });
 });
-document.querySelectorAll('.tab').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+
+document.querySelectorAll('.tab').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
 
     const t = b.dataset.tab;
-    ["invest","fx","profits","parent"].forEach(id=>{
+    ["invest","fx","profits","parent"].forEach(id => {
       const el = document.getElementById(`tab-${id}`);
       if (el) el.classList.toggle('hidden', id!==t);
     });
@@ -1567,6 +2193,7 @@ document.querySelectorAll('.tab').forEach(b=>{
     updateGlobalTrendsForTab(t);
   });
 });
+
 function requireParent() {
   const a = JSON.parse(localStorage.getItem(AUTH_KEY) || '{"role":"guest"}');
   if (a.role !== 'parent') { alert((TT().onlyParent) || 'Parent only: please log in as Parent.'); return false; }
@@ -1608,18 +2235,21 @@ function moveAllDonationsToSavings() {
 document.getElementById('moveDonationsToSavings')?.addEventListener('click', moveAllDonationsToSavings);
 document.getElementById('moveDonToSave')?.addEventListener('click', moveAllDonationsToSavings);
 
+/* === TRADE – STOCKS (btns) === */
 document.getElementById('buyBtn')?.addEventListener('click', buyStock);
 document.getElementById('cancelTrade')?.addEventListener('click', () => {
   selectedStock = null; updateTradeBox(); renderStocks(stockSearch?.value || "");
 });
 document.getElementById('qty')?.addEventListener('input', updateTradeBox);
 
+/* === TRADE – FX (btns) === */
 document.getElementById('fxBuyBtn')?.addEventListener('click', buyFx);
 document.getElementById('fxCancelTrade')?.addEventListener('click', () => {
   selectedFxPair = null; updateFxTradeBox(); renderFxList($("#fxSearch")?.value || "");
 });
 document.getElementById('fxQty')?.addEventListener('input', updateFxTradeBox);
 
+/* === LISTY / SZUKAJKI === */
 document.getElementById('fxSearch')?.addEventListener('input', (e) => renderFxList(e.target.value));
 document.getElementById('fxAddAllMajors')?.addEventListener('click', () => {
   const ch = activeChild(); if (!ch) return;
@@ -1630,18 +2260,18 @@ document.getElementById('fxAddAllMajors')?.addEventListener('click', () => {
   renderFxList(document.getElementById('fxSearch')?.value || "");
 });
 
-
+/* === JARS – szybkie dodawanie === */
 document.querySelectorAll('[data-add]').forEach(btn => {
   btn.addEventListener('click', () => {
     const ch = activeChild(); if (!ch) return;
     const k = btn.getAttribute('data-add');
 
-    // znajdź input obok tego przycisku
+    // input obok przycisku
     const input = btn.parentElement.querySelector('.jar-input');
     let inc = Number(input?.value || 0);
 
     if (!inc || inc <= 0) {
-      // fallback – jeśli nic nie wpisano, użyj domyślnej wartości
+      // fallback – gdy pusto
       inc = (k === 'give' ? 2 : 5);
     }
 
@@ -1649,11 +2279,11 @@ document.querySelectorAll('[data-add]').forEach(btn => {
     save(app);
     renderJars();
 
-    if (input) input.value = ''; // wyczyść po użyciu
+    if (input) input.value = '';
   });
 });
 
-
+/* === PARENT top-up / settings / clear === */
 document.getElementById('topupForm')?.addEventListener('submit', e => {
   e.preventDefault();
   if (!requireParent()) return;
@@ -1698,6 +2328,7 @@ document.getElementById('clearDataBtn')?.addEventListener('click', () => {
   }
 });
 
+/* === Ledger & child switch === */
 document.getElementById('filterType')?.addEventListener('change', () => renderLedger());
 
 childSel?.addEventListener('change', () => {
@@ -1706,7 +2337,7 @@ childSel?.addEventListener('change', () => {
   renderAll();
 });
 
-// Add Child
+/* === Add Child === */
 addChildBtn?.addEventListener('click', () => {
   if (!requireParent()) return;
   const name = prompt("Child's name:");
@@ -1722,6 +2353,29 @@ addChildBtn?.addEventListener('click', () => {
   setTimeout(fillLoginChildSelector, 0);
   toast(`Added: ${name}`);
 });
+
+/* === NEW: Add to basket (Stocks) === */
+document.getElementById('addToStockBasket')?.addEventListener('click', () => {
+  if (!selectedStock) return toast('Pick a stock first.');
+  const ch = activeChild();
+  const s = ch?.stocks.find(x => x.t === selectedStock);
+  const qty = Math.max(1, parseInt(document.getElementById('qty')?.value || '1', 10));
+  const price = (lastStockUiPrice ?? s?.p ?? 0);
+  addToBasketStock(selectedStock, price, qty);
+});
+
+/* === NEW: Add to basket (FX) === */
+document.getElementById('addToFxBasket')?.addEventListener('click', () => {
+  if (!selectedFxPair) return toast('Pick a currency pair first.');
+  const qty = Math.max(1, parseFloat(document.getElementById('fxQty')?.value || '1'));
+  const priceUsd = (lastFxUiPrice ?? rateUsdFromPair(selectedFxPair) ?? 0);
+  addToBasketFx(selectedFxPair, priceUsd, qty);
+});
+
+/* === NEW: Buy from baskets === */
+document.querySelector('[data-basket-buy="stocks"]')?.addEventListener('click', () => buyBasket('stocks'));
+document.querySelector('[data-basket-buy="fx"]')?.addEventListener('click', () => buyBasket('fx'));
+
 
 // ====== LIVE MODE (BEGIN)
 let liveFetchLock = false;
@@ -1986,11 +2640,12 @@ window.addEventListener("load", () => openTutorial(false));
 // Mapowanie tickerów do formatu Yahoo (tylko nietypowe przypadki)
 function mapToYahoo(sym) {
   const map = {
-    BRKB: 'BRK-B',    // Berkshire Hathaway B
-    // dodawaj tutaj kolejne mapowania, gdyby coś nie wracało z Yahoo
+    BRKB: 'BRK-B',   // było
+    BRK_B: 'BRK-B',  // ✅ dopisz to, jeśli używasz BRK_B w STOCK_UNIVERSE
   };
   return map[sym] || sym;
 }
+
 
 // ====== LIVE DATA FETCHERS (BEGIN)
 
@@ -2249,12 +2904,15 @@ setInterval(() => {
     });
   });
   save(app);
-  if (!__qtyTyping) {
-    renderStocks(stockSearch?.value || "");
-    renderPortfolioStocks();
-    renderJars();
-    renderProfits();
-  }
+ if (!__qtyTyping) {
+  renderStocks(stockSearch?.value || "");
+  renderPortfolioStocks();
+  renderJars();
+  renderProfits();
+  renderBasketStocks();   // ⬅️ NEW
+  renderBasketFx();       // ⬅️ NEW
+}
+
 }, 2000);
 
 // Odświeżaj Global Trends
@@ -2287,6 +2945,9 @@ const parentSection = document.getElementById('tab-parent');
 const tBtnLoginTop = document.getElementById('t-btnLoginTop');
 const tBtnLogoutTop = document.getElementById('t-btnLogout');
 
+// === App title (nagłówek/logotyp tekstowy) ===
+const appTitleEl = document.getElementById('appTitle'); // <div id="appTitle"></div> w HTML
+
 function fillLoginChildSelector() {
   if (!loginChild) return;
   loginChild.innerHTML = '';
@@ -2313,22 +2974,28 @@ function applyAuthUI() {
   // --- NEW: ustaw body[data-role] dla CSS (child: ukrycie placeholderów pod słoikami) ---
   document.body.dataset.role = appAuth?.role || 'guest';
 
+  // --- NEW: ustaw tytuł aplikacji zależnie od roli ---
+  if (appTitleEl) {
+    if (isChild()) {
+      appTitleEl.textContent = "Money Flow Kids";
+    } else if (isParent()) {
+      appTitleEl.textContent = "Money Flow";
+    } else {
+      appTitleEl.textContent = "Money Flow";
+    }
+  }
+
   const tr = TT();
   if (isParent()) {
     authBadge && (authBadge.textContent = tr.badgeParent || "Parent");
     loginBtn && loginBtn.classList.add('hidden');
     logoutBtn && logoutBtn.classList.remove('hidden');
   } else if (isChild()) {
-  const ch = activeChild();
-  // czytelny badge: "Child: Imię"
-  const tr = TT();
-  const label = (tr.badgeChild ? tr.badgeChild(ch?.name || "") : `Child: ${ch?.name || ""}`);
-  if (authBadge) authBadge.textContent = label;
-
-  // w trybie dziecka nie pokazujemy "Login" (to myli)
-  if (loginBtn)  loginBtn.classList.add('hidden');
-  if (logoutBtn) logoutBtn.classList.remove('hidden');
-
+    const ch = activeChild();
+    const label = (tr.badgeChild ? tr.badgeChild(ch?.name || "") : `Child: ${ch?.name || ""}`);
+    if (authBadge) authBadge.textContent = label;
+    if (loginBtn)  loginBtn.classList.add('hidden');
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
   } else {
     authBadge && (authBadge.textContent = tr.badgeGuest || "Guest");
     loginBtn && loginBtn.classList.remove('hidden');
@@ -2357,6 +3024,7 @@ function refreshAuthI18n() { applyAuthUI(); }
 
 // --- NEW: jednorazowe wywołanie, by data-role było ustawione od startu ---
 applyAuthUI();
+
 
 loginBtn?.addEventListener('click', openLogin);
 loginCancel?.addEventListener('click', closeLogin);
@@ -2532,3 +3200,79 @@ const observer = new MutationObserver(() => {
     .forEach(btn => btn.remove());
 });
 observer.observe(document.body, { childList: true, subtree: true });
+/* === YouTube mini-player wiring === */
+(function () {
+  const ytMini   = document.getElementById('ytMini');
+  const iframe   = document.getElementById('ytFrame');
+  if (!ytMini || !iframe) return;
+
+  const openers  = [document.getElementById('tutorialBtn'), document.getElementById('drawerTutorial')].filter(Boolean);
+  const btnClose = document.getElementById('ytClose');
+  const btnSize  = document.getElementById('ytToggleSize');
+
+  // Używamy wersji nocookie + playsinline (iOS)
+  const YT_URL = "https://www.youtube-nocookie.com/embed/eIpCd1wRhYE?rel=0&modestbranding=1&playsinline=1";
+  iframe.setAttribute('data-src', YT_URL);
+
+  function openMini() {
+    ytMini.classList.remove('hidden');
+    if (!iframe.src) iframe.src = iframe.dataset.src; // lazy init
+  }
+
+  function closeMini() {
+    ytMini.classList.add('hidden');
+    // zatrzymaj odtwarzanie przez zresetowanie src
+    const tmp = iframe.src;
+    iframe.src = '';
+    // przywróć oryginalny adres, żeby był gotowy na kolejne otwarcie
+    setTimeout(() => { iframe.src = iframe.dataset.src; }, 0);
+  }
+
+  function toggleSize() {
+    ytMini.classList.toggle('expanded');
+  }
+
+  openers.forEach(btn => btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    openMini();
+  }));
+
+  btnClose?.addEventListener('click', closeMini);
+  btnSize?.addEventListener('click', toggleSize);
+
+  // ESC zamyka
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !ytMini.classList.contains('hidden')) closeMini();
+  });
+
+  // Dodatkowa korekta safe-area przy zmianie rozmiaru
+  function safeAreaFix() {
+    ytMini.style.bottom = `calc(12px + env(safe-area-inset-bottom, 0px))`;
+    ytMini.style.right  = `calc(12px + env(safe-area-inset-right, 0px))`;
+  }
+  safeAreaFix();
+  window.addEventListener('resize', safeAreaFix, { passive: true });
+})();
+
+// === Auto-start tutorial video przy pierwszym uruchomieniu ===
+document.addEventListener("DOMContentLoaded", () => {
+  const mini = document.getElementById("ytMini");
+  const frame = document.getElementById("ytFrame");
+  if (!mini || !frame) return;
+
+  // Sprawdź, czy użytkownik już oglądał
+  const seen = localStorage.getItem("tutorialSeen");
+
+  if (!seen) {
+    // Pierwsze uruchomienie → pokaż mini-player
+    mini.classList.remove("hidden");
+
+    // Zapisz, że już wyświetlono tutorial
+    localStorage.setItem("tutorialSeen", "1");
+  }
+});
+window.addEventListener('DOMContentLoaded', () => {
+  renderAll();
+});
+
+
