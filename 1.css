@@ -3364,25 +3364,45 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
-/* Mobile labels: domyślnie ukryte */
-.mfk-cap { display: none; }
-
-/* Pokazuj podpisy tylko na telefonie */
+/* --- Etykiety obok wartości TYLKO NA TELEFONIE --- */
 @media (max-width: 640px) {
-  td { padding-top: 6px; padding-bottom: 6px; }
-  td .mfk-val { font-weight: 600; }
-  td .mfk-cap {
-    display: block;
-    font-size: 12px;
-    line-height: 1.1;
-    color: #9ca3af;      /* szary opis */
-    text-align: right;   /* podpis po prawej stronie */
-    margin-top: 2px;
+  /* Ustaw bazę pod etykiety po prawej */
+  #tradeHistoryBody tr td,
+  #fxHistoryBody tr td {
+    position: relative;
+    padding-right: 110px;    /* miejsce na napis po prawej */
   }
 
-  /* Kolory P/L zostają na wartości */
-  td.pnl-pos .mfk-val { color: #22c55e; }
-  td.pnl-neg .mfk-val { color: #ef4444; }
+  /* Wspólny wygląd etykiety */
+  #tradeHistoryBody tr td::after,
+  #fxHistoryBody tr td::after {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    line-height: 1.1;
+    color: #9ca3af;          /* delikatny szary */
+    white-space: nowrap;
+    content: "";             /* nadpisujemy niżej w nth-child */
+    pointer-events: none;
+  }
+
+  /* --- Sales History (Stocks) --- */
+  #tradeHistoryBody tr td:nth-child(1)::after { content: "Date"; }
+  #tradeHistoryBody tr td:nth-child(2)::after { content: "Symbol"; }
+  #tradeHistoryBody tr td:nth-child(3)::after { content: "Shares"; }
+  #tradeHistoryBody tr td:nth-child(4)::after { content: "Sell Price"; }
+  #tradeHistoryBody tr td:nth-child(5)::after { content: "Buy Price"; }
+  #tradeHistoryBody tr td:nth-child(6)::after { content: "Profit/Loss"; }
+
+  /* --- Sales History (FX) --- */
+  #fxHistoryBody tr td:nth-child(1)::after { content: "Date"; }
+  #fxHistoryBody tr td:nth-child(2)::after { content: "Pair"; }
+  #fxHistoryBody tr td:nth-child(3)::after { content: "Units"; }
+  #fxHistoryBody tr td:nth-child(4)::after { content: "Sell Rate"; }
+  #fxHistoryBody tr td:nth-child(5)::after { content: "Buy Rate"; }
+  #fxHistoryBody tr td:nth-child(6)::after { content: "Profit/Loss"; }
 }
 
 
