@@ -3374,17 +3374,19 @@ html, body { overflow-x: hidden; }
   }
 
   /* Wspólny wygląd etykiety */
-  #tradeHistoryBody tr td::after,
+   #tradeHistoryBody tr td::after,
   #fxHistoryBody tr td::after {
     position: absolute;
-    right: 10px;
+    right: 16px;              /* bliżej prawej krawędzi */
     top: 50%;
     transform: translateY(-50%);
     font-size: 12px;
     line-height: 1.1;
-    color: #9ca3af;          /* delikatny szary */
+    color: #9ca3af;
     white-space: nowrap;
-    content: "";             /* nadpisujemy niżej w nth-child */
+    text-align: right;        /* tekst wyrównany do prawej */
+    min-width: 80px;          /* etykieta ma stałą szerokość */
+    content: "";
     pointer-events: none;
   }
 
