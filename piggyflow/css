@@ -1,5 +1,4 @@
- 
-  /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
+       /* ========= Money Flow Kids — modern CSS refresh (2025, dedup) ========= */
 
 /* Palette */
 :root{
@@ -233,29 +232,6 @@ input:checked + .slider::before{transform:translateX(26px)}
 .jar-card{display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center}
 .jar-card .title{font-variant-numeric:tabular-nums}
 
-/* CSS+SVG background (optional fallback) */
-:root{ --jar-stroke:%23000; --jar-glass:%23ffffff; --jar-liquid:%2300c853; --jar-lid:%23222; }
-.jar-visual{
-  width:110px; height:140px; background-size:contain; background-repeat:no-repeat; background-position:center;
-  filter:drop-shadow(0 2px 6px rgba(0,0,0,.18)); transition:transform .15s ease;
-}
-.jar-visual:active{transform:scale(.98)}
-@supports (background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'></svg>")){
-  .jar-visual{
-    background-image:url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 200'>\
-  <defs><clipPath id='c'><path d='M45,40 h70 a15,15 0 0 1 15,15 v95 a20,20 0 0 1 -20,20 h-60 a20,20 0 0 1 -20,-20 v-95 a15,15 0 0 1 15,-15 z'/></clipPath></defs>\
-  <rect x='40' y='18' width='80' height='16' rx='5' fill='%23222' stroke='%23000' stroke-width='3'/>\
-  <path d='M45,40 h70 a15,15 0 0 1 15,15 v95 a20,20 0 0 1 -20,20 h-60 a20,20 0 0 1 -20,-20 v-95 a15,15 0 0 1 15,-15 z' fill='%23ffffff' stroke='%23000' stroke-width='3'/>\
-  <g clip-path='url(%23c)'><rect x='30' y='95' width='100' height='80' fill='%2300c853'/></g>\
-</svg>");
-  }
-}
-.jar-savings{--jar-liquid:%2300c853; --jar-lid:%2327ae60}
-.jar-earnings{--jar-liquid:%23ff9800; --jar-lid:%23ef6c00}
-.jar-donations{--jar-liquid:%23e91e63; --jar-lid:%23ad1457}
-.jar-invest{--jar-liquid:%233f51b5; --jar-lid:%23283989}
-@media (max-width:520px){ .jar-visual{width:90px; height:120px} }
 
 /* Photo jars (PNG mask) */
 .jar2{position:relative; width:160px; aspect-ratio:1/1.25; filter:drop-shadow(0 6px 12px rgba(0,0,0,.35)); transition:transform .2s ease, filter .2s ease}
@@ -271,7 +247,11 @@ input:checked + .slider::before{transform:translateX(26px)}
   background:linear-gradient(180deg, var(--liq-top,#41d98a), var(--liq-bottom,#00c853));
   opacity:.95; border-radius:8% 8% 16% 16% / 20% 20% 30% 30%;
 }
-.jar2.savings{--liq-top:#53d941; --liq-bottom:#00c853}
+/* Savings → ice blue */
+.jar2.savings{ --liq-top:#99ffff; --liq-bottom:#99ffff; }
+.jar2.savings .liquid::before{
+  background: linear-gradient(180deg,#99ffff,#99ffff);
+}
 .jar2.earnings{--liq-top:#eef131; --liq-bottom:#ff9800}
 .jar2.donations{--liq-top:#c03065; --liq-bottom:#e91e63}
 .jar2.invest{--liq-top:#152a70; --liq-bottom:#3f51b5}
@@ -591,7 +571,7 @@ td.space {
 }
 
 /* kolory wartości */
-#miniSave  { color:#22c55e; }
+#miniSave  { color:#15f4ee; }
 #miniSpend { color:#f59e0b; }
 #miniGive  { color:#ec4899; }
 #miniInvest{ color:#60a5fa; }
@@ -2348,11 +2328,6 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
     white-space: nowrap;
   }
 }
-/* Pokazuj ekranik proszący o obrót tylko w pionie */
-@media (orientation: portrait) {
-  #rotateOverlay { display:flex; }
-  body { overflow:hidden; }
-}
 #rotateOverlay{
   position:fixed; inset:0; z-index:9999;
   display:none; align-items:center; justify-content:center;
@@ -2362,4 +2337,1080 @@ section#tab-invest .tableWrap table tr > td:nth-child(5){
   background:#111827; border:1px solid rgba(255,255,255,.12);
   border-radius:12px; padding:16px 20px; max-width:480px;
 }
+/* ==== YouTube mini-player (dock + modal + mobile) ==== */
+.ytmini.hidden{ display:none !important; }
+
+.ytmini{
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  width: 360px;
+  aspect-ratio: 16 / 9;
+  background: #0b1220;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(2,8,23,.45);
+  z-index: 400; /* ponad topbarem/mini-jars */
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.ytmini-bar{
+  display:flex; align-items:center; gap:8px;
+  padding: 6px 8px;
+  background: rgba(15,23,42,.85);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  user-select:none; cursor: move;   /* drag (desktop) */
+}
+.ytmini-bar .spacer{ flex:1 1 auto; }
+.ytmini-btn{
+  padding: 4px 8px; border:1px solid rgba(255,255,255,.16);
+  background:#111827; color:#e5e7eb; border-radius:8px; cursor:pointer;
+}
+.ytmini-btn:hover{ filter:brightness(1.1); }
+.ytmini-btn.danger{ background:#221417; border-color:#3a1b21; color:#fecaca; }
+
+.ytmini-body{ position:relative; }
+.ytmini iframe{
+  position:absolute; inset:0; width:100%; height:100%; border:0;
+  background:#000;
+}
+
+/* Powiększone (modal) – na środku ekranu */
+.ytmini.is-large{
+  width: min(920px, 92vw);
+  height: min(520px, 52vw);  /* utrzymuje ~16:9 na węższych */
+  aspect-ratio: auto;
+  left: 50%; top: 50%; right:auto; bottom:auto;
+  transform: translate(-50%, -50%);
+  cursor: default;
+}
+
+/* Zminimalizowane – cienki pasek (zatrzymuje wideo) */
+.ytmini.is-mini{
+  width: 260px; height: 48px; aspect-ratio: auto;
+}
+
+/* Rączka zmiany rozmiaru (prawy/dolny róg) */
+.ytmini-resize{
+  position:absolute; right:4px; bottom:4px; width:14px; height:14px;
+  border-right: 2px solid rgba(255,255,255,.35);
+  border-bottom: 2px solid rgba(255,255,255,.35);
+  border-radius:2px; cursor: nwse-resize;
+  opacity:.7;
+}
+
+/* Mobile: pełna szerokość u dołu, bez przeciągania i bez rączki */
+@media (max-width: 640px){
+  .ytmini{
+    left: 0; right: 0; bottom: 0;
+    width: 100vw; height: auto; aspect-ratio: 16/9;
+    border-radius: 12px 12px 0 0;
+  }
+  .ytmini.is-large{
+    width: 100vw !important; height: auto !important; aspect-ratio: 16/9 !important;
+    left: 0; right: 0; top: auto; bottom: 0; transform:none;
+    border-radius: 12px 12px 0 0;
+  }
+  .ytmini-bar{ cursor: default; }
+  .ytmini-resize{ display:none; }
+}
+/* === YouTube mini-player === */
+.yt-mini {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 340px;           /* startowa szerokość */
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  overflow: hidden;
+  z-index: 9999;
+}
+
+/* rozmiar „medium” – OSOBNY blok */
+.yt-mini.medium {
+  width: 370px;           /* szerokość */
+  height: 208px;          /* wysokość (16:9) */
+}
+
+.yt-mini.hidden { display: none; }
+
+.yt-mini.max {                 /* powiększony */
+  width: min(920px, 92vw);
+  right: 16px;
+  bottom: 16px;
+}
+
+.yt-mini iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.yt-controls {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.yt-btn {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.2);
+  cursor: pointer;
+}
+.yt-btn.danger { background: rgba(180,0,0,.6); }
+.yt-btn:hover { filter: brightness(1.1); }
+
+/* Mini-player – rozmiary */
+.yt-mini      { position: fixed; top: 12px; right: 12px; width: 320px; height: 180px; z-index: 9999; }
+.yt-mini.large{ width: 560px; height: 315px; }
+/* enforce bottom-right docking */
+.yt-mini{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  top: auto !important;   /* zabij ewentualne top: 12px */
+}
+/* --- UNLOCK SCROLL + ZABIJ ORIENTATION OVERLAY --- */
+#rotateOverlay{ display:none !important; pointer-events:none !important; }
+
+html, body{
+  height:auto !important;
+  min-height:100% !important;
+  overflow-y:auto !important;
+  overflow-x:hidden;                /* poziomy dalej blokujemy */
+  -webkit-overflow-scrolling:touch; /* płynne na iOS */
+  touch-action: pan-y;              /* wymuś pionowy scroll */
+}
+/* === Savings kolor na #99FFFF === */
+.jar-savings{
+  --jar-liquid:#99ffff !important;
+  --jar-lid:#27ae60; /* zostaw albo zmień jeśli chcesz */
+}
+
+.jar2.savings{
+  --liq-top:#99ffff !important;
+  --liq-bottom:#99ffff !important;
+}
+/* === SAVINGS → ICE BLUE (twardy override) === */
+.jar2.savings .liquid::before,
+.jar2.jar-savings .liquid::before {           /* jeśli w HTML masz 'jar-savings' */
+  background: linear-gradient(180deg, #99ffff, #99ffff) !important;
+}
+.jar2.savings,
+.jar2.jar-savings {
+  --liq-top:#99ffff !important;
+  --liq-bottom:#99ffff !important;
+}
+.jar2.savings,
+.jar2.jar-savings{
+  --liq-top:#99ffff; --liq-bottom:#99ffff;
+}
+/* Savings = ICE BLUE */
+.wow-jars .jar-card:nth-child(1) .jar-svg{
+  --liq-top:#15f4ee !important;
+  --liq-bottom:##15f4ee !important;
+   --glow:#99ffff !important;
+  } 
+   /* Net Worth = zielony */
+#netWorth {
+  color: #22c55e !important;   /* zielony jak Savings */
+  font-weight: 800;
+}
+
+/* Available Cash = żółty */
+#availableCash {
+  color: #dee792 !important;   /* 500/600 żółty (Tailwind amber) */
+  font-weight: 800;
+}
+/* Available Cash (mini-jar) = żółty */
+#miniCash {
+  color: #dee792 !important;   /* złoty/żółty */
+  font-weight: 800;
+}
+#appTitle,
+#t-appTitle,
+.brand-title{
+  background-image: linear-gradient(90deg, var(--brand-blue), var(--brand-green));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  display: inline-block;
+  font-weight: 800;
+}
+/* == MOBILE MODE (≤640px) – iPKO vibe == */
+@media (max-width: 640px){
+
+  /* 0) Bez poziomego scrolla i bez auto-zooma na inputach */
+  html,body{max-width:100%; overflow-x:hidden;}
+  body{-webkit-text-size-adjust:100%;}
+
+  /* 1) Topbar — prosty, sticky */
+  :root{ --header-h:56px; }
+  .mfk-topbar, .topbar{
+    position: sticky !important;
+    top: 0;
+    z-index: 200;
+    height: var(--header-h);
+    background: rgba(7,11,22,.72) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  /* hamburger widoczny, środkowe menu do szuflady */
+  #mfkTopNav{ display:none !important; }
+  .mfk-nav-toggle{ display:inline-flex !important; }
+
+  /* 2) Pasek mini-KPI — 2 kolumny (czytelnie) */
+  #stickyMiniJars{
+    position: sticky !important;
+    top: var(--header-h);
+    z-index: 150;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 6px 8px;
+    padding: 6px 8px;
+    background: rgba(7,11,22,.72) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  #stickyMiniJars .mini-jar-label{ font-size:.7rem; }
+  #stickyMiniJars .mini-jar-value{ font-size:.9rem; font-weight:800; white-space:nowrap; }
+
+  /* 3) Siatki → jedna kolumna */
+  .grid.g-3,
+  #tab-invest:not(.hidden),
+  #tab-fx:not(.hidden),
+  #tab-profits:not(.hidden),
+  #tab-parent:not(.hidden){
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 4) Listy rynku i koszyki na całą szerokość */
+  #stock-basket, #fx-basket{
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+  }
+
+  /* 5) Portfolio: zamieniamy tabele na „karty” (zero ścisku i nakładek) */
+  #tab-invest .tableWrap, #tab-fx .tableWrap{
+    overflow-x: visible !important;
+  }
+  #tab-invest thead, #tab-fx thead{ display:none !important; }
+
+  #tab-invest tbody tr,
+  #tab-fx    tbody tr{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:6px;
+    padding:10px;
+    margin:0 0 8px;
+    background:#0c1528;
+    border:1px solid var(--panel-b, #334155);
+    border-radius:12px;
+  }
+  #tab-invest td, #tab-fx td{
+    border-top:0 !important;
+    padding:2px 6px !important;
+    text-align:left !important;
+    white-space:normal !important;
+  }
+
+  /* etykiety z nagłówków jako „label” nad wartością */
+  #tab-invest td::before, #tab-fx td::before{
+    content: attr(data-label);
+    display:block;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:2px;
+  }
+
+  /* kolumna z akcjami na pełną szerokość, pod spodem */
+  #tab-invest td.space, #tab-fx td.space{
+    grid-column: 1 / -1;
+    display:flex !important;
+    justify-content:flex-end !important;
+    align-items:center !important;
+    gap:8px !important;
+  }
+
+  /* 6) Tap-targety i inputy (iOS nie powiększa) */
+  button, .btn{ min-height:44px; }
+  input, select{ font-size:16px !important; } /* blokuje auto-zoom na iOS */
+
+  /* 7) Lżejsze przyciski jak w bankowych apkach */
+  :is(button,.btn,.role-switch .tab,.authwrap .tab){
+    background: #1f2937 !important;
+    border:1px solid #334155 !important;
+    color:#e5e7eb !important;
+    box-shadow:none !important;
+    backdrop-filter:none !important;
+  }
+
+  /* 8) Tytuł z gradientem — zostaje */
+  #t-appTitle, .brand-title{
+    background-image: linear-gradient(90deg,#3b82f6,#22c55e) !important;
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent !important; color:transparent !important;
+  }
+}
+/* === JARS: input bez spinnerów + kompakt === */
+.jar-card .jar-input{
+  appearance: textfield !important;
+  -moz-appearance: textfield !important;
+  padding-right: 10px !important;
+  width: 110px !important;
+}
+.jar-card .jar-input::-webkit-outer-spin-button,
+.jar-card .jar-input::-webkit-inner-spin-button{
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+/* === CHILD PROFILE: ukryj input + Add POD SŁOIKAMI (nadpisanie wszystkich wcześniejszych reguł) === */
+body[data-role="child"] .jar-card .jar-actions,
+body[data-role="child"] .jar-card .jar-input,
+body[data-role="child"] .jar-card .btn { 
+  display: none !important; 
+}
+body[data-role="child"] .jar-card { gap: 6px !important; } /* zgrabne odstępy */
+
+/* === MINI-JARS: telefon = 2 kolumny, czytelne etykiety === */
+@media (max-width: 640px){
+  #stickyMiniJars{
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 6px 8px !important;
+    padding: 6px 8px !important;
+  }
+  #stickyMiniJars .mini-jar-label{ font-size: .7rem !important; }
+  #stickyMiniJars .mini-jar-value{ font-size: .9rem !important; white-space: nowrap !important; }
+}
+
+/* === ARROWS przy liczbach: nigdy na tekście === */
+.arrow-up,.arrow-down,.arrow-flat{
+  display:inline-block !important;
+  margin-left: 4px !important;
+  position: relative; top: -1px;
+}
+
+/* === FX & STOCKS: mobile – nie rozjeżdża się, prawa kolumna wchodzi === */
+@media (max-width: 640px){
+  #tab-invest .tableWrap, #tab-fx .tableWrap{
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #tab-invest table, #tab-fx table{
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+  }
+  #tab-invest th, #tab-invest td,
+  #tab-fx     th, #tab-fx     td{
+    padding: 8px 6px !important;
+    white-space: nowrap !important;
+    text-align: center; vertical-align: middle;
+  }
+
+  /* STOCKS – proporcje, mieści się bez overlaya na przyciskach */
+  #tab-invest th:nth-child(1), #tab-invest td:nth-child(1){ width:18% !important; text-align:left !important; }
+  #tab-invest th:nth-child(2), #tab-invest td:nth-child(2){ width:10% !important; }
+  #tab-invest th:nth-child(3), #tab-invest td:nth-child(3){ width:14% !important; }
+  #tab-invest th:nth-child(4), #tab-invest td:nth-child(4){ width:14% !important; }
+  #tab-invest th:nth-child(5), #tab-invest td:nth-child(5){ width:14% !important; }
+  #tab-invest th:nth-child(6), #tab-invest td:nth-child(6){ width:14% !important; padding-right:10px !important; }
+  #tab-invest th:nth-child(7), #tab-invest td:nth-child(7){ width:16% !important; } /* Qty + Sell */
+  #tab-invest td.space{
+    display:flex !important; gap:6px !important; justify-content:flex-end !important; align-items:center !important;
+  }
+
+  /* FX – proporcje + szersze „Actions” */
+  #tab-fx th:nth-child(1), #tab-fx td:nth-child(1){ width:22% !important; text-align:left !important; }
+  #tab-fx th:nth-child(2), #tab-fx td:nth-child(2){ width:12% !important; }  /* Amount */
+  #tab-fx th:nth-child(3), #tab-fx td:nth-child(3){ width:14% !important; }  /* Avg */
+  #tab-fx th:nth-child(4), #tab-fx td:nth-child(4){ width:14% !important; }  /* Rate */
+  #tab-fx th:nth-child(5), #tab-fx td:nth-child(5){ width:16% !important; }  /* Value */
+  #tab-fx th:nth-child(6), #tab-fx td:nth-child(6){ width:12% !important; }  /* P/L */
+  #tab-fx th:nth-child(7), #tab-fx td:nth-child(7){ width:10% !important; }  /* Actions */
+  #tab-fx td.space{
+    display:flex !important; gap:6px !important; justify-content:flex-end !important; align-items:center !important;
+  }
+
+  /* węższe inputy ilości */
+  #tab-invest input[type="number"], #tab-fx input[type="number"]{
+    width:72px !important; min-width:72px !important;
+  }
+
+  /* Usuń spinnery na mobile globalnie */
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none !important; margin:0 !important; }
+  input[type=number]{ -moz-appearance:textfield !important; appearance:textfield !important; }
+}
+/* ===== MINI-JARS (MOBILE-ONLY, ≤640px) — 2 rzędy po 5, niski pasek ===== */
+@media (max-width: 640px){
+  #stickyMiniJars{
+    position: sticky !important;
+    top: var(--header-h, 56px) !important;  /* pod topbarem */
+    z-index: 150 !important;
+
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0,1fr)) !important; /* 5 na rząd */
+    column-gap: 6px !important;
+    row-gap: 4px !important;
+
+    padding: 4px 8px !important;
+    height: auto !important;       /* brak stałej wysokości */
+    margin: 0 !important;
+    background: rgba(7,11,22,.72) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,.06) !important;
+    box-sizing: border-box !important;
+  }
+
+  #stickyMiniJars .mini-jar{
+    min-width: 0 !important;
+    text-align: center !important;
+  }
+  #stickyMiniJars .mini-jar-label{
+    font-size: 11px !important;
+    line-height: 1.1 !important;
+    color: var(--muted) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  #stickyMiniJars .mini-jar-value{
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* ===== PORTFOLIO TABELKI (MOBILE-ONLY) — nic nie nachodzi, ewentualny h-scroll ===== */
+@media (max-width: 640px){
+  #tab-invest .tableWrap, #tab-fx .tableWrap{ overflow-x:auto !important; }
+  #tab-invest table,      #tab-fx table     { table-layout:fixed !important; min-width:560px; width:100%; }
+  #tab-invest td.space,   #tab-fx td.space  { display:flex !important; gap:6px !important; justify-content:flex-end !important; }
+  #tab-invest input[type=number], #tab-fx input[type=number]{ width:72px !important; min-width:72px !important; }
+}
+/* ===== MOBILE ONLY (≤640px): slim topbar + mini-jars 2×5 ===== */
+@media (max-width: 640px){
+  :root{ --header-h: 48px !important; }               /* niższy top bar */
+
+  /* TOP BAR – niski i wąskie kapsułki */
+  .topbar{
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 200 !important;
+    height: var(--header-h) !important;
+    padding: 6px 10px !important;
+    gap: 6px !important;
+  }
+  .topbar h1, #t-appTitle{ font-size: 16px !important; }
+  .topbar .tab, .topbar button, .topbar select{
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+  }
+  /* odchudź badge/logowanie */
+  .authwrap .tab, .authwrap button{ padding: 6px 8px !important; font-size: 12px !important; }
+  /* usuń ewentualne globalne kompensacje */
+  body{ padding-top: 0 !important; }
+
+  /* MINI-JARS – 2 wiersze po 5, niski pasek */
+  #stickyMiniJars{
+    position: sticky !important;
+    top: var(--header-h) !important;
+    z-index: 150 !important;
+
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0,1fr)) !important; /* 5 na rząd */
+    column-gap: 6px !important;
+    row-gap: 2px !important;
+
+    padding: 4px 8px !important;
+    height: auto !important;
+    background: rgba(7,11,22,.72) !important;
+    border-bottom: 1px solid rgba(255,255,255,.06) !important;
+  }
+
+  #stickyMiniJars .mini-jar{
+    min-width: 0 !important;
+    text-align: center !important;
+  }
+  #stickyMiniJars .mini-jar-label{
+    font-size: 10px !important;
+    line-height: 1.05 !important;
+    color: var(--muted) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  #stickyMiniJars .mini-jar-value{
+    font-size: 12.5px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+}
+/* ==== HARD RESET: fixed topbar + fixed mini-jars (działa wszędzie) ==== */
+:root{
+  --H-TOP: 56px;          /* desktop wysokość topbaru */
+  --H-JARS-DESK: 52px;    /* desktop: 1 rząd mini-jars */
+  --H-JARS-MOB: 86px;     /* mobile: 2 rzędy mini-jars (5+5) */
+}
+
+body{
+  padding-top: calc(var(--H-TOP) + var(--H-JARS-DESK)) !important;
+}
+
+/* TOPBAR – zawsze fixed, pełna szerokość */
+body .topbar{
+  position: fixed !important;
+  top: 0; left: 0; right: 0;
+  height: var(--H-TOP) !important;
+  z-index: 1000 !important;
+}
+
+/* MINI-JARS – zawsze fixed pod topbarem */
+body #stickyMiniJars{
+  position: fixed !important;
+  top: var(--H-TOP) !important;
+  left: 0; right: 0;
+  height: var(--H-JARS-DESK) !important;   /* desktop default */
+  z-index: 900 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 6px 12px !important;
+}
+
+/* Nagłówki tabel pod dwoma paskami */
+.tableWrap thead th{
+  position: sticky !important;
+  top: calc(var(--H-TOP) + var(--H-JARS-DESK)) !important;
+  z-index: 2 !important;
+}
+
+/* ===== MOBILE (≤640px): cieńszy topbar + mini-jars 2×5 ===== */
+@media (max-width: 640px){
+  :root{ --H-TOP: 48px; }  /* cieńszy pasek na telu */
+
+  body{
+    padding-top: calc(var(--H-TOP) + var(--H-JARS-MOB)) !important;
+  }
+
+  /* topbar zostaje fixed, tylko niższy */
+  body .topbar{
+    height: var(--H-TOP) !important;
+    padding: 6px 10px !important;
+    gap: 6px !important;
+  }
+
+  /* mini-jars: 5 kolumn → automatycznie 2 rzędy */
+  body #stickyMiniJars{
+    height: var(--H-JARS-MOB) !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    column-gap: 6px !important;
+    row-gap: 2px !important;
+    align-content: center !important;
+    padding: 4px 8px !important;
+  }
+  #stickyMiniJars .mini-jar{
+    min-width: 0 !important; text-align: center !important;
+  }
+  #stickyMiniJars .mini-jar-label{
+    font-size: 10px !important; line-height: 1.05 !important;
+    white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
+  }
+  #stickyMiniJars .mini-jar-value{
+    font-size: 12.5px !important; font-weight: 800 !important; white-space: nowrap !important;
+  }
+
+  .tableWrap thead th{
+    top: calc(var(--H-TOP) + var(--H-JARS-MOB)) !important;
+  }
+}
+ /* ==== MOBILE ONLY (≤640px): schowaj strzałki w mini-jars ==== */
+@media (max-width: 640px){
+  /* wszystkie warianty elementów strzałek w pasku */
+  #stickyMiniJars [class*="arrow-"],
+  .mini-strip     [class*="arrow-"],
+  #stickyMiniJars i.arrow-up,
+  #stickyMiniJars i.arrow-down,
+  .mini-strip  i.arrow-up,
+  .mini-strip  i.arrow-down,
+  #stickyMiniJars svg.arrow-up,
+  #stickyMiniJars svg.arrow-down,
+  .mini-strip  svg.arrow-up,
+  .mini-strip  svg.arrow-down{
+    display: none !important;
+    margin: 0 !important;
+  }
+
+  /* gdyby strzałki były dodawane jako ::before na wartości */
+  #stickyMiniJars .mini-jar-value::before,
+  .mini-strip .mini-pill b::before{
+    content: "" !important;
+    display: none !important;
+  }
+}
+/* ==== MOBILE ONLY (≤640px) — usuń strzałki w pasku mini-jars ==== */
+@media (max-width: 640px){
+  #stickyMiniJars .arrow-up,
+  #stickyMiniJars .arrow-down,
+  #stickyMiniJars .arrow-flat,
+  .mini-strip .arrow-up,
+  .mini-strip .arrow-down,
+  .mini-strip .arrow-flat {
+    display: none !important;     /* zabija ikonki <i> lub <svg> */
+  }
+
+  /* gdyby były wstawiane jako pseudo-elementy */
+  #stickyMiniJars .mini-jar-value::before,
+  #stickyMiniJars .mini-jar-value::after,
+  .mini-strip .mini-pill b::before,
+  .mini-strip .mini-pill b::after {
+    content: none !important;
+    display: none !important;
+  }
+}
+/* ==== 1) HAMBURGER – większy target i ikona ==== */
+.mfk-nav-toggle{
+  width: 44px !important;
+  height: 44px !important;
+  padding: 8px !important;
+  border-radius: 12px !important;
+}
+
+/* jeśli to <svg> lub <i> w środku */
+.mfk-nav-toggle svg,
+.mfk-nav-toggle i,
+.mfk-nav-toggle .icon{
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 24px !important;
+}
+
+/* jeśli hamburger jest z <span class="bar"> */
+.mfk-nav-toggle .bar{
+  display:block;
+  width: 24px !important;
+  height: 3px !important;
+  border-radius: 2px;
+  margin: 4px 0 !important;
+}
+
+/* ==== 2) MENU NA PIERWSZYM PLANIE (ponad topbar + mini-jars) ==== */
+/* Drawer/backdrop */
+.mfk-drawer,
+.mfk-backdrop{
+  position: fixed !important;
+  z-index: 5000 !important;          /* > topbar (1000) i mini-jars (900) */
+}
+
+/* Gdy używasz osobnego kontenera np. #mfkMobileDrawer */
+#mfkMobileDrawer{
+  position: fixed !important;
+  inset: 0 auto 0 0 !important;      /* lewy off-canvas */
+  z-index: 5000 !important;
+}
+
+/* Jeśli masz rozwijane menu (dropdown) pod hamburgerem */
+.mfk-mobile-menu,                      /* podmień, jeśli masz inny selektor */
+#mfkDropMenu{
+  position: fixed !important;
+  top: var(--H-TOP, 56px) !important;  /* tuż pod topbarem */
+  left: 8px !important;
+  right: 8px !important;
+  z-index: 5001 !important;
+}
+
+/* Na wszelki wypadek: nic nie ucina menu */
+.topbar, .role-switch{ overflow: visible !important; }
+/* ==== Hamburger pełny placeholder ==== */
+.mfk-nav-toggle {
+  width: 44px;               /* kwadratowy przycisk */
+  height: 44px;
+  display: flex;             /* centrowanie kresek */
+  flex-direction: column;    /* układ pionowy */
+  justify-content: center;   /* równe odstępy góra/dół */
+  align-items: center;
+  gap: 5px;                  /* odstęp między kreskami */
+  border-radius: 12px;
+}
+
+.mfk-nav-toggle .bar {
+  width: 70%;                /* długość kreski względem przycisku */
+  height: 3px;               /* grubość */
+  background: #fff;          /* kolor (zmień jeśli chcesz) */
+  border-radius: 2px;
+}
+/* === FIX: input + Sell w jednej linii (mobile & desktop) === */
+section#tab-invest #portfolioBody td.space,
+section#tab-fx      #fxBody        td.space{
+  display: flex !important;
+  flex-direction: row !important;     /* ⬅️ jedna linia */
+  align-items: center !important;
+  justify-content: flex-end !important; /* przycisk po prawej */
+  gap: 8px !important;
+  white-space: nowrap !important;
+}
+
+/* kompaktowe inputy, żeby wszystko się mieściło obok siebie */
+section#tab-invest #portfolioBody td.space input[type="number"],
+section#tab-fx      #fxBody        td.space input[type="number"],
+section#tab-invest #portfolioBody td.space .input,
+section#tab-fx      #fxBody        td.space .input{
+  width: 72px !important;
+  min-width: 72px !important;
+  text-align: center;
+}
+
+/* przycisk nie zawija tekstu */
+section#tab-invest #portfolioBody td.space .btn,
+section#tab-fx      #fxBody        td.space .btn{
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+
+/* na bardzo wąskich telefonach: jeszcze ciaśniej */
+@media (max-width: 360px){
+  section#tab-invest #portfolioBody td.space,
+  section#tab-fx      #fxBody        td.space{
+    gap: 6px !important;
+  }
+  section#tab-invest #portfolioBody td.space input[type="number"],
+  section#tab-fx      #fxBody        td.space input[type="number"]{
+    width: 64px !important;
+    min-width: 64px !important;
+  }
+}
+/* Drawer musi być ponad tłem */
+#mfkMobileDrawer,
+.mfk-drawer{ z-index: 5001 !important; }
+
+#mfkBackdrop,
+.mfk-backdrop{ z-index: 5000 !important; }  /* tło pod spodem */
+/* Kliknięcia mają działać w menu; backdrop tylko zamyka */
+.mfk-drawer, .mfk-drawer * { pointer-events: auto !important; }
+/* === MOBILE HEADER FIT (≤640px) — taller bar === */
+@media (max-width: 640px){
+  :root{ --H-TOP: 68px !important; }   /* wyższy pasek + auto-kompensacja paddingu body */
+  .topbar{
+    height: var(--H-TOP) !important;
+    padding: 10px 12px !important;
+  }
+}
+/* === Basket tickers/pairs: żadnego nakładania się waluty na telefonie === */
+@media (max-width: 640px){
+  /* 1) Kapsułka z tickerem/parą – pozwól na dwa wiersze */
+  .b-ticker,
+  #fx-basket .b-ticker,
+  #stock-basket .b-ticker,
+  #fx-basket .pair-badge,
+  #stock-basket .pair-badge {
+    position: relative;
+    display: inline-flex !important;
+    flex-direction: column;              /* ticker w 1. wierszu, waluta w 2. */
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 10px !important;
+    min-width: 92px;                     /* żeby kapsułka się nie ściskała */
+    line-height: 1.05;
+    white-space: normal !important;      /* pozwól łamać wiersz */
+  }
+
+  /* 2a) Jeśli „USD” jest pseudo-elementem (np. ::after) – przenieś go POD spód */
+  .b-ticker::after,
+  #fx-basket .pair-badge::after,
+  #stock-basket .pair-badge::after {
+    position: static !important;         /* nie absolute */
+    transform: none !important;
+    display: block !important;
+    margin: 0 !important;
+    opacity: .9;
+    font-size: 12px;                     /* mniejsza waluta */
+  }
+
+  /* 2b) Jeśli masz osobny element waluty (np. <span class="cur">USD</span>) */
+  .b-ticker .cur,
+  #fx-basket .pair-badge .cur {
+    display: block !important;
+    font-size: 12px !important;
+    opacity: .9;
+    margin: 0 !important;
+  }
+
+  /* 3) Gdy wcześniej dodaliśmy odstęp na prawo pod pseudo-element – wyłącz go */
+  .b-ticker{ padding-right: 10px !important; }
+}
+/* === FIX: Basket ticker + input quantity === */
+
+/* 1) Usuń kreseczkę pod tickerem */
+#stock-basket .b-ticker::after,
+#fx-basket   .b-ticker::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* 2) Zwęż input ilości w koszyku (Stocks + FX) */
+#stock-basket .b-qty .input,
+#fx-basket   .b-qty .input {
+  width: 64px !important;   /* było 80px+ → teraz ciaśniej */
+  min-width: 64px !important;
+  text-align: center;
+}
+/* Usunięcie strzałek w input type=number (Chrome, Edge, Safari, Opera) */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Usunięcie strzałek w Firefox */
+input[type=number] {
+  appearance: textfield;       /* standard */
+  -moz-appearance: textfield;  /* Firefox */
+}
+#portfolioBody input::placeholder,
+#fxBody input::placeholder {
+  color: transparent !important;
+  opacity: 0 !important;
+}
+/* MOBILE: awaryjne ukrycie pseudo-ikonek ::before/::after */
+@media (max-width: 640px){
+  [style*="--_no-arrows"]::before,
+  [style*="--_no-arrows"]::after{
+    content: none !important;
+    display: none !important;
+  }
+
+  /* oraz wszelkie elementy z klasami arrow-* (gdyby JS ich nie zdążył usunąć) */
+  [class*="arrow-"]{
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+/* MOBILE: koszyki – nic się nie nachodzi, lewy "price" znika (mamy kwotę po prawej) */
+@media (max-width:640px){
+  #stock-basket .basket-item, #fx-basket .basket-item{
+    display:grid !important;
+    grid-template-columns: auto 1fr auto auto; /* badge | (elastyczna przerwa) | qty | kwota */
+    align-items:center; gap:8px;
+  }
+  #stock-basket .basket-item > *, #fx-basket .basket-item > *{ min-width:0; }
+
+  /* jeśli pojawia się dodatkowa cena/lewy price – ukryj go na telu */
+  #stock-basket .basket-item .b-price:first-child,
+  #fx-basket   .basket-item .b-price:first-child{
+    display:none !important;
+  }
+
+  /* badge bez pozycji absolutnej */
+  #stock-basket .b-ticker, #fx-basket .b-ticker{
+    position:static !important; white-space:nowrap;
+  }
+}
+/* Mini-jars: ukryj strzałki TYLKO na mobile */
+@media (max-width: 768px) {
+  .mini-jars .delta,
+  .mini-jars .arrow,
+  .mini-jars .trend,
+  .wow-jars .delta,
+  .wow-jars .arrow,
+  .kpi .delta,
+  .kpi .arrow {
+    display: none !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+/* Dwie “spacje” między etykietą a liczbą w podsumowaniach koszyka */
+.basket-summary .metric{
+  display: inline-flex;
+  align-items: center;
+  gap: 2ch; /* ~szerokość dwóch znaków */
+}
+
+.basket-summary .metric .val{
+  /* gdyby gap był nadpisany gdzieś indziej, to i tak dołóż ten margines */
+  margin-left: 0 !important;
+}
+/* --- GLOBAL FIX (bezpieczne dla całej apki) --- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: hidden; }
+
+/* --- Profits: niech nic nie wychodzi poza kartę --- */
+#tab-profits .card { overflow: hidden; }
+#tab-profits .card > * { max-width: 100%; }
+
+/* Kafelek/sekcja w historii – 100% szerokości bez wycieku przez border/padding */
+#tab-profits .history-card,
+#tab-profits .fx-sale,
+#tab-profits .st-sale,
+#tab-profits .tableWrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Jeżeli masz w historii wiersze jako "label : value" */
+#tab-profits .row-line { 
+  display: grid;
+  grid-template-columns: 120px 1fr; 
+  gap: 6px;
+}
+@media (max-width: 640px) {
+  #tab-profits .row-line { grid-template-columns: 1fr; }
+}
+
+/* Dodatkowo: długie słowa/liczby niech się łamią, a nie pchają layoutu */
+#tab-profits, #tab-profits * {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+/* PROFITS – mobile-only, bez zmian na desktopie */
+@media (max-width: 640px) {
+
+  /* 1) kontener: nie przewijaj w poziomie */
+  #tab-profits .tableWrap {
+    overflow-x: visible !important;
+  }
+
+  /* 2) zamieniamy tabelę na “karty” */
+  #tab-profits table {
+    display: block;
+    width: 100%;
+  }
+  #tab-profits thead {
+    position: absolute;
+    left: -9999px; /* ukryj nagłówek */
+    height: 0;
+    overflow: hidden;
+  }
+  #tab-profits tbody {
+    display: block;
+    width: 100%;
+  }
+  #tab-profits tbody tr {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    background: var(--card-bg, rgba(255,255,255,.03));
+  }
+  #tab-profits tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    width: 100%;
+    /* jeśli gdzieś są sztywne szerokości, zerujemy */
+    max-width: 100%;
+    white-space: normal;
+  }
+  /* 3) pokaż etykiety kolumn z atrybutu data-label
+        (JS już je dopisuje w Twoim kodzie) */
+  #tab-profits tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    opacity: .7;
+    margin-right: 12px;
+  }
+
+  /* 4) trochę ciaśniej nagłówki sekcji KPI, żeby było czytelnie */
+  #tab-profits .kpi { padding: 10px; }
+  #tab-profits .kpi > .muted { font-size: .9rem; }
+}
+/* PROFITS (mobile): zero poziomego scrolla i nic nie wystaje */
+@media (max-width: 640px){
+  #tab-profits .card,
+  #tab-profits .tableWrap{ 
+    overflow-x: hidden !important; 
+    max-width: 100% !important;
+  }
+  #tab-profits .tableWrap table{
+    min-width: 0 !important;     /* zabija wymuszoną szerokość tabeli */
+    width: 100% !important;
+    table-layout: fixed !important;
+    display: block;              /* pewniak na brak paska */
+  }
+  #tab-profits .tableWrap *{
+    max-width: 100% !important;  /* żaden potomek nie rozpycha */
+    white-space: normal !important;
+  }
+}
+/* === MOBILE LABELS (Sales History) — FINAL === */
+@media (max-width: 820px) {
+  /* 1) Zrób miejsce na etykietę po prawej i wyłącz chowanie */
+  #tradeHistoryBody td,
+  #fxHistoryBody td {
+    position: relative !important;
+    padding-right: 128px !important;   /* miejsce na napis */
+    overflow: visible !important;
+  }
+
+  /* 2) Sama etykieta – przyklejona do prawej krawędzi */
+  #tradeHistoryBody td::after,
+  #fxHistoryBody td::after {
+    position: absolute !important;
+    right: 16px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    min-width: 88px !important;        /* stała szerokość = równa kolumna */
+    text-align: right !important;
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    color: #9ca3af !important;
+    white-space: nowrap !important;
+    content: "" !important;
+    pointer-events: none !important;
+    z-index: 1;
+  }
+
+  /* 3) Nazwy dla Stocks */
+  #tradeHistoryBody td:nth-child(1)::after { content: "Date" !important; }
+  #tradeHistoryBody td:nth-child(2)::after { content: "Ticker" !important; }
+  #tradeHistoryBody td:nth-child(3)::after { content: "Qty" !important; }
+  #tradeHistoryBody td:nth-child(4)::after { content: "Price" !important; }
+  #tradeHistoryBody td:nth-child(5)::after { content: "Avg. cost" !important; }
+  #tradeHistoryBody td:nth-child(6)::after { content: "P/L" !important; }
+
+  /* 4) Nazwy dla FX */
+  #fxHistoryBody td:nth-child(1)::after { content: "Date" !important; }
+  #fxHistoryBody td:nth-child(2)::after { content: "Pair" !important; }
+  #fxHistoryBody td:nth-child(3)::after { content: "Qty" !important; }
+  #fxHistoryBody td:nth-child(4)::after { content: "Rate" !important; }
+  #fxHistoryBody td:nth-child(5)::after { content: "Avg. rate" !important; }
+  #fxHistoryBody td:nth-child(6)::after { content: "P/L" !important; }
+}
+
+
+
+
+
 
