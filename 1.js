@@ -45,25 +45,82 @@ matchMedia('(max-width:640px)').addEventListener('change', applyLabelizeIfMobile
 
 
 // ====== UTIL ======
+
 const DB_KEY = "kidmoney_multi_fx_live_i18n_v1";
 const AUTH_KEY = window.AUTH_KEY || 'mfk-auth-v1';// { role: 'guest'|'parent'|'child', childId?: string }
 const LANG_KEY = "pf_lang";
+// ===== Display currency per language (EN->USD, PL->PLN) =====
+const CURRENCY_KEY = "pf_display_currency";
+const DISPLAY_CURRENCY_BY_LANG = { en: "USD", pl: "PLN" };
+
+// (u Ciebie getLang/setLang już istnieją niżej przy tData – użyjmy tych)
+function currentLocale() { return (getLang() === 'pl') ? 'pl-PL' : 'en-US'; }
+
+function getDisplayCurrency() {
+  return localStorage.getItem(CURRENCY_KEY) || DISPLAY_CURRENCY_BY_LANG[getLang()] || "USD";
+}
+function setDisplayCurrency(cur) {
+  localStorage.setItem(CURRENCY_KEY, cur);
+}
+// === QUOTE waluty dla UI FX (PL -> PLN, EN -> USD) ===
+function fxQuote(){
+  // UI: gdy PL -> pokazuj pary A/PLN; gdy EN -> A/USD
+  return (getDisplayCurrency() === 'PLN') ? 'PLN' : 'USD';
+}
+
+// Konwersja: wartości aplikacji są w USD → na walutę wyświetlaną
+function convertFromUSD(usdAmount, toCur = getDisplayCurrency()) {
+  const v = Number(usdAmount || 0);
+  if (toCur === "USD") return v;
+  if (toCur === "PLN") {
+    const plnPerUsd = baseFx?.USD || 4.0; // PLN za 1 USD
+    return v * plnPerUsd;
+  }
+  return v;
+}
+
+// Odwrotna konwersja: kwoty w PLN → na USD (do logiki aplikacji)
+function convertToUSD(amount, fromCur = getDisplayCurrency()) {
+  const v = Number(amount || 0);
+  if (fromCur === "USD") return v;
+  if (fromCur === "PLN") {
+    const plnPerUsd = baseFx?.USD || 4.0; // PLN za 1 USD
+    return v / plnPerUsd;
+  }
+  return v;
+}
+
+// Formatter — zawsze przyjmuje USD i pokazuje w walucie wybranej przez użytkownika
+function fmtMoneyFromUSD(usdAmount) {
+  const cur = getDisplayCurrency();
+  const amt = convertFromUSD(usdAmount, cur);
+  return new Intl.NumberFormat(currentLocale(), {
+    style: "currency",
+    currency: cur,
+    maximumFractionDigits: 2
+  }).format(amt);
+}
+// Formatter bez przeliczania FX — liczba jest traktowana jako kwota "już w wybranej walucie".
+function fmtMoneyNoFx(amount) {
+  const cur = getDisplayCurrency();
+  const v = Number(amount || 0);
+  return new Intl.NumberFormat(currentLocale(), {
+    style: "currency",
+    currency: cur,
+    maximumFractionDigits: 2
+  }).format(v);
+}
 
 
 // Legacy formatter – zostaje dla zgodności
 // ===== Walutowe formatery (spójne: wszystko pokazujemy w USD) =====
-const USD = v =>
-  new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    .format(Number(v || 0)) + " USD";
+const USD = v => fmtMoneyFromUSD(Number(v || 0));   // zachowujemy starą nazwę – teraz dynamiczna
+const PLN = v => fmtMoneyFromUSD(Number(v || 0));   // alias – cały kod dalej działa bez zmian
 
-// Zachowujemy starą nazwę dla kompatybilności – *PLN* aliasuje do USD
-const PLN = v => USD(v);
-
-// FX: 4 miejsca, bez sufiksu
+// FX: 4 miejsca, locale wg języka
 const FX = v =>
-  new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+  new Intl.NumberFormat(currentLocale(), { minimumFractionDigits: 4, maximumFractionDigits: 4 })
     .format(Number(v || 0));
-
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const nowISO = () => { const d = new Date(); return d.toISOString().slice(0, 10) + "T" + d.toTimeString().slice(0, 8); };
@@ -206,7 +263,8 @@ const tData = {
   pl: {
     sim: "Symulacja (offline)", live: "Live (backend)", apiNot: "API: brak połączenia", apiConn: "API: łączenie…",
     fxOk: "FX ok", fxFail: "FX błąd", stOk: "Akcje ok", stFail: "Akcje błąd",
-    addedPocket: "Dodano kieszonkowe 10 USD", moved55: "Przeniesiono 5 USD Earnings → Oszczędności",
+  addedPocket: amt => `Dodano kieszonkowe ${amt}`,
+moved55: amt => `Przeniesiono ${amt} Earnings → Oszczędności`,
     needFunds: amt => `Za mało środków w Oszczędnościach (potrzeba ${amt})`,
     bought: (q, s) => `Kupiono ${q} ${s}`, sold: (q, s, p) => `Sprzedano ${q} ${s} (P/L: ${p})`,
     sell: "Sprzedaj", pinBad: "Zły PIN.", pinLocked: "PIN zablokowany, spróbuj później.",
@@ -218,7 +276,9 @@ const tData = {
   en: {
     sim: "Simulation (offline)", live: "Live (backend)", apiNot: "API: not connected", apiConn: "API: connecting…",
     fxOk: "FX ok", fxFail: "FX failed", stOk: "Stocks ok", stFail: "Stocks failed",
-    addedPocket: "Added allowance 10 USD", moved55: "Moved 5 USD Earnings → Savings",
+    addedPocket: amt => `Added allowance ${amt}`,
+moved55: amt => `Moved ${amt} Earnings → Savings`,
+
     needFunds: amt => `Not enough funds in Savings (need ${amt})`,
     bought: (q, s) => `Bought ${q} ${s}`, sold: (q, s, p) => `Sold ${q} ${s} (P/L: ${p})`,
     sell: "Sell", pinBad: "Wrong PIN.", pinLocked: "PIN locked, try later.",
@@ -249,14 +309,19 @@ function TT() { return tData[getLang()] || tData.en; }
 (function ensureLangSelect() {
   function wire(sel) {
     sel.value = getLang();
-    sel.addEventListener('change', () => {
-      setLang(sel.value);
-      updateLiveUI();
-      refreshStaticI18n();
-      if (typeof refreshTutorialTexts === 'function') refreshTutorialTexts();
-      if (typeof refreshAuthI18n === 'function') refreshAuthI18n();
-      if (typeof renderAll === 'function') renderAll();
-    });
+sel.addEventListener('change', () => {
+  setLang(sel.value);
+  // ZAWSZE przełącz walutę pod język (PL→PLN, EN→USD)
+  setDisplayCurrency(DISPLAY_CURRENCY_BY_LANG[sel.value] || "USD");
+
+  updateLiveUI();
+  refreshStaticI18n();
+  if (typeof refreshTutorialTexts === 'function') refreshTutorialTexts();
+  if (typeof refreshAuthI18n === 'function') refreshAuthI18n();
+  if (typeof renderAll === 'function') renderAll();
+});
+
+
   }
   let sel = document.getElementById('langSelect');
   if (sel) { wire(sel); return; }
@@ -264,11 +329,10 @@ function TT() { return tData[getLang()] || tData.en; }
   const wrap = document.createElement('span');
   wrap.style.marginLeft = '8px';
   wrap.innerHTML = `
-    <select id="langSelect" title="Language">
-      <option value="pl">PL</option>
-      <option value="en">EN</option>
-      <option value="es">ES</option>
-    </select>`;
+      <select id="langSelect" title="Language">
+    <option value="pl">PL</option>
+    <option value="en">EN</option>
+  </select>`;
   host.appendChild(wrap);
   wire(wrap.querySelector('#langSelect'));
 })();
@@ -350,7 +414,7 @@ function renderBasket(which) {
     empty.textContent = 'No items in basket.';
     listEl.appendChild(empty);
     if (qtyEl) qtyEl.textContent = '0';
-    if (amtEl) amtEl.textContent = '0.00 USD';
+   if (amtEl) amtEl.textContent = USD(0);
     return;
   }
 
@@ -742,11 +806,12 @@ function renderMiniJars(){
   const cash = computeAvailableCashFromJars(j);
 
   // podstawowe słoiki
-  if (miniEls.cash)   miniEls.cash.textContent   = USD(cash);
-  if (miniEls.save)   miniEls.save.textContent   = USD(j.save);
-  if (miniEls.spend)  miniEls.spend.textContent  = USD(j.spend);
-  if (miniEls.give)   miniEls.give.textContent   = USD(j.give);
-  if (miniEls.invest) miniEls.invest.textContent = USD(j.invest);
+if (miniEls.cash)   miniEls.cash.textContent   = fmtMoneyFromUSD(cash);
+if (miniEls.save)   miniEls.save.textContent   = fmtMoneyFromUSD(j.save);
+if (miniEls.spend)  miniEls.spend.textContent  = fmtMoneyFromUSD(j.spend);
+if (miniEls.give)   miniEls.give.textContent   = fmtMoneyFromUSD(j.give);
+if (miniEls.invest) miniEls.invest.textContent = fmtMoneyFromUSD(j.invest);
+
 
   // wartości portfeli
   const valStocks = portfolioValueStocks(ch);
@@ -1153,32 +1218,33 @@ function renderGlobalTrends(mode) {
 
   const seen = new Set();
 
-  if (mode === 'fx') {
-    if (sub) sub.textContent = 'World currency trends';
-    const bases = ISO.filter(c => c !== "USD").slice(0, 8);
-    if (!app.trends) app.trends = { stocks: {}, fx: {} };
+ if (mode === 'fx') {
+  if (sub) sub.textContent = 'World currency trends';
+  const quote = fxQuote(); // USD lub PLN
+  const bases = ISO.filter(c => c !== quote).slice(0, 8);
+  if (!app.trends) app.trends = { stocks: {}, fx: {} };
 
-    bases.forEach(base => {
-      const pair = `${base}/USD`;
-      const rateNow = Number(fxRate(pair) || 0);
-      if (!Number.isFinite(rateNow) || rateNow <= 0) return;
+  bases.forEach(base => {
+    const pair = `${base}/${quote}`;
+    const rateNow = Number(fxRate(pair) || 0);
+    if (!Number.isFinite(rateNow) || rateNow <= 0) return;
 
-      // stabilny kierunek
-      const dir = gtStableFxDir(pair, rateNow);
+    // stabilny kierunek
+    const dir = gtStableFxDir(pair, rateNow);
 
-      // stabilny % zmiany
-      const chgPct = fxChangePctStable(pair, rateNow);
+    // stabilny % zmiany
+    const chgPct = fxChangePctStable(pair, rateNow);
 
-      app.trends.fx[pair] = rateNow;
-      const el = getTile(pair);
-      seen.add(pair);
+    app.trends.fx[pair] = rateNow;
+    const el = getTile(pair);
+    seen.add(pair);
 
-      el.querySelector('.code').textContent = base;
-      el.querySelector('.name').textContent = CURRENCY_NAMES[base] || base;
-      el.querySelector('.px').innerHTML     = `${FX(rateNow)} ${arrowHtml(dir)}`;
-      el.querySelector('.q').textContent    = 'vs USD';
-      el.querySelector('.chg').textContent  = fmtPctWithFloor(chgPct, dir);
-    });
+    el.querySelector('.code').textContent = base;
+    el.querySelector('.name').textContent = CURRENCY_NAMES[base] || base;
+    el.querySelector('.px').innerHTML     = `${FX(rateNow)} ${arrowHtml(dir)}`;
+    el.querySelector('.q').textContent    = `vs ${quote}`;
+    el.querySelector('.chg').textContent  = fmtPctWithFloor(chgPct, dir);
+  });
 
   } else {
     if (sub) sub.textContent = 'World stock trends';
@@ -1273,17 +1339,21 @@ function renderAvailableCash() {
   const ch = activeChild();
   if (!ch || !availableCashEl) return;
   const cash = Number(ch.jars?.save || 0) + Number(ch.jars?.spend || 0) + Number(ch.jars?.give || 0);
-availableCashEl.textContent = USD(cash);
+availableCashEl.textContent = fmtMoneyFromUSD(cash);
 }
 
 function renderJars() {
   const ch = activeChild(); if (!ch) return;
-  saveAmt && (saveAmt.textContent = PLN(ch.jars.save));
-  spendAmt && (spendAmt.textContent = PLN(ch.jars.spend));
-  giveAmt && (giveAmt.textContent = PLN(ch.jars.give));
-  investAmt && (investAmt.textContent = PLN(ch.jars.invest));
-  const net = ch.jars.save + ch.jars.spend + ch.jars.give + portfolioValueStocks(ch) + portfolioValueFx(ch);
-  netWorthEl && (netWorthEl.textContent = PLN(net));
+  // Słoiki = STAŁE (bez przeliczania FX)
+saveAmt   && (saveAmt.textContent   = fmtMoneyFromUSD(ch.jars.save));
+spendAmt  && (spendAmt.textContent  = fmtMoneyFromUSD(ch.jars.spend));
+giveAmt   && (giveAmt.textContent   = fmtMoneyFromUSD(ch.jars.give));
+investAmt && (investAmt.textContent = fmtMoneyFromUSD(ch.jars.invest));
+
+// Net worth nadal może być mark-to-market (PLN/ USD wg ustawień)
+const net = ch.jars.save + ch.jars.spend + ch.jars.give + portfolioValueStocks(ch) + portfolioValueFx(ch);
+netWorthEl && (netWorthEl.textContent = USD(net));
+
   setJarFill(saveAmt, ch.jars.save);
   setJarFill(spendAmt, ch.jars.spend);
   setJarFill(giveAmt, ch.jars.give);
@@ -1486,13 +1556,17 @@ function renderFxList(filter = "") {
   fxList.innerHTML = "";
   const raw = (filter || "").trim();
   const isDefaultView = raw === "";
+  const quote = fxQuote(); // <-- USD lub PLN zależnie od języka
 
+  // generator jednego kafelka FX
   const toBtn = (pair) => {
-  const r = fxRate(pair);
-if (!Number.isFinite(r)) return null;
+    const r = fxRate(pair);
+    if (!Number.isFinite(r)) return null;
+
     const dir = fxTrendDir(pair, r);
     const [baseC, quoteC] = pair.split("/");
     const baseName = CURRENCY_NAMES[baseC] || baseC;
+
     const btn = document.createElement("button");
     btn.className = "fxpair" + (selectedFxPair === pair ? " active" : "");
     btn.innerHTML = `
@@ -1514,7 +1588,7 @@ if (!Number.isFinite(r)) return null;
     return btn;
   };
 
-  // Wpisano parę A/B
+  // 1) Użytkownik wpisał konkretną parę "A/B" -> pokaż tę parę
   if (raw.includes("/")) {
     const f = raw.toUpperCase();
     const [maybeA, maybeB] = f.split("/");
@@ -1532,25 +1606,26 @@ if (!Number.isFinite(r)) return null;
     return;
   }
 
-  // Wpisano kod/nazwę waluty – zawsze pokazuj .../USD
+  // 2) Wpisano kod/nazwę waluty -> pokaż A/QUOTE (QUOTE = USD lub PLN)
   if (raw) {
     const f = raw.toUpperCase();
-    const isUsdQuery = f === "USD" || (CURRENCY_NAMES.USD || "US Dollar").toUpperCase().includes(f);
-    let bases = [];
-    if (isUsdQuery) {
-      bases = ISO.filter(c => c !== "USD");
-    } else {
-      bases = ISO.filter(code => {
-        const name = (CURRENCY_NAMES[code] || code).toUpperCase();
-        return code.includes(f) || name.includes(f);
-      }).filter(c => c !== "USD");
-      if (bases.length === 0) {
-        updateFxMoreBtn(0, false);
-        save(app);
-        return;
-      }
+
+    // Wyszukanie po kodzie/nazwie waluty
+    let bases = ISO.filter(code => {
+      const name = (CURRENCY_NAMES[code] || code).toUpperCase();
+      return code.includes(f) || name.includes(f);
+    });
+
+    // Nie pokazuj par z identyczną walutą po obu stronach
+    bases = bases.filter(c => c !== quote);
+
+    if (bases.length === 0) {
+      updateFxMoreBtn(0, false);
+      save(app);
+      return;
     }
-    const pairs = bases.map(b => `${b}/USD`);
+
+    const pairs = bases.map(b => `${b}/${quote}`);
     const uniq = [...new Set(pairs)];
     uniq.slice(0, 500).forEach(p => { const el = toBtn(p); if (el) fxList.appendChild(el); });
     updateFxMoreBtn(uniq.length, false);
@@ -1558,9 +1633,9 @@ if (!Number.isFinite(r)) return null;
     return;
   }
 
-  // Widok domyślny: wszystkie .../USD
-  const allBaseVsUsd = ISO.filter(b => b !== "USD").map(b => `${b}/USD`);
-  const uniq = [...new Set(allBaseVsUsd)];
+  // 3) Widok domyślny -> wszystkie A/QUOTE (A != QUOTE)
+  const allBaseVsQuote = ISO.filter(b => b !== quote).map(b => `${b}/${quote}`);
+  const uniq = [...new Set(allBaseVsQuote)];
   const limit = fxExpanded ? 500 : 5;
   uniq.slice(0, limit).forEach(p => { const el = toBtn(p); if (el) fxList.appendChild(el); });
   updateFxMoreBtn(uniq.length, true);
@@ -2205,7 +2280,8 @@ document.getElementById('addAllowance')?.addEventListener('click', () => {
   const amt = 10;
   ch.jars.save += amt;
   addLedger("in", amt, "Allowance");
-  toast(TT().addedPocket || "Added allowance 10 USD");
+ toast( (TT().addedPocket && TT().addedPocket(fmtMoneyFromUSD(10))) || `Added allowance ${fmtMoneyFromUSD(10)}` );
+
   renderJars();
 });
 
@@ -2260,46 +2336,53 @@ document.getElementById('fxAddAllMajors')?.addEventListener('click', () => {
   renderFxList(document.getElementById('fxSearch')?.value || "");
 });
 
-/* === JARS – szybkie dodawanie === */
+/* === JARS – szybkie dodawanie (z konwersją do USD) === */
 document.querySelectorAll('[data-add]').forEach(btn => {
   btn.addEventListener('click', () => {
     const ch = activeChild(); if (!ch) return;
     const k = btn.getAttribute('data-add');
 
-    // input obok przycisku
     const input = btn.parentElement.querySelector('.jar-input');
-    let inc = Number(input?.value || 0);
+    let incDisp = Number(input?.value || 0);
 
-    if (!inc || inc <= 0) {
-      // fallback – gdy pusto
-      inc = (k === 'give' ? 2 : 5);
+    if (!incDisp || incDisp <= 0) {
+      incDisp = (k === 'give' ? 2 : 5); // fallback
     }
 
-    ch.jars[k] += inc;
+    const incUSD = convertToUSD(incDisp, getDisplayCurrency()); // ⬅️ najważniejsze
+    ch.jars[k] += incUSD;
+
     save(app);
     renderJars();
-
     if (input) input.value = '';
   });
 });
+
 
 /* === PARENT top-up / settings / clear === */
 document.getElementById('topupForm')?.addEventListener('submit', e => {
   e.preventDefault();
   if (!requireParent()) return;
-  const amt = Number(document.getElementById("topupAmount").value);
+
+  const amtDisp = Number(document.getElementById("topupAmount").value); // wpisane w walucie wyświetlania
   const note = document.getElementById("topupNote").value;
   const pin = document.getElementById("parentPin").value;
+
   try { verifyPin(app, pin); } catch (err) { return alert(err.message); }
-  if (!amt || amt <= 0) return alert("Enter amount > 0");
+  if (!amtDisp || amtDisp <= 0) return alert("Enter amount > 0");
+
+  const amtUSD = convertToUSD(amtDisp, getDisplayCurrency()); // ⬅️ konwersja
   const ch = activeChild(); if (!ch) return;
-  ch.jars.save += amt;
-  addLedger("in", amt, note || "Parent top-up");
+
+  ch.jars.save += amtUSD;
+  addLedger("in", amtUSD, note || "Parent top-up");
   save(app);
-  toast(TT().topupDone ? TT().topupDone(PLN(amt)) : `Topped up Savings by ${PLN(amt)}`);
+
+  toast(TT().topupDone ? TT().topupDone(fmtMoneyFromUSD(amtUSD)) : `Topped up Savings by ${fmtMoneyFromUSD(amtUSD)}`);
   e.target.reset();
   renderJars();
 });
+
 
 document.getElementById('settingsForm')?.addEventListener('submit', e => {
   e.preventDefault();
@@ -2361,7 +2444,8 @@ document.getElementById('addToStockBasket')?.addEventListener('click', () => {
   const s = ch?.stocks.find(x => x.t === selectedStock);
   const qty = Math.max(1, parseInt(document.getElementById('qty')?.value || '1', 10));
   const price = (lastStockUiPrice ?? s?.p ?? 0);
-  addToBasketStock(selectedStock, price, qty);
+ addToBasketStocks(selectedStock, s?.n, price, qty);
+
 });
 
 /* === NEW: Add to basket (FX) === */
@@ -2373,8 +2457,9 @@ document.getElementById('addToFxBasket')?.addEventListener('click', () => {
 });
 
 /* === NEW: Buy from baskets === */
-document.querySelector('[data-basket-buy="stocks"]')?.addEventListener('click', () => buyBasket('stocks'));
-document.querySelector('[data-basket-buy="fx"]')?.addEventListener('click', () => buyBasket('fx'));
+document.querySelector('[data-basket-buy="stocks"]')?.addEventListener('click', buyBasketStocks);
+document.querySelector('[data-basket-buy="fx"]')?.addEventListener('click', buyBasketFx);
+
 
 
 // ====== LIVE MODE (BEGIN)
@@ -2403,8 +2488,9 @@ liveFxTimer = setInterval(() => refreshFxFromApi(),    70_000);  // 70s
 function simulateFxOfflineTick() {
   if (app.liveMode) return;               // tylko offline
   const next = { ...baseFx, PLN: 1 };     // PLN zawsze 1
-  ISO.forEach(code => {
-    if (code === "PLN") return;
+ ISO.forEach(code => {
+  if (code === "PLN" || code === "USD") return; // ⬅️ nie zmieniamy USD/PLN w offline
+
     const v = Number(next[code]);
     if (!Number.isFinite(v) || v <= 0) return;
     const drift = 1 + (Math.random() - 0.5) * 0.005; // ±0.25%
