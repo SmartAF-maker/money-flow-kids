@@ -3377,7 +3377,7 @@ html, body { overflow-x: hidden; }
   #tradeHistoryBody tr td::after,
   #fxHistoryBody tr td::after {
     position: absolute;
-    right: 14px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     font-size: 12px;
