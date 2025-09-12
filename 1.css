@@ -3401,4 +3401,42 @@ html, body { overflow-x: hidden; }
   #fxHistoryBody td:nth-child(5)::after{ content:"Avg. rate" !important; }
   #fxHistoryBody td:nth-child(6)::after{ content:"P/L" !important; }
 }
+/* === SALES HISTORY – etykiety po prawej (div–kafelki) === */
+@media (max-width: 820px){
+  /* każdy wiersz w kafelku */
+  .st-sale > *,.fx-sale > *{
+    position: relative !important;
+    padding-right: 110px !important;
+    overflow: visible !important;
+  }
+  .st-sale > *::after,.fx-sale > *::after{
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    min-width: 90px !important;
+    text-align: right !important;
+    font-size: 12px !important;
+    color: #9ca3af !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+    content: "" !important;
+  }
+
+  /* STOCKS (kolejność linii w kafelku) */
+  .st-sale > *:nth-child(1)::after{ content:"Date" !important; }
+  .st-sale > *:nth-child(2)::after{ content:"Ticker" !important; }
+  .st-sale > *:nth-child(3)::after{ content:"Qty" !important; }
+  .st-sale > *:nth-child(4)::after{ content:"Price" !important; }
+  .st-sale > *:nth-child(5)::after{ content:"Avg. cost" !important; }
+  .st-sale > *:nth-child(6)::after{ content:"P/L" !important; }
+
+  /* FX (kolejność linii w kafelku) */
+  .fx-sale > *:nth-child(1)::after{ content:"Date" !important; }
+  .fx-sale > *:nth-child(2)::after{ content:"Pair" !important; }
+  .fx-sale > *:nth-child(3)::after{ content:"Qty" !important; }
+  .fx-sale > *:nth-child(4)::after{ content:"Rate" !important; }
+  .fx-sale > *:nth-child(5)::after{ content:"Avg. rate" !important; }
+  .fx-sale > *:nth-child(6)::after{ content:"P/L" !important; }
+}
 
