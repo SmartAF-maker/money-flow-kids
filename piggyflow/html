@@ -1077,55 +1077,6 @@
   new MutationObserver(stripArrows).observe(document.body, { childList: true, subtree: true, characterData: true });
 })();
 </script>
-<style id="mobile-history-labels">
-/* === MOBILE LABELS — działa bez JS, tylko na telefonie === */
-@media (max-width: 820px) {
-  /* niech nic tego nie przytnie */
-  .tableWrap { overflow: visible !important; }
-
-  /* zrób miejsce na etykietę po prawej stronie komórki */
-  #tradeHistoryBody td,
-  #fxHistoryBody td {
-    position: relative !important;
-    padding-right: 128px !important;
-    overflow: visible !important;
-  }
-
-  /* wygląd etykiety (przyklejona do prawej krawędzi wiersza) */
-  #tradeHistoryBody td::after,
-  #fxHistoryBody td::after {
-    position: absolute !important;
-    right: 16px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    min-width: 88px !important;   /* równa kolumna podpisów */
-    text-align: right !important;
-    font-size: 12px !important;
-    line-height: 1.1 !important;
-    color: #9ca3af !important;
-    white-space: nowrap !important;
-    content: "" !important;
-    pointer-events: none !important;
-    z-index: 3 !important;
-  }
-
-  /* Sales History (Stocks) */
-  #tradeHistoryBody td:nth-child(1)::after { content: "Date" !important; }
-  #tradeHistoryBody td:nth-child(2)::after { content: "Ticker" !important; }
-  #tradeHistoryBody td:nth-child(3)::after { content: "Qty" !important; }
-  #tradeHistoryBody td:nth-child(4)::after { content: "Price" !important; }
-  #tradeHistoryBody td:nth-child(5)::after { content: "Avg. cost" !important; }
-  #tradeHistoryBody td:nth-child(6)::after { content: "P/L" !important; }
-
-  /* Sales History (FX) */
-  #fxHistoryBody td:nth-child(1)::after { content: "Date" !important; }
-  #fxHistoryBody td:nth-child(2)::after { content: "Pair" !important; }
-  #fxHistoryBody td:nth-child(3)::after { content: "Qty" !important; }
-  #fxHistoryBody td:nth-child(4)::after { content: "Rate" !important; }
-  #fxHistoryBody td:nth-child(5)::after { content: "Avg. rate" !important; }
-  #fxHistoryBody td:nth-child(6)::after { content: "P/L" !important; }
-}
-</style>
 
   </body>
 </html>
