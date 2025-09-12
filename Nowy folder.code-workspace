@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "../Nowy folder"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "Nowy folder"
+	}
+}

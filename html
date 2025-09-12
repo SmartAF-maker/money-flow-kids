@@ -1,0 +1,1082 @@
+ <!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Money Flow Kids</title>
+<title>Money Flow Kids</title>
+
+<link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
+<link rel="preconnect" href="https://s.ytimg.com" crossorigin>
+<link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+<link rel="preconnect" href="https://r4---sn.googlevideo.com" crossorigin>
+<link rel="dns-prefetch" href="//www.youtube-nocookie.com">
+<link rel="dns-prefetch" href="//s.ytimg.com">
+<link rel="dns-prefetch" href="//i.ytimg.com">
+<link rel="dns-prefetch" href="//googlevideo.com">
+
+<link rel="stylesheet" href="1.css" />
+
+<!-- BRAND TITLE GRADIENT -->
+<style>
+  :root{
+    --brand-blue:  #3b82f6; /* niebieski jak na screenie */
+    --brand-green: #22c55e; /* zielony jak na screenie */
+  }
+
+  /* Tylko tytuł w topbarze + ewentualnie inne nagłówki z klasą .brand-title */
+  #t-appTitle,
+  .brand-title{
+    background-image: linear-gradient(90deg, var(--brand-blue), var(--brand-green));
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
+    display: inline-block; /* pomaga dla background-clip */
+    font-weight: 800;      /* jak na zrzucie */
+  }
+</style>
+
+    <!-- WOW Jars – styl tylko dla słoików (zawsze widoczne) -->
+    <style>
+      /* ============= WOW JARS (always visible) ============= */
+      .jars {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(220px, 1fr));
+        gap: 12px;
+        align-items: start;
+      }
+      @media (max-width: 1200px) { .jars { grid-template-columns: repeat(2, minmax(220px, 1fr)); } }
+      @media (max-width: 560px)  { .jars { grid-template-columns: 1fr; } }
+
+      .wow-jars .jar-card {
+        display: flex; flex-direction: column; align-items: center; gap: 8px;
+        text-align: center; min-height: 260px;
+      }
+      .jar-svg { width: 140px; height: auto; display: block; }
+
+      /* Poziom cieczy: sterowany przez --fill */
+      .jar-svg .liquid { transform: translateY(calc(-1 * var(--fill, 0%))); transition: transform .6s cubic-bezier(.22,1,.36,1); }
+
+      /* Falowanie tafli */
+      .jar-svg .wave { transform-origin: 50% 0%; animation: waveMove 3.5s ease-in-out infinite alternate; }
+      @keyframes waveMove { from { transform: translateY(-2px) scaleX(1.02); } to { transform: translateY(2px) scaleX(0.98); } }
+
+      /* Bąbelki */
+      .jar-svg .bubbles circle { animation: bubbleUp 4s linear infinite; }
+      .jar-svg .bubbles circle:nth-child(2){ animation-delay: .8s; }
+      .jar-svg .bubbles circle:nth-child(3){ animation-delay: 1.6s; }
+      @keyframes bubbleUp { 0%{transform:translateY(0);opacity:.7;}80%{transform:translateY(-26px);opacity:.3;}100%{transform:translateY(-32px);opacity:0;} }
+
+      /* Hover */
+      .wow-jars .jar-card:hover .jar-svg { filter: drop-shadow(0 6px 12px rgba(31,61,98,.22)); transform: translateY(-1px); transition: filter .25s, transform .25s; }
+
+      /* Glow */
+      .jar-svg .liquid, .jar-svg .wave {
+        filter: saturate(1.15) contrast(1.08)
+                drop-shadow(0 0 8px var(--glow, rgba(255,255,255,.14)))
+                drop-shadow(0 0 16px var(--glow, rgba(255,255,255,.10)));
+        pointer-events: none;
+      }
+
+      /* Kolory słoików */
+      .wow-jars .jar-card:nth-child(1) .jar-svg { --liq-top:#1ff35b; --liq-bottom:#1e9e1e; --glow:#18ff64; } /* Savings */
+      .wow-jars .jar-card:nth-child(2) .jar-svg { --liq-top:#f38a03; --liq-bottom:#915201; --glow:#ffb341; } /* Earnings */
+      .wow-jars .jar-card:nth-child(3) .jar-svg { --liq-top:#df48b9; --liq-bottom:#660a29; --glow:#ff0ac2; } /* Gifts */
+      .wow-jars .jar-card:nth-child(4) .jar-svg { --liq-top:#134dc7; --liq-bottom:#0b2e77; --glow:#4e7cff; } /* Invest */
+
+      /* RWD – sama grafika słoika */
+      @media (max-width: 520px) { .jar-svg { width: 110px; } }
+    </style>
+
+    <!-- RWD GRID PATCH (zakładki; NIE dotyka słoików) -->
+    <style>
+      #tab-invest, #tab-fx, #tab-parent, #tab-profits {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
+        gap: 12px;
+        align-items: start;
+      }
+      @media (max-width: 1400px) { #tab-invest, #tab-fx, #tab-profits { grid-template-columns: 1fr; } }
+
+      #tab-parent { grid-template-columns: repeat(2, minmax(420px, 1fr)); gap: 12px; }
+      @media (max-width: 900px) { #tab-parent { grid-template-columns: 1fr; } }
+
+      #tab-invest > .card, #tab-fx > .card, #tab-parent > .card, #tab-profits > .card { min-width: 0; }
+      #tab-invest .tableWrap, #tab-fx .tableWrap, #tab-profits .tableWrap { overflow-x: auto; }
+
+      
+      /* KPI – kontenerki */
+      .grid.g-3 { display: grid; grid-template-columns: repeat(3, minmax(220px,1fr)); gap: 12px; }
+      @media (max-width: 1200px) { .grid.g-3 { grid-template-columns: 1fr; } }
+      .kpi{ background: var(--card-bg, rgba(255,255,255,0.03)); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 12px; }
+      .kpi > .muted { font-size: .9rem; }
+      .kpi > div:last-child { font-weight: 700; font-size: 1.1rem; }
+
+      /* Profits – jedna kolumna: KPI -> Stocks -> FX */
+      #tab-profits { grid-template-columns: 1fr !important; }
+
+      /* Tutorial modal */
+      #tutorialModal .modal-content { width: min(720px, 92vw); }
+      #tutorialModal img { max-width: 100%; height: auto; display: block; }
+
+      /* Global Trends – widoczne; ukrywamy/wyświetlamy klasą .hidden z JS */
+      #globalTrendsCard { display: block; }
+      .hidden { display: none !important; }
+    </style>
+
+</style>
+
+    <!-- CSP: allow live data endpoints for fetch() (Tylko w <head>) -->
+    <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src  'self' 'unsafe-inline' https://www.youtube.com https://www.youtube-nocookie.com https://s.ytimg.com;
+  style-src   'self' 'unsafe-inline';
+  img-src     'self' data: blob: https://i.ytimg.com https://img.youtube.com;
+  font-src    'self' data:;
+  media-src   'self' blob: https://*.googlevideo.com;
+  connect-src 'self'
+               https://api.exchangerate.host
+               https://query1.finance.yahoo.com
+               https://query2.finance.yahoo.com
+               https://r.jina.ai;
+  frame-src   'self' https://www.youtube.com https://www.youtube-nocookie.com;
+  frame-ancestors 'self';
+  worker-src  'self';
+  base-uri    'self';
+  form-action 'self'">
+  </head>
+
+  <body>
+    <header class="topbar mfk-topbar" role="banner">
+  <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
+<h1 id="t-appTitle" class="logo brand-title">Money Flow</h1>
+
+  <div class="role-switch" id="mfkTopNav">
+    <select id="langSelect" title="Language">
+      <option value="pl">PL</option>
+      <option value="en" selected>EN</option>
+      <option value="es">ES</option>
+    </select>
+
+    <div class="role-parent-only" style="display:inline-flex;align-items:center;gap:6px">
+      <label class="muted" for="childSelector"></label>
+      <select id="childSelector" class="input" style="min-width:160px"></select>
+    </div>
+
+    <button id="addChildBtn" type="button" class="tab role-parent-only" data-i18n="addChild">+ Add child</button>
+    <button type="button" class="tab active" data-tab="invest" data-i18n="tabStocks">Stocks</button>
+    <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
+    <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
+    <button type="button" class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
+    <button id="tutorialBtn" type="button" class="tab">📘 <span data-i18n="tutorial">Tutorial</span></button>
+  </div>
+
+  <div class="authwrap">
+    <span id="authBadge" class="muted" aria-live="polite">Guest</span>
+    <button id="loginBtn" type="button" class="tab"><span id="t-btnLoginTop">Login</span></button>
+    <button id="logoutBtn" type="button" class="tab hidden"><span id="t-btnLogout">Logout</span></button>
+  </div>
+</header>
+<!-- Mobile drawer (appears on small screens) -->
+<aside id="mfkMobileDrawer" class="mfk-drawer" aria-hidden="true">
+  <nav class="mfk-drawer-nav">
+    <div class="row">
+      <label class="muted" for="childSelectorDrawer">Child</label>
+      <select id="childSelectorDrawer" class="input"></select>
+    </div>
+
+    <button type="button" class="tab" data-tab="invest" data-i18n="tabStocks">Stocks</button>
+    <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
+    <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
+    <button type="button" class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
+    <!-- ważne: ID poniżej -->
+    <button id="drawerTutorial" type="button" class="tab" data-tab="tutorial" data-i18n="tutorial">Tutorial</button>
+
+    <hr />
+    <button id="drawerLogin" type="button" class="tab">Login</button>
+    <button id="drawerLogout" type="button" class="tab hidden">Logout</button>
+  </nav>
+</aside>
+
+<!-- Backdrop musi być POZA <aside> -->
+<div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
+
+    <!-- Sticky mini jars (below top buttons) -->
+<section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
+  <div class="mini-jar">
+    <div class="mini-jar-label">Available cash</div>
+    <div id="miniCash" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="jarSavings">Savings</div>
+    <div id="miniSave" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="jarSpending">Earnings</div>
+    <div id="miniSpend" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="jarGiving">Gifts</div>
+    <div id="miniGive" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="jarInvest">Investments</div>
+    <div id="miniInvest" class="mini-jar-value">0.00 USD</div>
+  </div>
+
+  <!-- NEW: INV. value FX -->
+  <div class="mini-jar">
+    <div class="mini-jar-label">INV. value FX</div>
+    <div id="miniInvFx" class="mini-jar-value">0.00 USD</div>
+  </div>
+
+  <!-- NEW: INV. value Stocks -->
+  <div class="mini-jar">
+    <div class="mini-jar-label">INV. value Stocks</div>
+    <div id="miniInvStocks" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <!-- NEW: INV. value Total -->
+    <div class="mini-jar">
+    <div class="mini-jar-label">INV. value Total</div>
+    <div id="miniInvTotal" class="mini-jar-value">0.00 USD</div>
+  </div>
+  
+    <!-- NEW: Profits summary (same as in Profits tab) -->
+  <div class="mini-jar">
+    <div class="mini-jar-label">Total earned</div>
+    <div id="miniTotalEarned" class="mini-jar-value">0.00 USD</div>
+  </div>
+  <div class="mini-jar">
+    <div class="mini-jar-label">Total loss</div>
+    <div id="miniTotalLoss" class="mini-jar-value">0.00 USD</div>
+  </div>
+</section>
+
+
+
+    <main class="container">
+      <!-- Live mode switch -->
+      <section class="card">
+        <div class="row">
+          <div class="title" data-i18n="dataMode">Data Mode</div>
+          <label class="switch"><input type="checkbox" id="liveModeToggle" /><span class="slider"></span></label>
+          <div id="liveModeLabel" class="muted">Simulation (offline)</div>
+          <div id="liveStatus" class="muted" style="margin-top:6px"></div>
+        </div>
+        <div class="sub" data-i18n="dataModeHint">In Live mode, prices/rates come from the backend (requires active subscription or trial).</div>
+      </section>
+
+      <!-- Słoiki – ZAWSZE -->
+      <section class="jars wow-jars">
+        <!-- Savings -->
+        <div class="card jar-card" style="--fill:0%">
+          <!-- SVG jar -->
+          <!-- (Savings SVG left unchanged for brevity; identical to your version) -->
+          <!-- === BEGIN Savings SVG === -->
+          <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <linearGradient id="lidGrad_s" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#c9d2df"/>
+                <stop offset="40%" stop-color="#f5f7fa"/>
+                <stop offset="60%" stop-color="#aeb9c8"/>
+                <stop offset="100%" stop-color="#e6ecf3"/>
+              </linearGradient>
+              <linearGradient id="glassGrad_s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+                <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="shineGrad_s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="liqGrad_s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--liq-top,#41d98a)"/>
+                <stop offset="100%" stop-color="var(--liq-bottom,#00c853)"/>
+              </linearGradient>
+              <filter id="shadowBlur_s" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="off"/>
+                <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <path id="jarPath_s" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
+              <clipPath id="clip_s"><use href="#jarPath_s"/></clipPath>
+            </defs>
+            <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
+            <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_s)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_s)"/>
+            <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
+            <use href="#jarPath_s" fill="url(#glassGrad_s)" stroke="#b7c7db" stroke-width="2.5"/>
+            <g clip-path="url(#clip_s)">
+              <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_s)"/>
+              <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
+              <g class="bubbles" fill="#ffffff" opacity=".65">
+                <circle cx="70" cy="200" r="3"/><circle cx="120" cy="190" r="2.5"/><circle cx="95" cy="180" r="2"/>
+              </g>
+            </g>
+            <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_s)" opacity=".35"/>
+            <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
+          </svg>
+          <!-- === END Savings SVG === -->
+
+          <div class="muted" data-i18n="jarSavings">Savings</div>
+          <div id="saveAmt" class="title">0.00 USD</div>
+          <div class="jar-actions">
+            <input type="number" min="0.01" step="0.01" class="jar-input">
+            <button class="btn" data-add="save" data-i18n="add">+ Add</button>
+          </div>
+        </div>
+
+        <!-- Earnings -->
+        <div class="card jar-card" style="--fill:0%">
+          <!-- (Earnings SVG – bez zmian) -->
+          <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <linearGradient id="lidGrad_e" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#c9d2df"/>
+                <stop offset="40%" stop-color="#f5f7fa"/>
+                <stop offset="60%" stop-color="#aeb9c8"/>
+                <stop offset="100%" stop-color="#e6ecf3"/>
+              </linearGradient>
+              <linearGradient id="glassGrad_e" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+                <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="shineGrad_e" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="liqGrad_e" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--liq-top,#ffb74d)"/>
+                <stop offset="100%" stop-color="var(--liq-bottom,#ff9800)"/>
+              </linearGradient>
+              <filter id="shadowBlur_e" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="off"/>
+                <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <path id="jarPath_e" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
+              <clipPath id="clip_e"><use href="#jarPath_e"/></clipPath>
+            </defs>
+            <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
+            <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_e)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_e)"/>
+            <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
+            <use href="#jarPath_e" fill="url(#glassGrad_e)" stroke="#b7c7db" stroke-width="2.5"/>
+            <g clip-path="url(#clip_e)">
+              <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_e)"/>
+              <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
+              <g class="bubbles" fill="#ffffff" opacity=".7">
+                <circle cx="80" cy="200" r="3"/><circle cx="130" cy="190" r="2.5"/><circle cx="105" cy="175" r="2"/>
+              </g>
+            </g>
+            <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_e)" opacity=".35"/>
+            <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
+          </svg>
+
+          <div class="muted" data-i18n="jarSpending">Earnings</div>
+          <div id="spendAmt" class="title">0.00 USD</div>
+          <div class="jar-actions">
+            <input type="number" min="0.01" step="0.01" class="jar-input">
+            <button class="btn" data-add="spend" data-i18n="add">+ Add</button>
+          </div>
+        </div>
+
+        <!-- Gifts -->
+        <div class="card jar-card" style="--fill:0%">
+          <!-- (Gifts SVG – bez zmian) -->
+          <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <linearGradient id="lidGrad_d" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#c9d2df"/>
+                <stop offset="40%" stop-color="#f5f7fa"/>
+                <stop offset="60%" stop-color="#aeb9c8"/>
+                <stop offset="100%" stop-color="#e6ecf3"/>
+              </linearGradient>
+              <linearGradient id="glassGrad_d" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+                <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="shineGrad_d" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="liqGrad_d" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--liq-top,#ff6fa3)"/>
+                <stop offset="100%" stop-color="var(--liq-bottom,#e91e63)"/>
+              </linearGradient>
+              <filter id="shadowBlur_d" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="off"/>
+                <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <path id="jarPath_d" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
+              <clipPath id="clip_d"><use href="#jarPath_d"/></clipPath>
+            </defs>
+            <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
+            <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_d)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_d)"/>
+            <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
+            <use href="#jarPath_d" fill="url(#glassGrad_d)" stroke="#b7c7db" stroke-width="2.5"/>
+            <g clip-path="url(#clip_d)">
+              <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_d)"/>
+              <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
+              <g class="bubbles" fill="#ffffff" opacity=".7">
+                <circle cx="88" cy="198" r="3"/><circle cx="124" cy="186" r="2.5"/><circle cx="108" cy="172" r="2"/>
+              </g>
+            </g>
+            <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_d)" opacity=".35"/>
+            <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
+          </svg>
+
+          <div class="muted" data-i18n="jarGiving">Gifts</div>
+          <div id="giveAmt" class="title">0.00 USD</div>
+          <div class="jar-actions">
+            <input type="number" min="0.01" step="0.01" class="jar-input">
+            <button class="btn" data-add="give" data-i18n="add">+ Add</button>
+          </div>
+        </div>
+
+        <!-- Invest (cash) -->
+        <div class="card jar-card" style="--fill:0%">
+          <!-- (Invest SVG – bez zmian) -->
+          <svg class="jar-svg" viewBox="0 0 200 240" aria-hidden="true">
+            <defs>
+              <linearGradient id="lidGrad_i" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#c9d2df"/>
+                <stop offset="40%" stop-color="#f5f7fa"/>
+                <stop offset="60%" stop-color="#aeb9c8"/>
+                <stop offset="100%" stop-color="#e6ecf3"/>
+              </linearGradient>
+              <linearGradient id="glassGrad_i" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+                <stop offset="70%"  stop-color="#f8fbff" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#eef5ff" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="shineGrad_i" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="liqGrad_i" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--liq-top,#6a8cff)"/>
+                <stop offset="100%" stop-color="var(--liq-bottom,#3f51b5)"/>
+              </linearGradient>
+              <filter id="shadowBlur_i" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="off"/>
+                <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <path id="jarPath_i" d="M45,40 h110 a16,16 0 0 1 16,16 v110 a24,24 0 0 1 -24,24 h-94 a24,24 0 0 1 -24,-24 v-110 a16,16 0 0 1 16,-16 z"/>
+              <clipPath id="clip_i"><use href="#jarPath_i"/></clipPath>
+            </defs>
+            <ellipse cx="100" cy="224" rx="60" ry="10" fill="#000" opacity="0.12"></ellipse>
+            <rect x="40" y="16" width="120" height="22" rx="6" fill="url(#lidGrad_i)" stroke="#6f7f93" stroke-width="2" filter="url(#shadowBlur_i)"/>
+            <rect x="48" y="14" width="104" height="6" rx="3" fill="#aab6c5" opacity=".55"/>
+            <use href="#jarPath_i" fill="url(#glassGrad_i)" stroke="#b7c7db" stroke-width="2.5"/>
+            <g clip-path="url(#clip_i)">
+              <rect class="liquid" x="32" y="240" width="136" height="160" fill="url(#liqGrad_i)"/>
+              <path class="wave" d="M20,0 C40,8 60,-8 80,0 S120,8 140,0 S180,-8 200,0 v40 h-180 z" fill="rgba(255,255,255,.25)"/>
+              <g class="bubbles" fill="#ffffff" opacity=".7">
+                <circle cx="78" cy="198" r="3"/><circle cx="126" cy="188" r="2.5"/><circle cx="102" cy="176" r="2"/>
+              </g>
+            </g>
+            <path d="M62,48 c0,0 28,-10 76,0 v120 c-34,16 -64,16 -76,0 z" fill="url(#shineGrad_i)" opacity=".35"/>
+            <rect x="38" y="38" width="124" height="4" rx="2" fill="#fff" opacity=".6"/>
+          </svg>
+
+          <div class="muted" data-i18n="jarInvest">Investments</div>
+          <div id="investAmt" class="title">0.00 USD</div>
+          <div class="jar-actions">
+            <input type="number" min="0.01" step="0.01" class="jar-input">
+            <button class="btn" data-add="invest" data-i18n="add">+ Add</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Net Worth + Available Cash + Quick Actions -->
+      <section class="grid g-3" style="grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div class="card">
+          <div class="title" data-i18n="netWorth">Net Worth</div>
+          <div id="netWorth" class="big">0.00 USD</div>
+          <div class="sub" data-i18n="netWorthHint">
+            Total jars + stock portfolio + FX portfolio (in USD).
+          </div>
+        </div>
+
+        <div class="card available-cash">
+          <div class="title">Available Cash</div>
+          <div id="availableCash" class="big">0.00 USD</div>
+          <div class="sub">Savings + Earnings + Gifts (in USD)</div>
+        </div>
+
+        <div class="card">
+          <div class="title" data-i18n="quickActions">Quick Actions</div>
+          <div class="space">
+            <button class="btn" id="addAllowance" data-i18n="allowance10">Allowance 10 USD</button>
+            <button class="btn" id="moveSpendSave" data-i18n="move5">Move Earnings → Savings</button>
+            <button id="moveDonToSave" class="btn" data-i18n="moveDonToSave">Move Gifts → Savings</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Global Trends -->
+      <section class="card" id="globalTrendsCard">
+        <div class="title" id="t-globalTrends">Global Trends</div>
+        <div id="globalTrendsSub" class="muted">World stock indices</div>
+        <div id="globalTrendsList" class="trend-list"></div>
+      </section>
+
+<!-- Stocks -->
+<section id="tab-invest" class="grid">
+  <!-- LEWA: Stock Market + Trade -->
+  <div class="col left">
+    <div class="card">
+      <div class="row">
+        <div class="title" data-i18n="stocksMarket">Stock Market</div>
+      </div>
+
+      <div class="row" style="margin: 6px 0" id="stockControls">
+        <select id="stockRegion" class="input" title="Region" style="max-width: 170px">
+          <option value="all">All regions</option>
+          <option value="usa">USA</option>
+          <option value="eu">Europe</option>
+          <option value="cn">China</option>
+        </select>
+
+        <input id="stockSearch" class="input" placeholder="AAPL, Microsoft…" />
+        <button id="stockAddPopular" class="btn">Add more</button>
+      </div>
+
+      <div id="stockList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
+
+      <div id="tradeBox" class="card" style="margin-top: 12px; display: none">
+        <div class="title" id="tradeTitle">Transaction</div>
+
+        <div class="row" style="margin-bottom: 8px">
+          <label class="muted" data-i18n="qty">Quantity</label>
+          <input id="qty" type="number" min="1" step="1" value="1" class="input" />
+          <div class="right muted">
+            <span data-i18n="cost">Cost:</span>
+            <span id="cost">0.00 USD</span>
+          </div>
+        </div>
+
+        <div class="space">
+      <button id="addToStockBasket" class="btn primary">Add to basket</button>
+      <button id="cancelTrade" class="btn" data-i18n="cancel">Cancel</button>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRAWA: najpierw Basket, potem Portfolio -->
+  <div class="col right">
+    <!-- Basket (JEDYNY dla akcji) -->
+    <div class="card basket" id="stock-basket">
+      <div class="panel-header">
+        <h3>Basket (Stocks)</h3>
+      </div>
+
+      <div class="basket-list" data-basket-list="stocks">
+        <div class="basket-empty">No items in basket.</div>
+      </div>
+
+      <div class="basket-summary row" style="justify-content: space-between">
+        <div class="metric">
+          <span>Quantity</span>
+          <strong class="val" data-basket-qty="stocks">0</strong>
+        </div>
+        <div class="metric">
+          <span>Amount</span>
+          <strong class="val" data-basket-amt="stocks">0.00 USD</strong>
+        </div>
+      </div>
+
+      <div class="basket-actions">
+        <button class="btn btn-grad" data-basket-buy="stocks">Buy (investment cash)</button>
+      </div>
+    </div>
+
+    <!-- Stock Portfolio -->
+    <div class="card">
+      <div class="title" data-i18n="stocksPortfolio">Stock Portfolio</div>
+      <div id="portfolioEmpty" class="muted" data-i18n="empty">No positions.</div>
+      <div class="tableWrap" style="overflow: auto; display: none">
+        <table>
+          <thead>
+            <tr class="muted">
+              <th data-i18n="ticker">Ticker</th>
+              <th data-i18n="shares">Shares</th>
+              <th data-i18n="avgCost">Avg. cost</th>
+              <th data-i18n="price">Price</th>
+              <th data-i18n="value">Value</th>
+              <th>P/L</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="portfolioBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- FX -->
+<section id="tab-fx" class="grid hidden">
+  <!-- LEWA: FX Market + Trade -->
+  <div class="col left">
+    <div class="card">
+      <div class="row">
+        <div class="title" data-i18n="fxMarket">Currency Market (FX)</div>
+      </div>
+
+      <div class="row" style="margin: 6px 0">
+        <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
+        <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
+      </div>
+
+      <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
+
+      <div id="fxTradeBox" class="card" style="margin-top: 12px; display: none">
+        <div class="title" id="fxTradeTitle" data-i18n="fxTrade">FX Transaction</div>
+
+        <div class="row" style="margin-bottom: 8px">
+          <label class="muted" data-i18n="qtyBase">Quantity (base currency)</label>
+          <input id="fxQty" type="number" min="1" step="1" value="100" class="input" />
+          <div class="right muted">
+            <span data-i18n="cost">Cost:</span>
+            <span id="fxCost">0.00 USD</span>
+          </div>
+        </div>
+
+        <div class="space">
+  <button id="addToFxBasket" class="btn primary">Add to basket</button>
+  <button id="fxCancelTrade" class="btn" data-i18n="cancel">Cancel</button>
+</div>
+
+
+        <div class="sub" data-i18n="fxHint"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRAWA: najpierw Basket, potem Portfolio -->
+  <div class="col right">
+    <!-- Basket -->
+    <div class="card basket" id="fx-basket">
+      <div class="panel-header">
+        <h3>Basket (FX)</h3>
+      </div>
+
+      <div class="basket-list" data-basket-list="fx">
+        <div class="basket-empty">No items in basket.</div>
+      </div>
+
+      <!-- Podsumowanie: Quantity i Amount obok siebie -->
+      <div class="basket-summary row" style="justify-content: space-between">
+        <div class="metric">
+          <span>Quantity</span>
+          <strong class="val" data-basket-qty="fx">0</strong>
+        </div>
+        <div class="metric">
+          <span>Amount</span>
+          <strong class="val" data-basket-amt="fx">0.00 USD</strong>
+        </div>
+      </div>
+
+      <div class="basket-actions">
+        <button class="btn btn-grad" data-basket-buy="fx">Buy (investment cash)</button>
+      </div>
+    </div>
+
+    <!-- FX Portfolio -->
+    <div class="card">
+      <div class="title" data-i18n="fxPortfolio">FX Portfolio</div>
+      <div id="fxEmpty" class="muted" data-i18n="empty">No positions.</div>
+      <div class="tableWrap" style="overflow: auto; display: none">
+        <table>
+          <thead>
+            <tr class="muted">
+              <th data-i18n="pair">Pair</th>
+              <th data-i18n="amount">Amount</th>
+              <th data-i18n="avgRate">Avg. rate</th>
+              <th data-i18n="rate">Rate</th>
+                  <th data-i18n="value">Value</th> 
+                       <th>P/L</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="fxBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+    
+  
+      <!-- Profits -->
+      <section id="tab-profits" class="grid hidden">
+        <div class="card">
+          <div class="title">Total Profit and Loss</div>
+          <div class="grid g-3">
+            <div class="kpi"><div class="muted">Realized (Stocks)</div><div id="kpiRealizedStocks">0.00 USD</div></div>
+            <div class="kpi"><div class="muted">Unrealized (Stocks)</div><div id="kpiUnrealizedStocks">0.00 USD</div></div>
+            <div class="kpi"><div class="muted">Realized (FX)</div><div id="kpiRealizedFx">0.00 USD</div></div>
+            <div class="kpi"><div class="muted">Unrealized (FX)</div><div id="kpiUnrealizedFx">0.00 USD</div></div>
+            <div class="kpi"><div class="muted">Total earned</div><div id="kpiTotal">0.00 USD</div></div>
+            <div class="kpi"><div class="muted">Total loss</div><div id="kpiTotalLoss">0.00 USD</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="title">Sales History (Stocks)</div>
+          <div class="tableWrap" style="overflow:auto; max-height: 260px;">
+            <table>
+              <thead>
+                <tr class="muted">
+                  <th>Date</th><th>Ticker</th><th>Qty</th><th>Price</th><th>Avg. cost</th><th>P/L</th>
+                </tr>
+              </thead>
+              <tbody id="tradeHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="title">Sales History (FX)</div>
+          <div class="tableWrap" style="overflow:auto; max-height: 260px;">
+            <table>
+              <thead>
+                <tr class="muted">
+                  <th>Date</th><th>Pair</th><th>Qty</th><th>Rate</th><th>Avg. rate</th><th>P/L</th>
+                </tr>
+              </thead>
+              <tbody id="fxHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Parent -->
+      <section id="tab-parent" class="grid hidden" data-parent-only="1" style="grid-template-columns: repeat(2, minmax(420px, 1fr)); gap: 12px;">
+        <div class="card">
+          <div class="title" data-i18n="parentPanel">Parent Panel</div>
+          <div class="sub">Set up a recurring monthly allowance (virtual, in-app only).</div>
+
+          <form id="allowanceForm" class="row" autocomplete="off">
+            <input id="allowanceAmount" type="number" step="0.01" min="0.50" placeholder="Monthly amount (USD)" required />
+            <input id="allowanceDay" type="number" min="1" max="28" placeholder="Day of month (1–28)" required />
+            <input id="allowanceStart" type="date" placeholder="Start date" />
+            <input id="allowancePin" type="password" maxlength="6" placeholder="Parent PIN (4–6 digits)" required />
+            <button type="submit" class="btn">Save allowance</button>
+          </form>
+
+          <p class="sub" style="margin-top:8px">
+            The app will auto-top-up the <strong>Savings</strong> jar each month on the selected day.
+            The start date is optional (defaults to today). Max day is 28 to avoid month-length issues.
+          </p>
+
+          <div class="config" style="margin-top:14px">
+            <h4 data-i18n="Settings">Settings</h4>
+
+            <form id="settingsForm" class="row" autocomplete="off" style="margin-bottom:10px">
+              <input id="setDailyLimit" type="number" step="0.01" min="1" placeholder="Daily limit (jar capacity scale)" />
+              <button type="submit" class="btn" data-i18n="save">Save</button>
+            </form>
+
+            <div class="pin-setup">
+              <label class="label">Set/change PIN (4–6 digits)</label>
+
+              <div class="pin-field">
+                <input type="password" id="pin1" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Enter new PIN">
+                <button type="button" class="icon-btn" id="pin1Eye" aria-label="Show/Hide PIN">👁️</button>
+              </div>
+
+              <div class="pin-field" style="margin-top:6px">
+                <input type="password" id="pin2" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Confirm new PIN">
+                <button type="button" class="icon-btn" id="pin2Eye" aria-label="Show/Hide PIN">👁️</button>
+              </div>
+
+              <div class="form-row end" style="margin-top:8px">
+                <button id="savePinBtn" class="btn primary" type="button">Save PIN</button>
+              </div>
+
+              <p id="pinMsg" class="form-msg" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="title" data-i18n="ledgerTitle">History (allowance / expenses)</div>
+          <div class="row" style="margin-bottom: 8px">
+            <select id="filterType">
+              <option value="all" data-i18n="all">All</option>
+              <option value="in" data-i18n="topups">Top-ups</option>
+              <option value="out" data-i18n="expenses">Expenses</option>
+            </select>
+            <button id="clearDataBtn" class="btn danger" data-i18n="clearDemo">Clear (demo)</button>
+          </div>
+          <ul id="ledger"></ul>
+        </div>
+      </section>
+    <div id="ytMini" class="yt-mini medium hidden" aria-label="Tutorial video" aria-live="polite">
+  <div class="yt-controls" aria-label="Video controls">
+    <button id="ytToggleSize" class="yt-btn" title="Powiększ / Zmniejsz">⤢</button>
+    <button id="ytClose" class="yt-btn danger" title="Zamknij">×</button>
+  </div>
+<iframe id="ytFrame"
+  src="https://www.youtube-nocookie.com/embed/UvLx-u7k8uk?rel=0&modestbranding=1&playsinline=1"
+  title="Money Flow Kids — tutorial"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  allowfullscreen>
+</iframe>
+
+
+</div>
+    </main>
+    <footer class="footer"><small id="t-footerNote"> </small></footer>
+     <!-- Login modal -->
+    <div id="loginModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <div class="modal-content">
+        <h2 id="loginTitle" class="title" style="margin-bottom:12px">Login</h2>
+
+        <div class="row" style="margin-bottom:8px">
+          <label><input type="radio" name="role" value="child" checked /> <span id="t-roleChild">Child</span></label>
+          <label><input type="radio" name="role" value="parent" /> <span id="t-roleParent">Parent</span></label>
+        </div>
+
+        <div id="childFields">
+          <div class="row" style="margin-bottom:8px">
+            <label class="muted" for="loginChild" id="t-selectChild">Select child</label>
+            <select id="loginChild"></select>
+          </div>
+        </div>
+
+        <div id="parentFields" class="hidden">
+          <div class="row" style="margin-bottom:8px">
+            <label class="muted" for="loginPin" id="t-parentPin">Parent PIN</label>
+            <input id="loginPin" type="password" inputmode="numeric" maxlength="6" placeholder="4–6 digits" />
+          </div>
+        </div>
+
+        <div class="tutorial-controls">
+          <button id="loginCancel" class="btn"><span id="t-btnCancel">Cancel</span></button>
+          <button id="loginSubmit" class="btn primary"><span id="t-btnLogin">Login</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" style="display:none"></div>
+
+    <script src="1.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+
+      // 4a) Otwieranie / zamykanie drawer (hamburger menu)
+      (function(){
+        const btn = document.getElementById('mfkNavToggle');
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        if(!btn || !drawer || !backdrop) return;
+
+        function open(){
+          drawer.classList.add('open');
+          backdrop.hidden = false;
+          btn.setAttribute('aria-expanded','true');
+          document.body.style.overflow = 'hidden';
+        }
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
+        }
+
+        btn.addEventListener('click', () =>
+          drawer.classList.contains('open') ? close() : open()
+        );
+        backdrop.addEventListener('click', close);
+        document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+      })();
+
+      // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
+      (function(){
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        const btn = document.getElementById('mfkNavToggle');
+        if(!drawer || !backdrop || !btn) return;
+
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
+        }
+
+        drawer.addEventListener('click', (e) => {
+          if (e.target.closest('.tab')) close();
+        });
+      })();
+
+           
+      /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
+(function () {
+  const drawerTut = document.getElementById('drawerTutorial');
+  if (!drawerTut) return;
+
+  const drawer   = document.getElementById('mfkMobileDrawer');
+  const backdrop = document.getElementById('mfkBackdrop');
+  const navBtn   = document.getElementById('mfkNavToggle');
+  const ytMini   = document.getElementById('ytMini');
+
+  function closeDrawer() {
+    if (drawer)   drawer.classList.remove('open');
+    if (backdrop) backdrop.hidden = true;
+    if (navBtn)   navBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  function openYT() {
+    if (ytMini) ytMini.classList.remove('hidden');
+  }
+
+  drawerTut.addEventListener('click', function () {
+    closeDrawer();
+    setTimeout(openYT, 150);
+  });
+})();
+
+/* === Mini-YT: powiększ / zamknij === */
+(function () {
+  const mini   = document.getElementById('ytMini');
+  const btnXL  = document.getElementById('ytToggleSize');
+  const btnX   = document.getElementById('ytClose');
+  const frame  = document.getElementById('ytFrame');
+  if (!mini || !btnXL || !btnX) return;
+
+  // Powiększ / zmniejsz
+  btnXL.addEventListener('click', () => {
+    mini.classList.toggle('large');
+    btnXL.title = mini.classList.contains('large') ? 'Zmniejsz' : 'Powiększ';
+  });
+
+  // Zamknij i zatrzymaj odtwarzanie
+  btnX.addEventListener('click', () => {
+    mini.classList.add('hidden');
+    if (frame) frame.src = frame.src; // reset iframe, żeby zatrzymać film
+  });
+})();
+    </script>
+<script>
+/* Dodaj etykiety kolumn do <td>, żeby CSS mobilny mógł je wyświetlać */
+(function () {
+  function labelize(table) {
+    if (!table) return;
+    const heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      Array.from(tr.children).forEach((td, i) => {
+        td.setAttribute('data-label', heads[i] || '');
+      });
+    });
+  }
+
+  function labelizeAll() {
+    document.querySelectorAll('table').forEach(labelize);
+  }
+
+  // 1) na start
+  document.addEventListener('DOMContentLoaded', labelizeAll);
+
+  // 2) oraz gdy JS dopisze nowe wiersze (portfolio / history)
+  const obs = new MutationObserver(muts => {
+    for (const m of muts) {
+      const table = m.target.closest('table');
+      if (table) labelize(table);
+    }
+  });
+  document.querySelectorAll('tbody').forEach(tb => {
+    obs.observe(tb, { childList: true, subtree: true });
+  });
+})();
+</script>
+
+<script>
+// ==== KILL ALL ARROWS ON MOBILE (≤640px) ====
+(function () {
+  if (!window.matchMedia("(max-width: 640px)").matches) return;
+
+  // wszystkie znaki-strzałki jakie zwykle się pojawiają
+  const ARROWS = /[▲▼↑↓⮝⮟⇧⇩⬆⬇↗↘↕↔⏶⏷🡑🡓🡅🡇]/g;
+
+  // usuń strzałki z tekstu (węzły tekstowe)
+  function stripArrowsInText(node) {
+    if (node.nodeType === 3) { // Text
+      const t = node.nodeValue;
+      const nt = t.replace(ARROWS, "").replace(/\s{2,}/g, " ");
+      if (nt !== t) node.nodeValue = nt.trim();
+    }
+  }
+
+  function purge(root) {
+    // 1) usuń elementy-ikonki (i/svg/span) oznaczone klasami arrow-*
+    root.querySelectorAll('[class*="arrow-"]').forEach(el => el.remove());
+
+    // 2) usuń pseudo-ikonki dorabiane contentem ::before/::after (zabij je font-size:0)
+    root.querySelectorAll("*").forEach(el => {
+      // tekst węzłów
+      el.childNodes.forEach(stripArrowsInText);
+      // ukryj ewentualne ::before/::after
+      el.style.setProperty("--_no-arrows", "1");
+    });
+  }
+
+  // start
+  purge(document.body);
+
+  // obserwuj zmiany i wycinaj na bieżąco
+  const obs = new MutationObserver(muts => {
+    for (const m of muts) {
+      if (m.type === "characterData") {
+        stripArrowsInText(m.target);
+      } else if (m.addedNodes && m.addedNodes.length) {
+        m.addedNodes.forEach(n => {
+          if (n.nodeType === 1) purge(n);       // element
+          else if (n.nodeType === 3) stripArrowsInText(n); // tekst
+        });
+      }
+    }
+  });
+  obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+</script>
+<script>
+(function () {
+  // usuń z mini-jars i mini-strip WSZYSTKIE znaki strzałek itp. na mobile
+  const isMobile = () => matchMedia('(max-width:640px)').matches;
+  const stripArrows = () => {
+    if (!isMobile()) return;
+    const targets = document.querySelectorAll(
+      '#stickyMiniJars .mini-jar-value, #stickyMiniJars .mini-jar-label, .mini-strip .mini-pill b'
+    );
+    targets.forEach(el => {
+      const t = el.textContent || '';
+      // wytnij ▲ ▼ ↑ ↓ ▴ ▾ + − – — itp.
+      const nt = t.replace(/[▲▼↑↓▴▾↗↘+−–—]/g, '').replace(/\s{2,}/g,' ').trim();
+      if (t !== nt) el.textContent = nt;
+    });
+  };
+
+  // uruchom teraz, po zmianie szerokości i po każdej zmianie DOM (gdy dane się odświeżają)
+  stripArrows();
+  matchMedia('(max-width:640px)').addEventListener('change', stripArrows);
+  new MutationObserver(stripArrows).observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+</script>
+
+  </body>
+</html>
