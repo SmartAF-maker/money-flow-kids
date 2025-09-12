@@ -3364,45 +3364,49 @@ html, body { overflow-x: hidden; }
     white-space: normal !important;
   }
 }
-/* --- Etykiety obok wartości TYLKO NA TELEFONIE --- */
-@media (max-width: 640px) {
-  /* Ustaw bazę pod etykiety po prawej */
-  #tradeHistoryBody tr td,
-  #fxHistoryBody tr td {
-    position: relative;
-    padding-right: 110px;    /* miejsce na napis po prawej */
+/* === MOBILE LABELS (Sales History) — FINAL === */
+@media (max-width: 820px) {
+  /* 1) Zrób miejsce na etykietę po prawej i wyłącz chowanie */
+  #tradeHistoryBody td,
+  #fxHistoryBody td {
+    position: relative !important;
+    padding-right: 128px !important;   /* miejsce na napis */
+    overflow: visible !important;
   }
 
-  /* Wspólny wygląd etykiety */
-  #tradeHistoryBody tr td::after,
-  #fxHistoryBody tr td::after {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    line-height: 1.1;
-    color: #9ca3af;          /* delikatny szary */
-    white-space: nowrap;
-    content: "";             /* nadpisujemy niżej w nth-child */
-    pointer-events: none;
+  /* 2) Sama etykieta – przyklejona do prawej krawędzi */
+  #tradeHistoryBody td::after,
+  #fxHistoryBody td::after {
+    position: absolute !important;
+    right: 16px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    min-width: 88px !important;        /* stała szerokość = równa kolumna */
+    text-align: right !important;
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    color: #9ca3af !important;
+    white-space: nowrap !important;
+    content: "" !important;
+    pointer-events: none !important;
+    z-index: 1;
   }
 
-  /* --- Sales History (Stocks) --- */
-  #tradeHistoryBody tr td:nth-child(1)::after { content: "Date"; }
-  #tradeHistoryBody tr td:nth-child(2)::after { content: "Symbol"; }
-  #tradeHistoryBody tr td:nth-child(3)::after { content: "Shares"; }
-  #tradeHistoryBody tr td:nth-child(4)::after { content: "Sell Price"; }
-  #tradeHistoryBody tr td:nth-child(5)::after { content: "Buy Price"; }
-  #tradeHistoryBody tr td:nth-child(6)::after { content: "Profit/Loss"; }
+  /* 3) Nazwy dla Stocks */
+  #tradeHistoryBody td:nth-child(1)::after { content: "Date" !important; }
+  #tradeHistoryBody td:nth-child(2)::after { content: "Ticker" !important; }
+  #tradeHistoryBody td:nth-child(3)::after { content: "Qty" !important; }
+  #tradeHistoryBody td:nth-child(4)::after { content: "Price" !important; }
+  #tradeHistoryBody td:nth-child(5)::after { content: "Avg. cost" !important; }
+  #tradeHistoryBody td:nth-child(6)::after { content: "P/L" !important; }
 
-  /* --- Sales History (FX) --- */
-  #fxHistoryBody tr td:nth-child(1)::after { content: "Date"; }
-  #fxHistoryBody tr td:nth-child(2)::after { content: "Pair"; }
-  #fxHistoryBody tr td:nth-child(3)::after { content: "Units"; }
-  #fxHistoryBody tr td:nth-child(4)::after { content: "Sell Rate"; }
-  #fxHistoryBody tr td:nth-child(5)::after { content: "Buy Rate"; }
-  #fxHistoryBody tr td:nth-child(6)::after { content: "Profit/Loss"; }
+  /* 4) Nazwy dla FX */
+  #fxHistoryBody td:nth-child(1)::after { content: "Date" !important; }
+  #fxHistoryBody td:nth-child(2)::after { content: "Pair" !important; }
+  #fxHistoryBody td:nth-child(3)::after { content: "Qty" !important; }
+  #fxHistoryBody td:nth-child(4)::after { content: "Rate" !important; }
+  #fxHistoryBody td:nth-child(5)::after { content: "Avg. rate" !important; }
+  #fxHistoryBody td:nth-child(6)::after { content: "P/L" !important; }
 }
 
 
