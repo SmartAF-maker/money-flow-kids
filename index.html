@@ -205,10 +205,13 @@
 <div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
     <!-- Sticky mini jars (below top buttons) -->
 <section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
+  <!-- Cash -->
   <div class="mini-jar">
-    <div class="mini-jar-label">Available cash</div>
+    <div class="mini-jar-label" data-i18n="miniCash">Available cash</div>
     <div id="miniCash" class="mini-jar-value">0.00 USD</div>
   </div>
+
+  <!-- Savings / Earnings / Gifts (zostają Twoje istniejące klucze) -->
   <div class="mini-jar">
     <div class="mini-jar-label" data-i18n="jarSavings">Savings</div>
     <div id="miniSave" class="mini-jar-value">0.00 USD</div>
@@ -221,40 +224,37 @@
     <div class="mini-jar-label" data-i18n="jarGiving">Gifts</div>
     <div id="miniGive" class="mini-jar-value">0.00 USD</div>
   </div>
+
+  <!-- Mini: Investments (osobny klucz tylko dla mini) -->
   <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="jarInvest">Investments</div>
+    <div class="mini-jar-label" data-i18n="miniInv">Investments</div>
     <div id="miniInvest" class="mini-jar-value">0.00 USD</div>
   </div>
 
-  <!-- NEW: INV. value FX -->
+  <!-- INV. Value FX / Stocks / Total -->
   <div class="mini-jar">
-    <div class="mini-jar-label">INV. value FX</div>
+    <div class="mini-jar-label" data-i18n="miniInvFx">INV. value FX</div>
     <div id="miniInvFx" class="mini-jar-value">0.00 USD</div>
   </div>
-
-  <!-- NEW: INV. value Stocks -->
   <div class="mini-jar">
-    <div class="mini-jar-label">INV. value Stocks</div>
+    <div class="mini-jar-label" data-i18n="miniInvStocks">INV. value Stocks</div>
     <div id="miniInvStocks" class="mini-jar-value">0.00 USD</div>
   </div>
-  <!-- NEW: INV. value Total -->
-    <div class="mini-jar">
-    <div class="mini-jar-label">INV. value Total</div>
+  <div class="mini-jar">
+    <div class="mini-jar-label" data-i18n="miniInvTotal">INV. value Total</div>
     <div id="miniInvTotal" class="mini-jar-value">0.00 USD</div>
   </div>
-  
-    <!-- NEW: Profits summary (same as in Profits tab) -->
+
+  <!-- Profits / Losses -->
   <div class="mini-jar">
-    <div class="mini-jar-label">Total earned</div>
+    <div class="mini-jar-label" data-i18n="miniProfits">Total earned</div>
     <div id="miniTotalEarned" class="mini-jar-value">0.00 USD</div>
   </div>
   <div class="mini-jar">
-    <div class="mini-jar-label">Total loss</div>
+    <div class="mini-jar-label" data-i18n="miniLosses">Total loss</div>
     <div id="miniTotalLoss" class="mini-jar-value">0.00 USD</div>
   </div>
 </section>
-
-
 
     <main class="container">
       <!-- Live mode switch -->
