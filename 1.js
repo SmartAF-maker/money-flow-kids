@@ -769,95 +769,53 @@ const miniEls = {
   totalEarned: document.getElementById('miniTotalEarned'),
   totalLoss:   document.getElementById('miniTotalLoss')
 };
-/* === MOBILE-ONLY: REPLACE mini-jars labels (EN/PL) === */
-(function () {
-  // 1) Wstrzykujemy tylko-mobilny CSS: ukryj stare labelki i pokaż swoją z :before
-  const css = `
-  @media (max-width:640px){
-    .mini[data-cap]::before{
-      content: attr(data-cap);
-      display:block;
-      font-size:12px;
-      line-height:1;
-      opacity:.85;
-      margin-bottom:2px;
-    }
-    .mini ._mini-hide-mobile{ display:none !important; }
-  }`;
-  const st = document.createElement('style');
-  st.textContent = css;
-  document.head.appendChild(st);
+/* === MOBILE-ONLY TEXT REPLACEMENT for mini-jars (EN/PL) === */
+function applyMiniLabelsMobile() {
+  // tylko telefon
+  if (!window.matchMedia("(max-width:640px)").matches) return;
 
-  // pomocniczo – ustawia atrybut data-cap i chowa stare elementy-etykiety
-  function setMiniLabel(hostEl, valueEl, text){
-    if (!hostEl || !valueEl) return;
-    // zapisz nową etykietę (będzie widoczna jako ::before z CSS)
-    hostEl.setAttribute('data-cap', text);
+  const lang = (typeof getLang === 'function' ? getLang() : 'en');
 
-    // schowaj WSZYSTKO oprócz elementu z wartością i ewentualnych strzałek itp.
-    Array.from(hostEl.children).forEach(ch => {
-      if (ch === valueEl) return;               // zostaw liczbową wartość
-      if (ch.contains(valueEl)) return;         // lub kontener tej wartości
-      if (ch.classList.contains('mini-cap')) return; // stare moje podpisy (gdyby były)
-      ch.classList.add('_mini-hide-mobile');    // ukryj na telefonie
-    });
-  }
-
-  // Twoje wymagane napisy
-  function labelsFor(lang){
-    if (lang === 'pl') {
-      return {
+  // WYMAGANE PRZEZ CIEBIE NAPISY
+  const L = (lang === 'pl')
+    ? {
         cash:        'Środki',
-        invest:      'Invest',        // dokładnie tak jak chcesz
+        invest:      'Invest',
         invFx:       'INV. Waluta',
         invStocks:   'INV. Akcje',
         totalEarned: 'Profity',
         totalLoss:   'Straty'
+      }
+    : {
+        cash:        'Cash',
+        invest:      'Invests',
+        invFx:       'INV. FX',
+        invStocks:   'INV. Stocks',
+        totalEarned: 'Profits',
+        totalLoss:   'Losses'
       };
-    }
-    return {
-      cash:        'Cash',
-      invest:      'Invests',
-      invFx:       'INV. FX',
-      invStocks:   'INV. Stocks',
-      totalEarned: 'Profits',
-      totalLoss:   'Losses'
-    };
-  }
 
-  // Główna funkcja – uruchamiaj po każdym renderze mini-jars
-  window.applyMiniLabelsMobile = function applyMiniLabelsMobile(){
-    if (!window.matchMedia('(max-width:640px)').matches) return; // tylko telefon
-    const lang = (typeof getLang === 'function' ? getLang() : 'en');
-    const L = labelsFor(lang);
-
-    // dla każdego mini elementu: znajdź „host” (kontener) i ustaw etykietę
-    const map = [
-      ['cash',        miniEls.cash,        L.cash],
-      ['invest',      miniEls.invest,      L.invest],
-      ['invFx',       miniEls.invFx,       L.invFx],
-      ['invStocks',   miniEls.invStocks,   L.invStocks],
-      ['totalEarned', miniEls.totalEarned, L.totalEarned],
-      ['totalLoss',   miniEls.totalLoss,   L.totalLoss],
-    ];
-
-    map.forEach(([key, valEl, txt]) => {
-      if (!valEl) return;
-      const host = valEl.closest('.mini') || valEl.parentElement || null;
-      if (!host) return;
-      setMiniLabel(host, valEl, txt);
-    });
+  // Znajdujemy elementy po ich atrybucie data-i18n
+  const map = {
+    cash:        document.querySelector('[data-i18n="miniCash"]'),
+    invest:      document.querySelector('[data-i18n="miniInv"]'),
+    invFx:       document.querySelector('[data-i18n="miniInvFx"]'),
+    invStocks:   document.querySelector('[data-i18n="miniInvStocks"]'),
+    totalEarned: document.querySelector('[data-i18n="miniProfits"]'),
+    totalLoss:   document.querySelector('[data-i18n="miniLosses"]')
   };
 
-  // reaguj na zmianę szerokości i na zmianę języka
-  matchMedia('(max-width:640px)').addEventListener('change', () => {
-    if (window.matchMedia('(max-width:640px)').matches) applyMiniLabelsMobile();
-  });
-  // jeśli masz select języka – po jego zmianie
-  document.getElementById('langSelect')?.addEventListener('change', () => {
-    applyMiniLabelsMobile();
-  });
-})();
+  // Podmieniamy textContent zamiast dopisywać
+  for (const key in map) {
+    if (map[key]) map[key].textContent = L[key];
+  }
+}
+
+// uruchamiamy na starcie
+document.addEventListener('DOMContentLoaded', applyMiniLabelsMobile);
+
+// reagujemy na zmianę szerokości (wejście/wyjście z mobile)
+matchMedia('(max-width:640px)').addEventListener('change', applyMiniLabelsMobile);
 
 function setPnlColor(el, pnl){
   if (!el) return;
