@@ -812,6 +812,108 @@ if (miniEls.spend)  miniEls.spend.textContent  = fmtMoneyFromUSD(j.spend);
 if (miniEls.give)   miniEls.give.textContent   = fmtMoneyFromUSD(j.give);
 if (miniEls.invest) miniEls.invest.textContent = fmtMoneyFromUSD(j.invest);
 
+/* === MINI-JARS: pełne, gotowe wklejki (tylko JS) ===
+   1) Wklej TEN blok gdziekolwiek PO definicji tData i PO miniEls
+   2) Nie usuwa nic z Twojego kodu – tylko rozszerza tData i ustawia etykiety
+   3) Działa na telefonie i desktopie; aktualizuje się przy zmianie języka
+*/
+
+/* 1) Rozszerz słownik tłumaczeń o etykiety mini-jars */
+(function extendMiniJarsI18N(){
+  if (!window.tData) return;
+
+  tData.pl = Object.assign({}, tData.pl, {
+    miniCashLbl:        "Środki",
+    miniInvFxLbl:       "INV. Waluty",
+    miniInvStocksLbl:   "INV. Akcje",
+    miniInvTotalLbl:    "Inwestycje",
+    miniEarnedLbl:      "Profity",
+    miniLossLbl:        "Straty"
+  });
+
+  tData.en = Object.assign({}, tData.en, {
+    miniCashLbl:        "Cash",
+    miniInvFxLbl:       "INV. FX",
+    miniInvStocksLbl:   "INV. Stocks",
+    miniInvTotalLbl:    "Investments",
+    miniEarnedLbl:      "Profits",
+    miniLossLbl:        "Losses"
+  });
+
+  // (opcjonalnie — jeśli używasz hiszpańskiego)
+  if (tData.es) {
+    tData.es = Object.assign({}, tData.es, {
+      miniCashLbl:        "Efectivo",
+      miniInvFxLbl:       "INV. FX",
+      miniInvStocksLbl:   "INV. Acciones",
+      miniInvTotalLbl:    "Inversiones",
+      miniEarnedLbl:      "Ganancias",
+      miniLossLbl:        "Pérdidas"
+    });
+  }
+})();
+
+/* 2) Uchwyty do ETYKIET mini-jars (to są SAME NAPISY, nie kwoty)
+   Dodaj w HTML po prostu elementy z tymi ID:
+   - <span id="miniCashLbl"></span>
+   - <span id="miniInvFxLbl"></span>
+   - <span id="miniInvStocksLbl"></span>
+   - <span id="miniInvTotalLbl"></span>
+   - <span id="miniEarnedLbl"></span>
+   - <span id="miniLossLbl"></span>
+*/
+const miniLabelEls = {
+  cash:        document.getElementById('miniCashLbl'),
+  invFx:       document.getElementById('miniInvFxLbl'),
+  invStocks:   document.getElementById('miniInvStocksLbl'),
+  invTotal:    document.getElementById('miniInvTotalLbl'),
+  earned:      document.getElementById('miniEarnedLbl'),
+  loss:        document.getElementById('miniLossLbl')
+};
+
+/* 3) Funkcja, która ustawia napisy wg bieżącego języka */
+function refreshMiniLabels(){
+  if (typeof TT !== 'function') return;
+  const t = TT();
+
+  if (miniLabelEls.cash)      miniLabelEls.cash.textContent      = t.miniCashLbl        || "Cash";
+  if (miniLabelEls.invFx)     miniLabelEls.invFx.textContent     = t.miniInvFxLbl       || "INV. FX";
+  if (miniLabelEls.invStocks) miniLabelEls.invStocks.textContent = t.miniInvStocksLbl   || "INV. Stocks";
+  if (miniLabelEls.invTotal)  miniLabelEls.invTotal.textContent  = t.miniInvTotalLbl    || "Investments";
+  if (miniLabelEls.earned)    miniLabelEls.earned.textContent    = t.miniEarnedLbl      || "Profits";
+  if (miniLabelEls.loss)      miniLabelEls.loss.textContent      = t.miniLossLbl        || "Losses";
+}
+
+/* 4) Auto-odświeżenie etykiet:
+      - przy starcie
+      - po zmianie języka w #langSelect
+      - po globalnym renderze (jeśli istnieje renderAll)
+*/
+document.addEventListener('DOMContentLoaded', refreshMiniLabels);
+
+const __miniLangSel = document.getElementById('langSelect');
+if (__miniLangSel && !__miniLangSel._miniLabelsWired) {
+  __miniLangSel.addEventListener('change', () => {
+    // w Twoim kodzie i tak wywołuje się renderAll(); tu dodatkowo dociśniemy etykiety
+    refreshMiniLabels();
+  });
+  __miniLangSel._miniLabelsWired = true;
+}
+
+// jeżeli masz globalne renderowanie – podbij etykiety po każdym pełnym rerenderze
+(function hookMiniLabelsIntoRenderAll(){
+  if (typeof window.renderAll !== 'function') return;
+  if (window.renderAll._miniLabelsHooked) return;
+
+  const __orig = window.renderAll;
+  window.renderAll = function(){
+    try { __orig.apply(this, arguments); }
+    finally { refreshMiniLabels(); }
+  };
+  window.renderAll._miniLabelsHooked = true;
+})();
+
+/* KONIEC – nic więcej nie trzeba. Etykiety mini-paska zmieniasz teraz w tData.* powyżej. */
 
   // wartości portfeli
   const valStocks = portfolioValueStocks(ch);
