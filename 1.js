@@ -769,57 +769,95 @@ const miniEls = {
   totalEarned: document.getElementById('miniTotalEarned'),
   totalLoss:   document.getElementById('miniTotalLoss')
 };
-/* === MOBILE-ONLY CAPTIONS for mini-jars (EN/PL) === */
-function setMiniCaption(targetEl, text) {
-  if (!targetEl) return;
-  const host = targetEl.closest('.mini') || targetEl.parentElement || targetEl;
-  let cap = host.querySelector('.mini-cap');
-  if (!cap) {
-    cap = document.createElement('div');
-    cap.className = 'mini-cap';
-    // mały podpis nad wartością
-    cap.style.fontSize = '12px';
-    cap.style.opacity = '0.85';
-    cap.style.lineHeight = '1';
-    cap.style.marginBottom = '2px';
-    host.insertBefore(cap, host.firstChild);
+/* === MOBILE-ONLY: REPLACE mini-jars labels (EN/PL) === */
+(function () {
+  // 1) Wstrzykujemy tylko-mobilny CSS: ukryj stare labelki i pokaż swoją z :before
+  const css = `
+  @media (max-width:640px){
+    .mini[data-cap]::before{
+      content: attr(data-cap);
+      display:block;
+      font-size:12px;
+      line-height:1;
+      opacity:.85;
+      margin-bottom:2px;
+    }
+    .mini ._mini-hide-mobile{ display:none !important; }
+  }`;
+  const st = document.createElement('style');
+  st.textContent = css;
+  document.head.appendChild(st);
+
+  // pomocniczo – ustawia atrybut data-cap i chowa stare elementy-etykiety
+  function setMiniLabel(hostEl, valueEl, text){
+    if (!hostEl || !valueEl) return;
+    // zapisz nową etykietę (będzie widoczna jako ::before z CSS)
+    hostEl.setAttribute('data-cap', text);
+
+    // schowaj WSZYSTKO oprócz elementu z wartością i ewentualnych strzałek itp.
+    Array.from(hostEl.children).forEach(ch => {
+      if (ch === valueEl) return;               // zostaw liczbową wartość
+      if (ch.contains(valueEl)) return;         // lub kontener tej wartości
+      if (ch.classList.contains('mini-cap')) return; // stare moje podpisy (gdyby były)
+      ch.classList.add('_mini-hide-mobile');    // ukryj na telefonie
+    });
   }
-  cap.textContent = text;
-}
 
-function applyMiniLabelsMobile() {
-  // tylko telefon
-  if (!window.matchMedia('(max-width:640px)').matches) return;
-
-  const lang = (typeof getLang === 'function' ? getLang() : 'en');
-
-  const L = (lang === 'pl')
-    ? {
+  // Twoje wymagane napisy
+  function labelsFor(lang){
+    if (lang === 'pl') {
+      return {
         cash:        'Środki',
-        invest:      'Invest',
+        invest:      'Invest',        // dokładnie tak jak chcesz
         invFx:       'INV. Waluta',
         invStocks:   'INV. Akcje',
         totalEarned: 'Profity',
         totalLoss:   'Straty'
-      }
-    : {
-        cash:        'Cash',
-        invest:      'Invests',
-        invFx:       'INV. FX',
-        invStocks:   'INV. Stocks',
-        totalEarned: 'Profits',
-        totalLoss:   'Losses'
       };
+    }
+    return {
+      cash:        'Cash',
+      invest:      'Invests',
+      invFx:       'INV. FX',
+      invStocks:   'INV. Stocks',
+      totalEarned: 'Profits',
+      totalLoss:   'Losses'
+    };
+  }
 
-  setMiniCaption(miniEls.cash,        L.cash);
-  setMiniCaption(miniEls.invest,      L.invest);
-  setMiniCaption(miniEls.invFx,       L.invFx);
-  setMiniCaption(miniEls.invStocks,   L.invStocks);
-  setMiniCaption(miniEls.totalEarned, L.totalEarned);
-  setMiniCaption(miniEls.totalLoss,   L.totalLoss);
-}
+  // Główna funkcja – uruchamiaj po każdym renderze mini-jars
+  window.applyMiniLabelsMobile = function applyMiniLabelsMobile(){
+    if (!window.matchMedia('(max-width:640px)').matches) return; // tylko telefon
+    const lang = (typeof getLang === 'function' ? getLang() : 'en');
+    const L = labelsFor(lang);
 
-matchMedia('(max-width:640px)').addEventListener('change', applyMiniLabelsMobile);
+    // dla każdego mini elementu: znajdź „host” (kontener) i ustaw etykietę
+    const map = [
+      ['cash',        miniEls.cash,        L.cash],
+      ['invest',      miniEls.invest,      L.invest],
+      ['invFx',       miniEls.invFx,       L.invFx],
+      ['invStocks',   miniEls.invStocks,   L.invStocks],
+      ['totalEarned', miniEls.totalEarned, L.totalEarned],
+      ['totalLoss',   miniEls.totalLoss,   L.totalLoss],
+    ];
+
+    map.forEach(([key, valEl, txt]) => {
+      if (!valEl) return;
+      const host = valEl.closest('.mini') || valEl.parentElement || null;
+      if (!host) return;
+      setMiniLabel(host, valEl, txt);
+    });
+  };
+
+  // reaguj na zmianę szerokości i na zmianę języka
+  matchMedia('(max-width:640px)').addEventListener('change', () => {
+    if (window.matchMedia('(max-width:640px)').matches) applyMiniLabelsMobile();
+  });
+  // jeśli masz select języka – po jego zmianie
+  document.getElementById('langSelect')?.addEventListener('change', () => {
+    applyMiniLabelsMobile();
+  });
+})();
 
 function setPnlColor(el, pnl){
   if (!el) return;
