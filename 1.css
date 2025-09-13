@@ -3396,31 +3396,33 @@ width: 110px;
     color:var(--ink,#e5e7eb);
   }
 }
-/* === TOPBAR MOBILE: jedna linia + porządek elementów === */
+/* === TOPBAR: hard layout for mobile (hamburger | title | EN | Logout) === */
 @media (max-width: 720px){
   .mfk-topbar{
-    display:flex;
-    align-items:center;
-    flex-wrap:nowrap;              /* NIE łamie wiersza */
-    gap:8px;
-    padding:8px 10px;
+    position: relative;                 /* pozwala przypiąć Logout do prawej */
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;                  /* nie łamie wiersza */
+    gap: 8px;
+    padding: 8px 10px;
+    padding-right: 92px;                /* rezerwujemy miejsce na Logout po prawej */
   }
-  .mfk-topbar > *{ flex:0 0 auto; white-space:nowrap; }
 
-  /* Kolejność: [1] hamburger  [2] tytuł  [3] PL/EN  [4] Logout */
-  #mfkNavToggle{ order:1; }
+  /* kolejność w strumieniu: hamburger (1) -> tytuł (2) -> EN (3) */
+  #mfkNavToggle{ order:1; flex:0 0 auto; }
   #t-appTitle{
     order:2;
-    flex:1 1 auto;                 /* zajmuje środek */
+    flex:1 1 auto;
     text-align:center;
     overflow:hidden; text-overflow:ellipsis;
     margin:0 4px;
+    white-space:nowrap;
   }
 
   /* Desktopowa nawigacja chowamy całkiem (jest w hamburgerze) */
   #mfkTopNav{ display:none !important; }
 
-  /* PL/EN: guzik tylko na mobile, select chowamy */
+  /* EN – zostaje w strumieniu, przed Logoutem */
   #langSelect{ display:none !important; }
   .lang-btn{
     order:3;
@@ -3432,18 +3434,19 @@ width: 110px;
     color:var(--ink,#e5e7eb);
   }
 
-  /* Logout po prawej, kompaktowy */
+  /* LOGOUT: przypinamy absolutnie do prawej, zawsze na górnym pasku */
   .authwrap{
-    order:4;
-    display:flex; align-items:center; gap:8px;
-    flex:0 0 auto;
+    position: absolute;
+    right: 10px; top: 8px;              /* ten sam padding co w .mfk-topbar */
+    display: flex; align-items: center; gap: 8px;
+    z-index: 5;                          /* ponad tytułem i EN */
   }
   #authBadge{ display:none; }            /* oszczędzamy miejsce */
-  .authwrap .tab{ padding:6px 10px; }    /* mniejszy przycisk */
-}
+  .authwrap .tab{ padding:6px 10px; }    /* kompaktowy przycisk */
 
-/* Bardzo małe ekrany: skracamy etykietę przycisku */
-@media (max-width: 360px){
-  .authwrap #logoutBtn span{ display:none; } /* ukryj tekst */
-  .authwrap #logoutBtn::after{ content:"⎋"; } /* prosta ikonka */
+  /* bardzo wąskie ekrany — skróć etykietę */
+  @media (max-width: 360px){
+    .authwrap #logoutBtn span{ display:none; }
+    .authwrap #logoutBtn::after{ content:"⎋"; }
+  }
 }
