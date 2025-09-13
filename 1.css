@@ -3396,3 +3396,45 @@ width: 110px;
     color:var(--ink,#e5e7eb);
   }
 }
+/* === TOPBAR: mobile fix (jedna linia) === */
+@media (max-width: 720px){
+  .mfk-topbar{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 10px;
+  }
+  .mfk-topbar > *{ white-space:nowrap; }
+
+  /* 1) Tytuł na środku, nie łamie się */
+  #t-appTitle{
+    flex:1 1 auto;
+    text-align:center;
+    overflow:hidden; text-overflow:ellipsis;
+    margin:0 4px;
+  }
+
+  /* 2) Desktopowa nawigacja znika (mamy ją w drawerze) */
+  #mfkTopNav{ display:none !important; }
+
+  /* 3) Język: na mobile pokazujemy guzik, chowamy select */
+  #langSelect{ display:none !important; }
+  .lang-btn{
+    display:inline-flex;
+    align-items:center; justify-content:center;
+    min-width:42px; height:30px; padding:0 10px;
+    border:1px solid var(--border-c,#1f2937);
+    border-radius:999px;
+    background:var(--card,#111827);
+    color:var(--ink,#e5e7eb);
+  }
+
+  /* 4) Prawa strona (Logout) zwarta i krótka */
+  .authwrap{
+    display:flex; align-items:center; gap:8px;
+    flex:0 0 auto;
+  }
+  #authBadge{ display:none; }             /* oszczędzamy miejsce */
+  .authwrap .tab{ padding:6px 10px; }     /* mniejsze przyciski */
+
+  /* 5) Hamburger po lewej, PL i Logout po prawej – nie łamie się */
+  #mfkNavToggle{ flex:0 0 auto; }
+}
