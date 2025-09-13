@@ -769,6 +769,57 @@ const miniEls = {
   totalEarned: document.getElementById('miniTotalEarned'),
   totalLoss:   document.getElementById('miniTotalLoss')
 };
+/* === MOBILE-ONLY CAPTIONS for mini-jars (EN/PL) === */
+function setMiniCaption(targetEl, text) {
+  if (!targetEl) return;
+  const host = targetEl.closest('.mini') || targetEl.parentElement || targetEl;
+  let cap = host.querySelector('.mini-cap');
+  if (!cap) {
+    cap = document.createElement('div');
+    cap.className = 'mini-cap';
+    // mały podpis nad wartością
+    cap.style.fontSize = '12px';
+    cap.style.opacity = '0.85';
+    cap.style.lineHeight = '1';
+    cap.style.marginBottom = '2px';
+    host.insertBefore(cap, host.firstChild);
+  }
+  cap.textContent = text;
+}
+
+function applyMiniLabelsMobile() {
+  // tylko telefon
+  if (!window.matchMedia('(max-width:640px)').matches) return;
+
+  const lang = (typeof getLang === 'function' ? getLang() : 'en');
+
+  const L = (lang === 'pl')
+    ? {
+        cash:        'Środki',
+        invest:      'Invest',
+        invFx:       'INV. Waluta',
+        invStocks:   'INV. Akcje',
+        totalEarned: 'Profity',
+        totalLoss:   'Straty'
+      }
+    : {
+        cash:        'Cash',
+        invest:      'Invests',
+        invFx:       'INV. FX',
+        invStocks:   'INV. Stocks',
+        totalEarned: 'Profits',
+        totalLoss:   'Losses'
+      };
+
+  setMiniCaption(miniEls.cash,        L.cash);
+  setMiniCaption(miniEls.invest,      L.invest);
+  setMiniCaption(miniEls.invFx,       L.invFx);
+  setMiniCaption(miniEls.invStocks,   L.invStocks);
+  setMiniCaption(miniEls.totalEarned, L.totalEarned);
+  setMiniCaption(miniEls.totalLoss,   L.totalLoss);
+}
+
+matchMedia('(max-width:640px)').addEventListener('change', applyMiniLabelsMobile);
 
 function setPnlColor(el, pnl){
   if (!el) return;
@@ -811,7 +862,7 @@ if (miniEls.save)   miniEls.save.textContent   = fmtMoneyFromUSD(j.save);
 if (miniEls.spend)  miniEls.spend.textContent  = fmtMoneyFromUSD(j.spend);
 if (miniEls.give)   miniEls.give.textContent   = fmtMoneyFromUSD(j.give);
 if (miniEls.invest) miniEls.invest.textContent = fmtMoneyFromUSD(j.invest);
-
+applyMiniLabelsMobile();
 
   // wartości portfeli
   const valStocks = portfolioValueStocks(ch);
