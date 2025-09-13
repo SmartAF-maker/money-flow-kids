@@ -3360,6 +3360,125 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('DOMContentLoaded', () => {
   renderAll();
 });
+/* ===== I18N bootstrap (safe, single-init) ===== */
+(function () {
+  if (window.__MFK_I18N_INIT__) return;
+  window.__MFK_I18N_INIT__ = true;
+
+  const LANG_KEY = (typeof window.LANG_KEY !== 'undefined') ? window.LANG_KEY : 'pf_lang';
+
+  function getLang(){
+    const saved = localStorage.getItem(LANG_KEY);
+    return (saved === 'en' || saved === 'pl') ? saved : 'pl';
+  }
+  function setLang(l){ localStorage.setItem(LANG_KEY, l); }
+
+  // Minimalny słownik — rozbudujesz wg potrzeb
+  const I18N = window.I18N || {
+    en: {
+      "nav.kidflow": "Kid Flow",
+      "nav.logout": "Parent Logout",
+      "netWorth": "Net Worth",
+      "quickActions": "Quick Actions",
+      "jarSavings": "Savings",
+      "jarSpending": "Earnings",
+      "jarGiving": "Gifts",
+      "jarInvest": "Investments",
+      "tabStocks": "Stocks",
+      "tabFx": "Currencies (FX)",
+      "tabPnL": "Profits",
+      "tabParent": "Parent"
+    },
+    pl: {
+      "nav.kidflow": "Kid Flow",
+      "nav.logout": "Wyloguj rodzica",
+      "netWorth": "Wartość netto",
+      "quickActions": "Szybkie akcje",
+      "jarSavings": "Oszczędności",
+      "jarSpending": "Zarobki",
+      "jarGiving": "Prezenty",
+      "jarInvest": "Inwestycje",
+      "tabStocks": "Akcje",
+      "tabFx": "Waluty (FX)",
+      "tabPnL": "Zyski",
+      "tabParent": "Rodzic"
+    }
+  };
+
+  const CURRENCY_NAMES = window.CURRENCY_NAMES || {
+    en: { PLN: "Polish Złoty", USD: "US Dollar", EUR: "Euro", GBP: "British Pound" },
+    pl: { PLN: "Polski złoty", USD: "Dolar amerykański", EUR: "Euro", GBP: "Funt brytyjski" }
+  };
+
+  let CURRENT_LOCALE = 'pl-PL';
+
+  function applyLang(){
+    const l = getLang();
+
+    document.documentElement.lang = l;
+
+    // Zsynchronizuj oba przełączniki
+    const btn = document.getElementById('lang-toggle');
+    if (btn) btn.textContent = l.toUpperCase();
+
+    const sel = document.getElementById('langSelect');
+    if (sel && sel.value !== l) sel.value = l;
+
+    CURRENT_LOCALE = (l === 'en') ? 'en-US' : 'pl-PL';
+
+    // Teksty z data-i18n
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      const dict = I18N[l] || {};
+      if (dict[key]) el.textContent = dict[key];
+    });
+
+    // Nazwy walut po pełnej nazwie (opcjonalnie)
+    document.querySelectorAll('[data-currency]').forEach(el => {
+      const code = el.getAttribute('data-currency');
+      const names = CURRENCY_NAMES[l] || {};
+      if (names[code]) el.textContent = names[code];
+    });
+
+    // Jeżeli masz centralny rerender — odśwież wszystko
+    if (typeof window.reRenderAll === 'function') window.reRenderAll();
+  }
+
+  function toggleLang(){
+    const next = getLang() === 'pl' ? 'en' : 'pl';
+    setLang(next);
+    applyLang();
+  }
+
+  // Udostępnij formatter jeśli jeszcze nie istnieje
+  if (!window.fmtMoney) {
+    window.fmtMoney = function(value, currencyCode){
+      try{
+        return new Intl.NumberFormat(CURRENT_LOCALE, { style: 'currency', currency: currencyCode }).format(value);
+      }catch(e){
+        return `${Number(value || 0).toFixed(2)} ${currencyCode}`;
+      }
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Podpięcie przycisku w top-barze (mobile)
+    const btn = document.getElementById('lang-toggle');
+    if (btn) btn.addEventListener('click', toggleLang);
+
+    // Podpięcie istniejącego selecta (desktop)
+    const sel = document.getElementById('langSelect');
+    if (sel) {
+      sel.value = getLang();
+      sel.addEventListener('change', (e) => {
+        setLang(e.target.value);
+        applyLang();
+      });
+    }
+
+    applyLang();
+  });
+})();
 
 
 

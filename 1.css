@@ -3378,3 +3378,21 @@ display: block;
 width: 110px;
 }
 }
+/* Lang button tylko na mobile */
+.lang-btn { display: none; }
+
+@media (max-width: 720px) {
+  #langSelect { display: none; }   /* na telefonie chowamy select */
+  .lang-btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:42px; height:30px;
+    padding:0 10px;
+    font:600 12px/1 system-ui,sans-serif;
+    border:1px solid var(--border-c,#1f2937);
+    border-radius:999px;
+    background:var(--card,#111827);
+    color:var(--ink,#e5e7eb);
+  }
+}
