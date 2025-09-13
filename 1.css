@@ -3396,30 +3396,35 @@ width: 110px;
     color:var(--ink,#e5e7eb);
   }
 }
-/* === TOPBAR: mobile fix (jedna linia) === */
+/* === TOPBAR MOBILE: jedna linia + porządek elementów === */
 @media (max-width: 720px){
   .mfk-topbar{
-    display:flex; align-items:center; gap:8px;
+    display:flex;
+    align-items:center;
+    flex-wrap:nowrap;              /* NIE łamie wiersza */
+    gap:8px;
     padding:8px 10px;
   }
-  .mfk-topbar > *{ white-space:nowrap; }
+  .mfk-topbar > *{ flex:0 0 auto; white-space:nowrap; }
 
-  /* 1) Tytuł na środku, nie łamie się */
+  /* Kolejność: [1] hamburger  [2] tytuł  [3] PL/EN  [4] Logout */
+  #mfkNavToggle{ order:1; }
   #t-appTitle{
-    flex:1 1 auto;
+    order:2;
+    flex:1 1 auto;                 /* zajmuje środek */
     text-align:center;
     overflow:hidden; text-overflow:ellipsis;
     margin:0 4px;
   }
 
-  /* 2) Desktopowa nawigacja znika (mamy ją w drawerze) */
+  /* Desktopowa nawigacja chowamy całkiem (jest w hamburgerze) */
   #mfkTopNav{ display:none !important; }
 
-  /* 3) Język: na mobile pokazujemy guzik, chowamy select */
+  /* PL/EN: guzik tylko na mobile, select chowamy */
   #langSelect{ display:none !important; }
   .lang-btn{
-    display:inline-flex;
-    align-items:center; justify-content:center;
+    order:3;
+    display:inline-flex; align-items:center; justify-content:center;
     min-width:42px; height:30px; padding:0 10px;
     border:1px solid var(--border-c,#1f2937);
     border-radius:999px;
@@ -3427,14 +3432,18 @@ width: 110px;
     color:var(--ink,#e5e7eb);
   }
 
-  /* 4) Prawa strona (Logout) zwarta i krótka */
+  /* Logout po prawej, kompaktowy */
   .authwrap{
+    order:4;
     display:flex; align-items:center; gap:8px;
     flex:0 0 auto;
   }
-  #authBadge{ display:none; }             /* oszczędzamy miejsce */
-  .authwrap .tab{ padding:6px 10px; }     /* mniejsze przyciski */
+  #authBadge{ display:none; }            /* oszczędzamy miejsce */
+  .authwrap .tab{ padding:6px 10px; }    /* mniejszy przycisk */
+}
 
-  /* 5) Hamburger po lewej, PL i Logout po prawej – nie łamie się */
-  #mfkNavToggle{ flex:0 0 auto; }
+/* Bardzo małe ekrany: skracamy etykietę przycisku */
+@media (max-width: 360px){
+  .authwrap #logoutBtn span{ display:none; } /* ukryj tekst */
+  .authwrap #logoutBtn::after{ content:"⎋"; } /* prosta ikonka */
 }
