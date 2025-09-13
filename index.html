@@ -203,7 +203,6 @@
 
 <!-- Backdrop musi być POZA <aside> -->
 <div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
-
     <!-- Sticky mini jars (below top buttons) -->
 <section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
   <div class="mini-jar">
@@ -1126,6 +1125,53 @@
   #fxHistoryBody td:nth-child(6)::after { content: "P/L" !important; }
 }
 </style>
+<script>
+/* Mini-jars — skrócone etykiety tylko dla mobile */
+(function () {
+  const MAP = {
+    en: {
+      miniCash:       "Cash",
+      miniInv:        "Invests",
+      miniInvFx:      "INV. FX",
+      miniInvStocks:  "INV. Stocks",
+      miniInvTotal:   "INV. Total",
+      miniProfits:    "Profits",
+      miniLosses:     "Losses",
+    },
+    pl: {
+      miniCash:       "Środki",
+      miniInv:        "Invest",
+      miniInvFx:      "INV. Waluta",
+      miniInvStocks:  "INV. Akcje",
+      miniInvTotal:   "INV. Razem",
+      miniProfits:    "Profity",
+      miniLosses:     "Straty",
+    }
+  };
+
+  function applyMiniLabels(lang) {
+    if (!window.matchMedia("(max-width:820px)").matches) return; // tylko mobile
+    const dict = MAP[lang] || MAP.en;
+    Object.entries(dict).forEach(([key, val]) => {
+      document.querySelectorAll(`[data-i18n="${key}"]`).forEach(el => el.textContent = val);
+    });
+  }
+
+  const langSel = document.getElementById('langSelect');
+  const current = (langSel && langSel.value) || 'en';
+  applyMiniLabels(current);
+
+  if (langSel) {
+    langSel.addEventListener('change', e => applyMiniLabels(e.target.value));
+  }
+
+  // gdy zmieni się szerokość okna (np. z desktopu → mobile w emulatorze)
+  window.matchMedia("(max-width:820px)").addEventListener("change", () => {
+    const lang = (langSel && langSel.value) || 'en';
+    applyMiniLabels(lang);
+  });
+})();
+</script>
 
   </body>
 </html>
