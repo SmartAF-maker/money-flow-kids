@@ -1080,6 +1080,90 @@
 </script>
 </style>
 </script>
+<script>
+/* ===== FIX i18n dla mini-jars (EN/PL) – PODMIEŃ, NIE DOKLEJAJ ===== */
+
+(function () {
+  // 1) Słowniki – tylko klucze użyte w mini-jars + kilka jarów
+  const I18N = {
+    en: {
+      miniCash:        "Available cash",
+      jarSavings:      "Savings",
+      jarSpending:     "Earnings",
+      jarGiving:       "Gifts",
+      jarInvest:       "Investments",
+      miniInv:         "Investments",
+      miniInvFx:       "INV. value FX",
+      miniInvStocks:   "INV. value Stocks",
+      miniInvTotal:    "INV. value Total",
+      miniProfits:     "Total earned",
+      miniLosses:      "Total loss"
+    },
+    pl: {
+      miniCash:        "Środki",
+      jarSavings:      "Oszczędności",
+      jarSpending:     "Zarobki",
+      jarGiving:       "Prezenty",
+      jarInvest:       "Inwestycje",
+      miniInv:         "Inwestycje",
+      miniInvFx:       "Wartość INV. FX",
+      miniInvStocks:   "Wartość INV. Akcje",
+      miniInvTotal:    "Wartość INV. Razem",
+      miniProfits:     "Zysk łącznie",
+      miniLosses:      "Strata łącznie"
+    }
+  };
+
+  // 2) Bieżący język (domyślnie EN); zapis/odczyt z localStorage
+  let lang = (localStorage.getItem("mfk_lang") || "en").toLowerCase();
+  if (!I18N[lang]) lang = "en";
+
+  // 3) Podmiana tekstów NA STAŁO (bez dopisywania)
+  function applyI18n() {
+    const dict = I18N[lang] || {};
+    document.documentElement.setAttribute("lang", lang);
+
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const key = el.getAttribute("data-i18n");
+      const val = dict[key];
+      if (val) {
+        // KLUCZOWE: nadpisujemy, nie dodajemy!
+        el.textContent = val;
+      }
+    });
+
+    const btn = document.getElementById("lang-toggle");
+    if (btn) btn.textContent = lang.toUpperCase();
+
+    const sel = document.getElementById("langSelect");
+    if (sel) sel.value = lang;
+  }
+
+  // 4) Zmiana języka – przycisk i/lub select
+  function setLang(newLang) {
+    lang = (newLang || "en").toLowerCase();
+    if (!I18N[lang]) lang = "en";
+    localStorage.setItem("mfk_lang", lang);
+    applyI18n();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    applyI18n();
+
+    const btn = document.getElementById("lang-toggle");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        setLang(lang === "en" ? "pl" : "en");
+      });
+    }
+
+    const sel = document.getElementById("langSelect");
+    if (sel) {
+      sel.addEventListener("change", (e) => setLang(e.target.value));
+    }
+  });
+})();
+</script>
 
 </body>
 </html>
