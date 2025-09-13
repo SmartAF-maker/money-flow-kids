@@ -3479,6 +3479,83 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
+/* Mini labelki dla tabel tylko na mobile (≤640px).
+   Działa tak:
+   - czyta nagłówki z <thead><th>…
+   - do każdej komórki <td> dokleja:
+       <div class="mfk-val">[oryginalna zawartość]</div>
+       <div class="mfk-cap">[etykieta z kolumny]</div>
+   - reaguje na: DOMContentLoaded, zmiany w DOM (MutationObserver), zmianę media query.
+*/
+(function () {
+  // Ustal, czy jesteśmy na mobile
+  const mq = window.matchMedia('(max-width:640px)');
+
+  // Przerób jedną tabelę
+  function labelize(table) {
+    if (!table) return;
+    const heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      Array.from(tr.children).forEach((td, i) => {
+        const label = heads[i] || '';
+
+        // (a) atrybut (jeśli używasz w CSS)
+        td.setAttribute('data-label', label);
+
+        // (b) struktura z podpisem
+        if (!td.querySelector('.mfk-val')) {
+          const val = document.createElement('div');
+          val.className = 'mfk-val';
+          while (td.firstChild) val.appendChild(td.firstChild); // przenieś aktualną zawartość
+
+          const cap = document.createElement('div');
+          cap.className = 'mfk-cap';
+          cap.textContent = label;
+
+          td.append(val, cap);
+        } else {
+          // odśwież podpis, gdyby kolumny się zmieniły
+          const cap = td.querySelector('.mfk-cap');
+          if (cap) cap.textContent = label;
+        }
+      });
+    });
+  }
+
+  // Znajdź i przerób wszystkie tabele, które chcesz wspierać
+  function labelizeAll() {
+    // Dostosuj selektor do swoich tabel
+    const tables = document.querySelectorAll(
+      '.tableWrap table, table.responsive, table[data-labelize], table.mfk'
+    );
+    tables.forEach(labelize);
+  }
+
+  // Odpal tylko na mobile
+  function applyLabelizeIfMobile() {
+    if (mq.matches) labelizeAll();
+  }
+
+  // Start po DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', applyLabelizeIfMobile, { once: true });
+
+  // Reaguj na późniejsze zmiany w DOM (np. przełączenia kart, dogrywanie danych)
+  const obs = new MutationObserver(() => applyLabelizeIfMobile());
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+
+  // Reaguj na zmianę szerokości (desktop ↔ mobile)
+  // (Safari starsze nie miały addEventListener na MediaQueryList – fallback)
+  if (typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', applyLabelizeIfMobile);
+  } else if (typeof mq.addListener === 'function') {
+    mq.addListener(applyLabelizeIfMobile);
+  }
+
+  // Dodatkowo lekkie opóźnienie po starcie w razie lazy-renderów
+  setTimeout(applyLabelizeIfMobile, 0);
+  setTimeout(applyLabelizeIfMobile, 150);
+})();
 
 
 
