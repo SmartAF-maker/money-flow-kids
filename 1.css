@@ -3466,21 +3466,67 @@ width: 110px;
     #logoutBtn::after{ content:"⎋"; }
   }
 }
-/* ========== DEBUG PATCH (tymczasowo, na koniec CSS) ========== */
+/* ==== MINI-JARS: mobile-only label overrides (EN/PL) ==== */
+@media (max-width: 720px){
+  /* Ukryj oryginalny tekst i wstaw własny przez ::after */
+  #stickyMiniJars .mini-jar .mini-jar-label{
+    position: relative;
+  }
+  /* Helper: chowamy oryginalną treść samych wybranych labeli */
+  html:lang(en)  #stickyMiniJars [data-i18n="miniCash"],
+  html:lang(en)  #stickyMiniJars [data-i18n="miniInv"],
+  html:lang(en)  #stickyMiniJars [data-i18n="miniInvFx"],
+  html:lang(en)  #stickyMiniJars [data-i18n="miniInvStocks"],
+  html:lang(en)  #stickyMiniJars [data-i18n="miniProfits"],
+  html:lang(en)  #stickyMiniJars [data-i18n="miniLosses"],
+  html:lang(pl)  #stickyMiniJars [data-i18n="miniCash"],
+  html:lang(pl)  #stickyMiniJars [data-i18n="miniInv"],
+  html:lang(pl)  #stickyMiniJars [data-i18n="miniInvFx"],
+  html:lang(pl)  #stickyMiniJars [data-i18n="miniInvStocks"],
+  html:lang(pl)  #stickyMiniJars [data-i18n="miniProfits"],
+  html:lang(pl)  #stickyMiniJars [data-i18n="miniLosses"]{
+    font-size:0 !important;            /* ukryj bazowy tekst tylko w mini-jars */
+  }
 
-/* 1) Nie ukrywaj inputów/btn w słoikach dla child */
-body[data-role="child"] .jar-card .jar-actions,
-body[data-role="child"] .jar-card .jar-input,
-body[data-role="child"] .jar-card .btn { display:flex !important; }
+  /* ——— EN ——— */
+  html:lang(en) #stickyMiniJars [data-i18n="miniCash"]::after{
+    content:"Cash"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  html:lang(en) #stickyMiniJars [data-i18n="miniInv"]::after{
+    content:"Invests"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  html:lang(en) #stickyMiniJars [data-i18n="miniInvFx"]::after{
+    content:"INV. FX"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  html:lang(en) #stickyMiniJars [data-i18n="miniInvStocks"]::after{
+    content:"INV. Stocks"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  /* miniInvTotal – brak zmiany wg Twojej specyfikacji, zostawiamy jak jest */
+  html:lang(en) #stickyMiniJars [data-i18n="miniProfits"]::after{
+    content:"Profits"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  html:lang(en) #stickyMiniJars [data-i18n="miniLosses"]::after{
+    content:"Losses"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
 
-/* 2) Gwarantuj odstęp pod topbar + mini-jars (gdy są fixed) */
-:root{ --H-TOP:56px; --H-JARS:52px; }
-body{ padding-top: calc(var(--H-TOP) + var(--H-JARS) + 12px) !important; }
-
-/* 3) Przywróć klikalność nagłówków tabel */
-.tableWrap thead,
-.tableWrap thead * { pointer-events:auto !important; }
-
-/* 4) Upewnij się, że nakładki nie zasłaniają UI */
-#rotateOverlay { display:none !important; }
-.yt-mini, .ytmini { z-index: 400 !important; } /* poniżej topbaru/mini-jars i toasta */
+  /* ——— PL ——— */
+  html:lang(pl) #stickyMiniJars [data-i18n="miniCash"]::after{
+    content:"Środki"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  html:lang(pl) #stickyMiniJars [data-i18n="miniInv"]::after{
+    content:"Invest"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  html:lang(pl) #stickyMiniJars [data-i18n="miniInvFx"]::after{
+    content:"INV. Waluta"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  html:lang(pl) #stickyMiniJars [data-i18n="miniInvStocks"]::after{
+    content:"INV. Akcje"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  /* miniInvTotal – brak zmiany wg specyfikacji, zostawiamy jak jest */
+  html:lang(pl) #stickyMiniJars [data-i18n="miniProfits"]::after{
+    content:"Profity"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+  html:lang(pl) #stickyMiniJars [data-i18n="miniLosses"]::after{
+    content:"Straty"; font-size:.85rem; font-weight:600; color:var(--ink);
+  }
+}
