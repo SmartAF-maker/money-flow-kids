@@ -3396,55 +3396,64 @@ width: 110px;
     color:var(--ink,#e5e7eb);
   }
 }
-/* === TOPBAR: hard layout for mobile (hamburger | title | EN | Logout) === */
+/* === TOPBAR MOBILE: jedna linia bez pozycji absolute === */
 @media (max-width: 720px){
   .mfk-topbar{
-    position: relative;                 /* pozwala przypiąć Logout do prawej */
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;                  /* nie łamie wiersza */
-    gap: 8px;
-    padding: 8px 10px;
-    padding-right: 92px;                /* rezerwujemy miejsce na Logout po prawej */
+    display:flex;
+    align-items:center;
+    flex-wrap:nowrap;            /* nic się nie łamie */
+    gap:8px;
+    padding:8px 10px;
   }
 
-  /* kolejność w strumieniu: hamburger (1) -> tytuł (2) -> EN (3) */
+  /* kolejność elementów */
   #mfkNavToggle{ order:1; flex:0 0 auto; }
+
   #t-appTitle{
     order:2;
-    flex:1 1 auto;
+    flex:1 1 auto;               /* środek zajmuje resztę */
     text-align:center;
-    overflow:hidden; text-overflow:ellipsis;
-    margin:0 4px;
-    white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    margin:0 6px;
   }
 
-  /* Desktopowa nawigacja chowamy całkiem (jest w hamburgerze) */
+  /* chowamy desktopową nawigację – jest w hamburgerze */
   #mfkTopNav{ display:none !important; }
 
-  /* EN – zostaje w strumieniu, przed Logoutem */
+  /* język: na mobile guzik, select chowamy */
   #langSelect{ display:none !important; }
   .lang-btn{
     order:3;
     display:inline-flex; align-items:center; justify-content:center;
-    min-width:42px; height:30px; padding:0 10px;
+    min-width:44px; height:30px; padding:0 10px;
     border:1px solid var(--border-c,#1f2937);
     border-radius:999px;
     background:var(--card,#111827);
     color:var(--ink,#e5e7eb);
   }
 
-  /* LOGOUT: przypinamy absolutnie do prawej, zawsze na górnym pasku */
+  /* badge + logout po prawej, w tej samej linii */
   .authwrap{
-    position: absolute;
-    right: 10px; top: 8px;              /* ten sam padding co w .mfk-topbar */
-    display: flex; align-items: center; gap: 8px;
-    z-index: 5;                          /* ponad tytułem i EN */
+    order:4;
+    display:flex; align-items:center; gap:8px;
+    flex:0 0 auto;
   }
-  #authBadge{ display:none; }            /* oszczędzamy miejsce */
-  .authwrap .tab{ padding:6px 10px; }    /* kompaktowy przycisk */
 
-  /* bardzo wąskie ekrany — skróć etykietę */
+  /* POKAŻ BADGE: Parent/Child */
+  #authBadge{
+    display:inline-block !important;
+    padding:6px 10px;
+    border:1px solid var(--border-c,#1f2937);
+    border-radius:999px;
+    background:var(--card,#111827);
+    color:var(--ink,#e5e7eb);
+    font-size:12px;
+  }
+
+  /* kompaktowy logout */
+  .authwrap .tab{ padding:6px 10px; }
+
+  /* bardzo wąskie ekrany – skracamy logout do ikonki */
   @media (max-width: 360px){
     .authwrap #logoutBtn span{ display:none; }
     .authwrap #logoutBtn::after{ content:"⎋"; }
