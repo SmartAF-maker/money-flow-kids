@@ -1081,64 +1081,70 @@
 </style>
 </script>
 <script>
-/* === Mini-jars: krótsze nazwy na telefonie (<=720px), desktop bez zmian === */
+/* === MINI-JARS: mobilne etykiety EN/PL (bez wpływu na desktop) === */
 (function () {
-  if (!window.matchMedia('(max-width: 720px)').matches) return;
+  const isMobile = () => matchMedia('(max-width: 720px)').matches;
 
-  // mapy skrótów tylko dla MINI-JARS (nie ruszamy reszty interfejsu)
-  const MAP = {
-    en: {
-      miniCash:      'Cash',
-      miniInv:       'Invests',
-      miniInvFx:     'INV. FX',
-      miniInvStocks: 'INV. Stocks',
-      // jeśli chcesz też total, odkomentuj:
-      // miniInvTotal:  'INV. Total',
-      miniProfits:   'Profits',
-      miniLosses:    'Losses',
-    },
-    pl: {
-      miniCash:      'Środki',
-      miniInv:       'Invest',
-      miniInvFx:     'INV. Waluta',
-      miniInvStocks: 'INV. Akcje',
-      // opcjonalnie:
-      // miniInvTotal:  'INV. Razem',
-      miniProfits:   'Profity',
-      miniLosses:    'Straty',
-    }
+  const MAP_EN = {
+    miniCash:       'Cash',
+    miniInv:        'Invests',
+    miniInvFx:      'INV. FX',
+    miniInvStocks:  'INV. Stocks',
+    // miniInvTotal — nie było w Twojej liście; zostawiam jak jest
+    miniProfits:    'Profits',
+    miniLosses:     'Losses'
   };
 
-  // odczyt aktualnego języka z selecta lub przycisku
-  function getLang(){
+  const MAP_PL = {
+    miniCash:       'Środki',
+    miniInv:        'Invest',
+    miniInvFx:      'INV. Waluta',
+    miniInvStocks:  'INV. Akcje',
+    // miniInvTotal — nie było w liście; zostawiam jak jest
+    miniProfits:    'Profity',
+    miniLosses:     'Straty'
+  };
+
+  function currentLang() {
     const sel = document.getElementById('langSelect');
-    if (sel && sel.value) return sel.value;
     const btn = document.getElementById('lang-toggle');
-    return (btn && (btn.textContent||'').trim().toLowerCase() === 'pl') ? 'pl' : 'en';
+    return (sel?.value || btn?.textContent || document.documentElement.lang || 'en')
+            .toLowerCase().startsWith('pl') ? 'pl' : 'en';
   }
 
-  function setLabel(i18nKey, text){
-    const el = document.querySelector('[data-i18n="' + i18nKey + '"]');
-    if (el && text) el.textContent = text;
+  function applyMobileMiniLabels() {
+    if (!isMobile()) return;              // desktop nietknięty
+    const dict = currentLang() === 'pl' ? MAP_PL : MAP_EN;
+
+    Object.entries(dict).forEach(([key, val]) => {
+      document.querySelectorAll('#stickyMiniJars [data-i18n="'+key+'"]').forEach(el => {
+        // modyfikujemy wyłącznie labelki mini-jars
+        if (el.classList.contains('mini-jar-label')) {
+          el.textContent = val;
+        }
+      });
+    });
   }
 
-  function applyMiniJarLabels(){
-    const lang = (getLang() === 'pl') ? 'pl' : 'en';
-    const dict = MAP[lang];
-    Object.keys(dict).forEach(k => setLabel(k, dict[k]));
-  }
+  // 1) na starcie
+  document.addEventListener('DOMContentLoaded', applyMobileMiniLabels);
 
-  // 1) od razu po starcie (mobile)
-  document.addEventListener('DOMContentLoaded', applyMiniJarLabels);
+  // 2) po zmianie języka (select albo przycisk)
+  document.getElementById('langSelect')?.addEventListener('change', () => {
+    setTimeout(applyMobileMiniLabels, 0);
+  });
+  document.getElementById('lang-toggle')?.addEventListener('click', () => {
+    setTimeout(applyMobileMiniLabels, 0);
+  });
 
-  // 2) po ewentualnym przełączeniu języka
-  const langSel = document.getElementById('langSelect');
-  if (langSel) langSel.addEventListener('change', applyMiniJarLabels);
+  // 3) przy zmianie rozmiaru / orientacji
+  addEventListener('resize', applyMobileMiniLabels);
+  addEventListener('orientationchange', applyMobileMiniLabels);
 
-  const langBtn = document.getElementById('lang-toggle');
-  if (langBtn) langBtn.addEventListener('click', () => {
-    // przycisk zamienia EN<->PL — po kliknięciu podmień labelki
-    setTimeout(applyMiniJarLabels, 0);
+  // 4) gdy inny skrypt nadpisze tłumaczenia – popraw ponownie
+  const obs = new MutationObserver(applyMobileMiniLabels);
+  obs.observe(document.getElementById('stickyMiniJars'), {
+    childList: true, subtree: true, characterData: true
   });
 })();
 </script>
