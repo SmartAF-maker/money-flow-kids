@@ -3466,24 +3466,3 @@ width: 110px;
     #logoutBtn::after{ content:"⎋"; }
   }
 }
-/* === MINI-JARS LABEL OVERRIDE === */
-#stickyMiniJars .mini-jar-label{ font-size:0 !important; }
-#stickyMiniJars .mini-jar-label::after{
-  font-size:12px!important; font-weight:500; color:var(--ink);
-}
-
-/* EN (default) */
-#stickyMiniJars [data-i18n="miniCash"]::after      { content:"Cash"; }
-#stickyMiniJars [data-i18n="miniInv"]::after       { content:"Invests"; }
-#stickyMiniJars [data-i18n="miniInvFx"]::after     { content:"INV. FX"; }
-#stickyMiniJars [data-i18n="miniInvStocks"]::after { content:"INV. Stocks"; }
-#stickyMiniJars [data-i18n="miniProfits"]::after   { content:"Profits"; }
-#stickyMiniJars [data-i18n="miniLosses"]::after    { content:"Losses"; }
-
-/* PL (gdy <html lang="pl">) */
-html[lang="pl"] #stickyMiniJars [data-i18n="miniCash"]::after      { content:"Środki"; }
-html[lang="pl"] #stickyMiniJars [data-i18n="miniInv"]::after       { content:"Invest"; }
-html[lang="pl"] #stickyMiniJars [data-i18n="miniInvFx"]::after     { content:"INV. Waluta"; }
-html[lang="pl"] #stickyMiniJars [data-i18n="miniInvStocks"]::after { content:"INV. Akcje"; }
-html[lang="pl"] #stickyMiniJars [data-i18n="miniProfits"]::after   { content:"Profity"; }
-html[lang="pl"] #stickyMiniJars [data-i18n="miniLosses"]::after    { content:"Straty"; }

@@ -3479,67 +3479,6 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-// === MINI-JARS – ETYKIETY (PL + EN) ===
-// Jeżeli tData nie istnieje, utwórz je:
-window.tData = window.tData || {};
-window.tData.en = window.tData.en || {};
-window.tData.pl = window.tData.pl || {};
-
-// Uzupełnij/aktualizuj klucze używane w HTML przez data-i18n:
-Object.assign(window.tData.en, {
-  // Mini pasek (stickyMiniJars)
-  miniCash: "Cash",
-  miniInv: "Investments",
-  miniInvFx: "INV. FX",
-  miniInvStocks: "INV. Stocks",
-  miniInvTotal: "Investments",
-  miniProfits: "Profits",
-  miniLosses: "Losses",
-
-  // Nazwy głównych słoików (te pod dużymi słoikami)
-  jarSavings: "Savings",
-  jarSpending: "Earnings",
-  jarGiving: "Gifts"
-});
-
-Object.assign(window.tData.pl, {
-  // Mini pasek (stickyMiniJars)
-  miniCash: "Środki",
-  miniInv: "Inwestycje",
-  miniInvFx: "INV. Waluta",
-  miniInvStocks: "INV. Akcje",
-  miniInvTotal: "Inwestycje",
-  miniProfits: "Zysk",
-  miniLosses: "Strata",
-
-  // Nazwy głównych słoików (te pod dużymi słoikami)
-  jarSavings: "Oszczędności",
-  jarSpending: "Zarobki",
-  jarGiving: "Prezenty"
-});
-
-// Jeśli masz w appce funkcję odświeżającą tłumaczenia, spróbuj ją wywołać:
-(function () {
-  // 1) Spróbuj istniejącej funkcji (jeśli jest)
-  if (typeof window.applyI18n === "function") {
-    try { window.applyI18n(); return; } catch (_) {}
-  }
-
-  // 2) Minimalny fallback – odczytaj aktualny język z selecta lub domyślnie 'en'
-  var langSelect = document.getElementById("langSelect");
-  var lang = (langSelect && langSelect.value) ? langSelect.value : "en";
-  var dict = (window.tData && window.tData[lang]) ? window.tData[lang] : {};
-
-  // Podmień wszystkie napisy z data-i18n
-  var nodes = document.querySelectorAll("[data-i18n]");
-  for (var i = 0; i < nodes.length; i++) {
-    var el = nodes[i];
-    var key = el.getAttribute("data-i18n");
-    if (key && Object.prototype.hasOwnProperty.call(dict, key)) {
-      el.textContent = String(dict[key]);
-    }
-  }
-})();
 
 
 
