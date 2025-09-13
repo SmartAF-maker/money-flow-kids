@@ -3466,9 +3466,21 @@ width: 110px;
     #logoutBtn::after{ content:"⎋"; }
   }
 }
-td .mfk-val { display:block; }
-td .mfk-cap { display:block; font-size:11px; color:#777; margin-top:2px; }
-/* Możesz pokazywać .mfk-cap tylko na mobile */
-@media (min-width: 641px) {
-  td .mfk-cap { display:none; }
-}
+/* ========== DEBUG PATCH (tymczasowo, na koniec CSS) ========== */
+
+/* 1) Nie ukrywaj inputów/btn w słoikach dla child */
+body[data-role="child"] .jar-card .jar-actions,
+body[data-role="child"] .jar-card .jar-input,
+body[data-role="child"] .jar-card .btn { display:flex !important; }
+
+/* 2) Gwarantuj odstęp pod topbar + mini-jars (gdy są fixed) */
+:root{ --H-TOP:56px; --H-JARS:52px; }
+body{ padding-top: calc(var(--H-TOP) + var(--H-JARS) + 12px) !important; }
+
+/* 3) Przywróć klikalność nagłówków tabel */
+.tableWrap thead,
+.tableWrap thead * { pointer-events:auto !important; }
+
+/* 4) Upewnij się, że nakładki nie zasłaniają UI */
+#rotateOverlay { display:none !important; }
+.yt-mini, .ytmini { z-index: 400 !important; } /* poniżej topbaru/mini-jars i toasta */
