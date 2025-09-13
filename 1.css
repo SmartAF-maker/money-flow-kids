@@ -3466,3 +3466,9 @@ width: 110px;
     #logoutBtn::after{ content:"⎋"; }
   }
 }
+td .mfk-val { display:block; }
+td .mfk-cap { display:block; font-size:11px; color:#777; margin-top:2px; }
+/* Możesz pokazywać .mfk-cap tylko na mobile */
+@media (min-width: 641px) {
+  td .mfk-cap { display:none; }
+}
