@@ -781,16 +781,16 @@ function applyMiniLabelsMobile() {
     ? {
         cash:        'Środki',
         invest:      'Invest',
-        invFx:       'INV. Waluta',
-        invStocks:   'INV. Akcje',
+        invFx:       'Waluta',
+        invStocks:   'Akcje',
         totalEarned: 'Profity',
         totalLoss:   'Straty'
       }
     : {
         cash:        'Cash',
         invest:      'Invests',
-        invFx:       'INV. FX',
-        invStocks:   'INV. Stocks',
+        invFx:       'FX',
+        invStocks:   'Stocks',
         totalEarned: 'Profits',
         totalLoss:   'Losses'
       };
