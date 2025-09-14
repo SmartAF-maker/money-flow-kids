@@ -783,6 +783,7 @@ function applyMiniLabelsMobile() {
         invest:      'Invest',
         invFx:       'Waluta',
         invStocks:   'Akcje',
+       invTotal:    'Razem',
         totalEarned: 'Profity',
         totalLoss:   'Straty'
       }
@@ -791,6 +792,7 @@ function applyMiniLabelsMobile() {
         invest:      'Invests',
         invFx:       'FX',
         invStocks:   'Stocks',
+        invTotal:    'Total',
         totalEarned: 'Profits',
         totalLoss:   'Losses'
       };
@@ -801,6 +803,7 @@ function applyMiniLabelsMobile() {
     invest:      document.querySelector('[data-i18n="miniInv"]'),
     invFx:       document.querySelector('[data-i18n="miniInvFx"]'),
     invStocks:   document.querySelector('[data-i18n="miniInvStocks"]'),
+      invTotal:    document.querySelector('[data-i18n="miniInvTotal"]'),
     totalEarned: document.querySelector('[data-i18n="miniProfits"]'),
     totalLoss:   document.querySelector('[data-i18n="miniLosses"]')
   };
