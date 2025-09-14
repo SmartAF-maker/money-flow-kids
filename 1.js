@@ -3530,8 +3530,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const FX_ALL     = ['EUR/USD','USD/PLN','USD/EUR','GBP/USD','USD/JPY','CHF/PLN','EUR/PLN','AUD/USD','NZD/USD'];
 
   /* ===== stan ===== */
-  let mode   = 'stock';     // 'stock' | 'fx'
-  let filter = 'stock';     // 'stock' | 'fx' | 'all'
+  let mode   = 'stock';
+  let filter = 'stock';
   let watchlist = loadLS();
 
   function loadLS(){
@@ -3546,7 +3546,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const pct = (a,b)=> (b===0?0:((a-b)/b)*100);
   const fmt = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
 
-  // GE -> ge.us (Stooq). Pozostaw z kropką jeśli podane.
   function stooqCode(sym){
     const s = (sym||'').toLowerCase();
     if (/\./.test(s)) return s;
@@ -3579,7 +3578,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   /* ===== fetch: STOCKS – Stooq z fallbackiem na Yahoo ===== */
   async function stockHistory(symbol, days=365*5){
-    // 1) Stooq
     try{
       const code = stooqCode(symbol);
       const url = `https://r.jina.ai/http://stooq.com/q/d/l/?s=${encodeURIComponent(code)}&i=d`;
@@ -3592,7 +3590,6 @@ window.addEventListener('DOMContentLoaded', () => {
         return { dates: dates.slice(cut), closes: closes.slice(cut) };
       }
     }catch(e){}
-    // 2) Yahoo fallback
     try{
       const urlY = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5y&interval=1d`;
       const ry = await fetch(urlY); const jy = await ry.json();
@@ -3621,30 +3618,30 @@ window.addEventListener('DOMContentLoaded', () => {
     const step = (c.width)/(values.length-1);
     const yy = v => c.height - ((v-min)/(max-min||1))*(c.height-pad*2) - pad;
 
-    // ścieżka obszaru pod linią
+    // obszar pod linią
     ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
     values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
     ctx.lineTo(c.width, c.height); ctx.lineTo(0, c.height); ctx.closePath();
 
     const up = values.at(-1)>=values[0];
 
-    // ✅ cieniowanie ZAWSZE błękitne (mocniejsze przy wzroście, delikatniejsze przy spadku)
+    // fill: ↑ błękit / ↓ Burgundy→Rose
     const grad = ctx.createLinearGradient(0, 0, 0, c.height);
     if (up) {
       grad.addColorStop(0, "rgba(0,200,255,0.35)");
       grad.addColorStop(1, "rgba(0,200,255,0.08)");
     } else {
-      grad.addColorStop(0, "rgba(0,200,255,0.22)");
-      grad.addColorStop(1, "rgba(0,200,255,0.06)");
+      grad.addColorStop(0, "rgba(153, 27, 27, 0.45)"); // #991B1B burgundy
+      grad.addColorStop(1, "rgba(244,114,182,0.12)"); // #F472B6 rose
     }
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // linia: neon-zielona ↑ / fioletowa ↓
+    // linia: ↑ neon-zielona / ↓ burgundowa
     ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
     values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
     ctx.lineWidth=2*devicePixelRatio;
-    ctx.strokeStyle = up ? "#00ff6a" : "#a78bfa";
+    ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; // burgundy line
     ctx.stroke();
   }
 
@@ -3667,7 +3664,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.fillText(min.toFixed(2), 8*devicePixelRatio, y(min)+4*devicePixelRatio);
     ctx.fillText(max.toFixed(2), 8*devicePixelRatio, y(max)+4*devicePixelRatio);
 
-    // === obszar pod linią — zawsze błękitny gradient ===
+    // obszar pod linią
     const up = values.at(-1) >= values[0];
     ctx.beginPath(); ctx.moveTo(left, y(values[0]));
     values.forEach((v,i)=> ctx.lineTo(left + i*step, y(v)));
@@ -3680,17 +3677,17 @@ window.addEventListener('DOMContentLoaded', () => {
       grad.addColorStop(0, "rgba(0,200,255,0.35)");
       grad.addColorStop(1, "rgba(0,200,255,0.08)");
     } else {
-      grad.addColorStop(0, "rgba(0,200,255,0.22)");
-      grad.addColorStop(1, "rgba(0,200,255,0.06)");
+      grad.addColorStop(0, "rgba(153, 27, 27, 0.45)"); // burgundy
+      grad.addColorStop(1, "rgba(244,114,182,0.12)"); // rose
     }
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // linia: neon-zielona ↑ / fioletowa ↓
+    // linia: ↑ neon-zielona / ↓ burgundowa
     ctx.beginPath(); ctx.moveTo(left, y(values[0]));
     values.forEach((v,i)=> ctx.lineTo(left + i*step, y(v)));
     ctx.lineWidth=2*devicePixelRatio;
-    ctx.strokeStyle = up ? "#00ff6a" : "#a78bfa";
+    ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c";
     ctx.stroke();
   }
 
@@ -3702,7 +3699,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const out=[], outD=[], map=new Map();
     for(let i=0;i<dates.length;i++){
       const d=new Date(dates[i]); let key=null;
-      if (mode==='W'){ // ISO week
+      if (mode==='W'){
         const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
         const day=dt.getUTCDay()||7; dt.setUTCDate(dt.getUTCDate()+4-day);
         const y=dt.getUTCFullYear(); const ys=new Date(Date.UTC(y,0,1));
@@ -3713,9 +3710,9 @@ window.addEventListener('DOMContentLoaded', () => {
       } else if (mode==='YTD'){
         const yStart = new Date(new Date().getFullYear(), 0, 1);
         if (d < yStart) continue;
-        key = dates[i]; // wszystkie dni od 1 stycznia
+        key = dates[i];
       }
-      if (key) map.set(key, {date: dates[i], val: values[i]}); // ostatnia wartość w kubełku
+      if (key) map.set(key, {date: dates[i], val: values[i]});
     }
     [...map.values()].sort((a,b)=> a.date.localeCompare(b.date)).forEach(o=>{ outD.push(o.date); out.push(o.val); });
     return {dates: outD, values: out};
@@ -3728,7 +3725,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const right= document.createElement('div');     right.className='wl-right';
     const spark= document.createElement('canvas');  spark.className='wl-spark';
 
-    // „×” jak w Basket – usuwa bez confirm
     const removeBtn = document.createElement('button');
     removeBtn.className = 'wl-remove'; removeBtn.setAttribute('aria-label','Remove from Watchlist'); removeBtn.textContent = '×';
 
@@ -3802,7 +3798,6 @@ window.addEventListener('DOMContentLoaded', () => {
       const closes= full?.closes || [];
       const ranges = $modal.querySelectorAll('.wl-range button');
 
-      // brak danych
       if (dates.length < 2 || closes.length < 2){
         $mPrice.textContent='—';
         $mChg.textContent='Brak danych';
@@ -3825,7 +3820,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (range==='YTD') return resample(d2, v2, 'YTD').values;
         if (range==='6M' || range==='1Y') return resample(d2, v2, 'W').values;
         if (range==='5Y') return resample(d2, v2, 'M').values;
-        return v2; // 1D/5D/1M
+        return v2;
       }
 
       function setRange(btn){
@@ -3837,8 +3832,7 @@ window.addEventListener('DOMContentLoaded', () => {
           $mPrice.textContent = fmt(last);
           const ch=last-prev, pc=pct(last,prev);
           $mChg.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
-          // 💚 przy wzroście, 💜 przy spadku
-          $mChg.style.color = ch>=0 ? 'var(--ok)' : '#a78bfa';
+          $mChg.style.color = ch>=0 ? 'var(--ok)' : '#b91c1c'; // burgundy text for down
           drawBig($big, vals);
         } else {
           $mPrice.textContent = '—'; $mChg.textContent = '—';
