@@ -45,6 +45,7 @@ matchMedia('(max-width:640px)').addEventListener('change', applyLabelizeIfMobile
 const DB_KEY = "kidmoney_multi_fx_live_i18n_v1";
 const AUTH_KEY = window.AUTH_KEY || 'mfk-auth-v1';// { role: 'guest'|'parent'|'child', childId?: string }
 const LANG_KEY = "pf_lang";
+
 // ===== Display currency per language (EN->USD, PL->PLN) =====
 const CURRENCY_KEY = "pf_display_currency";
 const DISPLAY_CURRENCY_BY_LANG = { en: "USD", pl: "PLN" };
@@ -2950,8 +2951,6 @@ async function refreshFxFromApi() {
     return false;
   }
 }
-
-// --- STOCKS (miękkie traktowanie cooldownu) ---
 // --- STOCKS (miękkie traktowanie cooldownu) ---
 async function refreshStocksFromApi() {
   try {
@@ -3512,11 +3511,17 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-/// ===== WATCHLIST (stocks + FX) v2 — robust FX fallbacks + safe remove-by-index =====
+/// ===== WATCHLIST (stocks + FX) v2 — perf tuned (DPR cap, TTL cache, lazy draw) =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
 
-  // DOM
+  // ---------- PERF CONSTANTS ----------
+  const DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1)); // mniejszy koszt rysowania
+  const DAYS_SPARK_STOCK = 420;  // ~14 mies. do małych sparków
+  const DAYS_SPARK_FX    = 210;  // ~7 mies. do małych sparków
+  const SERIES_TTL_MS    = 2 * 60 * 60 * 1000; // 2h cache w localStorage
+
+  // ---------- DOM ----------
   const $panel = document.querySelector('.panel.watchlist');
   const $list  = document.getElementById('wl-list');
   const $form  = document.getElementById('wl-form');
@@ -3535,14 +3540,14 @@ window.addEventListener('DOMContentLoaded', () => {
   const STOCKS_ALL = ['AAPL','MSFT','NVDA','GE','GOOGL','AMZN','META','TSLA','DIS','NFLX','NKE','INTC','AMD','BA','IBM','ORCL','PEP','KO','XOM'];
   const FX_ALL     = ['EUR/USD','USD/PLN','USD/EUR','GBP/USD','USD/JPY','CHF/PLN','EUR/PLN','AUD/USD','NZD/USD'];
 
-  // state
+  // ---------- STATE ----------
   let mode   = 'stock';
   let filter = 'stock';
   let watchlist = loadLS();
 
-  // caches
-  const cacheFX     = new Map();
-  const cacheStocks = new Map();
+  // caches (w pamięci procesu)
+  const cacheFX     = new Map();   // key: `${pair}|${days}`
+  const cacheStocks = new Map();   // key: `${symbol}|${days}`
 
   function loadLS(){
     try{
@@ -3552,7 +3557,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function saveLS(){ localStorage.setItem(LS_KEY, JSON.stringify(watchlist)); }
 
-  // utils
+  // ---------- UTILS ----------
   const pct = (a,b)=> (b===0?0:((a-b)/b)*100);
   const fmt = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
   const emptySeries = () => ({dates:[],closes:[]});
@@ -3585,10 +3590,31 @@ window.addEventListener('DOMContentLoaded', () => {
     } finally { clearTimeout(to); }
   }
 
-  // ===== FX (4 próby: host -> host@jina -> frankfurter@jina -> stooq CSV) =====
+  // ---------- localStorage series cache (TTL) ----------
+  function getSeriesCache(key){
+    try{
+      const raw = localStorage.getItem('mfk_series_cache_v1:' + key);
+      if (!raw) return null;
+      const { t, v } = JSON.parse(raw);
+      if (Date.now() - t > SERIES_TTL_MS) return null;
+      return v;
+    }catch(_){ return null; }
+  }
+  function setSeriesCache(key, value){
+    try{
+      localStorage.setItem('mfk_series_cache_v1:' + key, JSON.stringify({ t: Date.now(), v: value }));
+    }catch(_){}
+  }
+
+  // ---------- FX (host -> host@jina -> frankfurter@jina -> stooq CSV) ----------
   async function fxHistory(base, quote, days=365*5){
-    const key = `${base}/${quote}`;
-    if (cacheFX.has(key)) return cacheFX.get(key);
+    const pairKey = `${base}/${quote}`;
+    const memKey  = `${pairKey}|${days}`;
+    if (cacheFX.has(memKey)) return cacheFX.get(memKey);
+
+    const lsKey = `FX:${pairKey}:${days}`;
+    const fromLS = getSeriesCache(lsKey);
+    if (fromLS) { cacheFX.set(memKey, fromLS); return fromLS; }
 
     const end=new Date(); const start=new Date(end); start.setDate(start.getDate()-days);
     const s=start.toISOString().slice(0,10), e=end.toISOString().slice(0,10);
@@ -3621,11 +3647,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let out = emptySeries();
     try{ out = await try1(); }catch(_){}
-    if (!out.closes.length){ try{ out = await try2(); }catch(_){ } }
-    if (!out.closes.length){ try{ out = await try3(); }catch(_){ } }
-    if (!out.closes.length){ try{ out = await try4(); }catch(_){ } }
+    if (!out.closes.length){ try{ out = await try2(); }catch(_){} }
+    if (!out.closes.length){ try{ out = await try3(); }catch(_){} }
+    if (!out.closes.length){ try{ out = await try4(); }catch(_){} }
 
-    cacheFX.set(key, out);
+    cacheFX.set(memKey, out);
+    setSeriesCache(lsKey, out);
     return out;
   }
 
@@ -3641,10 +3668,15 @@ window.addEventListener('DOMContentLoaded', () => {
     return { dates, closes };
   }
 
-  // ===== Stocks (Stooq -> Yahoo) =====
+  // ---------- Stocks (Stooq -> Yahoo) ----------
   async function stockHistory(symbol, days=365*5){
     const key = symbol.toUpperCase();
-    if (cacheStocks.has(key)) return cacheStocks.get(key);
+    const memKey = `${key}|${days}`;
+    if (cacheStocks.has(memKey)) return cacheStocks.get(memKey);
+
+    const lsKey = `STK:${key}:${days}`;
+    const fromLS = getSeriesCache(lsKey);
+    if (fromLS) { cacheStocks.set(memKey, fromLS); return fromLS; }
 
     try{
       const code = stooqCode(symbol);
@@ -3655,7 +3687,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (closes.length > 10) {
         const cut = Math.max(0, dates.length - days);
         const out = { dates: dates.slice(cut), closes: closes.slice(cut) };
-        cacheStocks.set(key, out);
+        cacheStocks.set(memKey, out);
+        setSeriesCache(lsKey, out);
         return out;
       }
     }catch(_){}
@@ -3668,21 +3701,23 @@ window.addEventListener('DOMContentLoaded', () => {
       const dates = ts.map(t=> new Date(t*1000).toISOString().slice(0,10));
       const values = cs.filter(v=> v!=null);
       const out = { dates: dates.slice(-values.length), closes: values };
-      cacheStocks.set(key, out);
+      cacheStocks.set(memKey, out);
+      setSeriesCache(lsKey, out);
       return out;
     }catch(_){}
 
     const empty = emptySeries();
-    cacheStocks.set(key, empty);
+    cacheStocks.set(memKey, empty);
+    setSeriesCache(lsKey, empty);
     return empty;
   }
 
-  // ===== drawing (bez zmian) =====
+  // ---------- RYSOWANIE ----------
   function drawSpark(c, values){
     const cssW = c.clientWidth || c.offsetWidth || 220;
     const cssH = c.clientHeight || 38;
-    c.width  = Math.max(220, cssW) * devicePixelRatio;
-    c.height = cssH * devicePixelRatio;
+    c.width  = Math.max(220, cssW) * DPR;
+    c.height = cssH * DPR;
     const ctx = c.getContext('2d');
     ctx.clearRect(0,0,c.width,c.height);
     if (!values || values.length < 2) return;
@@ -3704,26 +3739,26 @@ window.addEventListener('DOMContentLoaded', () => {
 
     ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
     values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
-    ctx.lineWidth=2*devicePixelRatio; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
+    ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
 
   function drawBig(c, values){
     const cssW = c.clientWidth || 720, cssH = 280;
-    c.width = cssW * devicePixelRatio; c.height = cssH * devicePixelRatio;
+    c.width = cssW * DPR; c.height = cssH * DPR;
     const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
     if (!values || values.length<2) return;
 
-    const left=48*devicePixelRatio, right=16*devicePixelRatio, top=16*devicePixelRatio, bottom=32*devicePixelRatio;
+    const left=48*DPR, right=16*DPR, top=16*DPR, bottom=32*DPR;
     const min=Math.min(...values), max=Math.max(...values);
     const w = c.width - left - right, h = c.height - top - bottom;
     const step = w/(values.length-1);
     const y = v => c.height - bottom - ((v-min)/(max-min||1))*h;
 
-    ctx.strokeStyle='#23304d'; ctx.lineWidth=1*devicePixelRatio;
+    ctx.strokeStyle='#23304d'; ctx.lineWidth=1*DPR;
     for(let i=0;i<=4;i++){ const yy = top + i*h/4; ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(left+w,yy); ctx.stroke(); }
-    ctx.fillStyle='#9ca3af'; ctx.font = `${12*devicePixelRatio}px system-ui,sans-serif`;
-    ctx.fillText(min.toFixed(2), 8*devicePixelRatio, y(min)+4*devicePixelRatio);
-    ctx.fillText(max.toFixed(2), 8*devicePixelRatio, y(max)+4*devicePixelRatio);
+    ctx.fillStyle='#9ca3af'; ctx.font = `${12*DPR}px system-ui,sans-serif`;
+    ctx.fillText(min.toFixed(2), 8*DPR, y(min)+4*DPR);
+    ctx.fillText(max.toFixed(2), 8*DPR, y(max)+4*DPR);
 
     const up = values.at(-1) >= values[0];
     ctx.beginPath(); ctx.moveTo(left, y(values[0]));
@@ -3737,10 +3772,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     ctx.beginPath(); ctx.moveTo(left, y(values[0]));
     values.forEach((v,i)=> ctx.lineTo(left + i*step, y(v)));
-    ctx.lineWidth=2*devicePixelRatio; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
+    ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
 
-  // ===== resampling for modal (D/W/M) =====
+  // ---------- RESAMPLING (D/W/M) ----------
   function resample(dates, values, mode){
     if (!dates?.length || !values?.length) return {dates:[],values:[]};
     if (mode==='D') return {dates:[...dates], values:[...values]};
@@ -3763,7 +3798,22 @@ window.addEventListener('DOMContentLoaded', () => {
     return {dates: outD, values: out};
   }
 
-  // ===== cards =====
+  // ---------- IntersectionObserver do lazy draw ----------
+  const io = ('IntersectionObserver' in window)
+    ? new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          const el = e.target;
+          if (e.isIntersecting && el._wl_values && !el._wl_drawn) {
+            el._wl_drawn = true;
+            const c = el.querySelector('canvas.wl-spark');
+            if (c) requestAnimationFrame(() => drawSpark(c, el._wl_values));
+            io.unobserve(el);
+          }
+        }
+      }, { root: null, threshold: 0.1 })
+    : null;
+
+  // ---------- KARTY ----------
   async function mountCard(item, idx){
     const el   = document.createElement('article'); el.className='wl-card'; el.setAttribute('role','listitem');
     const left = document.createElement('div');     left.className='wl-left';
@@ -3785,10 +3835,10 @@ window.addEventListener('DOMContentLoaded', () => {
     let hist;
     if (item.type==='fx'){
       t.textContent=`${item.base}/${item.quote}`; n.textContent='FX';
-      hist=await fxHistory(item.base,item.quote,365);
+      hist=await fxHistory(item.base,item.quote, DAYS_SPARK_FX);
     } else {
       t.textContent=item.symbol.toUpperCase(); n.textContent='Stock';
-      hist=await stockHistory(item.symbol,365*3);
+      hist=await stockHistory(item.symbol, DAYS_SPARK_STOCK);
     }
 
     const vals = (hist?.closes||[]).slice(-120);
@@ -3798,7 +3848,11 @@ window.addEventListener('DOMContentLoaded', () => {
       const ch=last-prev, pc=pct(last,prev);
       d.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
       d.className   = 'wl-diff ' + (ch>=0?'pos':'neg');
-      drawSpark(spark, vals);
+
+      // lazy draw – rysuj dopiero gdy karta jest widoczna
+      el._wl_values = vals;
+      if (io) io.observe(el);
+      else requestAnimationFrame(() => drawSpark(spark, vals));
     } else {
       p.textContent='—'; d.textContent='—';
     }
@@ -3821,7 +3875,7 @@ window.addEventListener('DOMContentLoaded', () => {
       .forEach((item, idx) => mountCard(item, idx));
   }
 
-  // ===== modal =====
+  // ---------- MODAL ----------
   function openModal(item){
     if (!$modal) return;
     $modal.setAttribute('aria-hidden','false');
@@ -3886,7 +3940,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $modal?.querySelector('.wl-close')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
   $modal?.querySelector('.wl-modal__backdrop')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
 
-  // ===== picker (+Add) =====
+  // ---------- PICKER (+Add) ----------
   function fillPicker(){
     if (!$pick) return;
     const arr = mode==='fx' ? FX_ALL : STOCKS_ALL;
@@ -3939,7 +3993,21 @@ window.addEventListener('DOMContentLoaded', () => {
     saveLS(); render();
   });
 
-  // start
+  // ---------- Resize debounce: przerysuj tylko widoczne ----------
+  let _rTO=null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_rTO);
+    _rTO = setTimeout(() => {
+      document.querySelectorAll('.wl-card').forEach(card=>{
+        const c = card.querySelector('canvas.wl-spark');
+        if (card._wl_values && c && card.getBoundingClientRect().top < window.innerHeight) {
+          drawSpark(c, card._wl_values);
+        }
+      });
+    }, 120);
+  });
+
+  // ---------- START ----------
   fillPicker();
   render();
 })();
