@@ -3512,7 +3512,7 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-// ===== WATCHLIST (stocks + FX) v2 (fixed + FX CORS fallback + cache) =====
+ // ===== WATCHLIST (stocks + FX) v2 (fixed + FX CORS fallback + cache) =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
   const $list  = document.getElementById('wl-list');
@@ -3532,7 +3532,7 @@ window.addEventListener('DOMContentLoaded', () => {
   let filter = 'stock';
   let watchlist = loadLS();
 
-  // proste cache’y (sesyjne)
+  // cache
   const cacheFX     = new Map();   // key: "BASE/QUOTE"
   const cacheStocks = new Map();   // key: "TICKER"
 
@@ -3560,14 +3560,13 @@ window.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
-  // Pomocnicze: fetch z timeoutem
+  // fetch helper
   async function fetchJSON(url, {timeout=8000} = {}){
     const ctrl = new AbortController();
     const t = setTimeout(()=>ctrl.abort(), timeout);
     try{
       const r = await fetch(url, {signal: ctrl.signal});
       if (!r.ok) throw new Error('HTTP '+r.status);
-      // r.jina.ai zwraca JSON jako text -> parsujemy ręcznie
       const ct = r.headers.get('content-type')||'';
       const body = ct.includes('application/json') ? await r.json() : JSON.parse(await r.text());
       return body;
@@ -3582,21 +3581,16 @@ window.addEventListener('DOMContentLoaded', () => {
     const end=new Date(); const start=new Date(end); start.setDate(start.getDate()-days);
     const s=start.toISOString().slice(0,10), e=end.toISOString().slice(0,10);
 
-    // 1) bezpośrednio (czasem CORS blokuje)
     const try1 = async () => {
       const url=`https://api.exchangerate.host/timeseries?start_date=${s}&end_date=${e}&base=${base}&symbols=${quote}`;
       const j = await fetchJSON(url);
       return j?.rates ? normalizeFX(j.rates, quote) : {dates:[],closes:[]};
     };
-
-    // 2) przez r.jina.ai (proxy bez CORS)
     const try2 = async () => {
       const url=`https://r.jina.ai/http://api.exchangerate.host/timeseries?start_date=${s}&end_date=${e}&base=${base}&symbols=${quote}`;
       const j = await fetchJSON(url);
       return j?.rates ? normalizeFX(j.rates, quote) : {dates:[],closes:[]};
     };
-
-    // 3) frankfurter.app (ten sam zakres, inne pole nazwy)
     const try3 = async () => {
       const url=`https://api.frankfurter.app/${s}..${e}?from=${base}&to=${quote}`;
       const j = await fetchJSON(url);
@@ -3622,7 +3616,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const key = symbol.toUpperCase();
     if (cacheStocks.has(key)) return cacheStocks.get(key);
 
-    // 1) Stooq
     try{
       const code = stooqCode(symbol);
       const url  = `https://r.jina.ai/http://stooq.com/q/d/l/?s=${encodeURIComponent(code)}&i=d`;
@@ -3638,7 +3631,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }catch(_){}
 
-    // 2) Yahoo
     try{
       const urlY = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5y&interval=1d`;
       const jy = await fetchJSON(urlY);
@@ -3657,7 +3649,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return empty;
   }
 
-  /* ===== rysowanie (bez zmian wizualnych) ===== */
+  /* ===== drawing ===== */
   function drawSpark(c, values){
     const cssW = (c.clientWidth || c.offsetWidth || 220);
     const cssH = (c.clientHeight || 38);
@@ -3732,15 +3724,16 @@ window.addEventListener('DOMContentLoaded', () => {
         const day=dt.getUTCDay()||7; dt.setUTCDate(dt.getUTCDate()+4-day);
         const y=dt.getUTCFullYear(); const ys=new Date(Date.UTC(y,0,1));
         const w=Math.ceil((((dt-ys)/86400000)+1)/7); key=`${y}-W${String(w).padStart(2,'0')}`;
-      } else if (mode==='M'){ key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
-      else if (mode==='YTD'){ const yStart=new Date(new Date().getFullYear(),0,1); if (d<yStart) continue; key=dates[i]; }
+      } else if (mode==='M'){
+        key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      }
       if (key) map.set(key, {date: dates[i], val: values[i]});
     }
     [...map.values()].sort((a,b)=> a.date.localeCompare(b.date)).forEach(o=>{ outD.push(o.date); out.push(o.val); });
     return {dates: outD, values: out};
   }
 
-  /* ===== render kart ===== */
+  /* ===== create card ===== */
   async function mountCard(item){
     const el   = document.createElement('article'); el.className='wl-card'; el.setAttribute('role','listitem');
     const left = document.createElement('div');     left.className='wl-left';
@@ -3768,7 +3761,6 @@ window.addEventListener('DOMContentLoaded', () => {
       d.className   = 'wl-diff ' + (ch>=0?'pos':'neg');
       drawSpark(spark, vals);
     } else { p.textContent='—'; d.textContent='—'; }
-
     el.addEventListener('click', ()=> openModal(item));
     removeBtn.addEventListener('click', (e)=>{ e.stopPropagation();
       watchlist = watchlist.filter(x => !(x.type===item.type && ((x.symbol && x.symbol===item.symbol) || (x.base && x.base===item.base && x.quote===item.quote))));
@@ -3807,14 +3799,22 @@ window.addEventListener('DOMContentLoaded', () => {
       const now = new Date(dates.at(-1));
 
       function calc(range){
-        let d=365; if(range==='1D')d=7; if(range==='5D')d=14; if(range==='1M')d=31;
-        if(range==='6M')d=183; if(range==='1Y')d=365; if(range==='5Y')d=365*5; if(range==='YTD')d=366;
+        // ZOSTAWIAMY TYLKO: 1D, 5D, 1M, 6M, 1Y
+        if (range==='1D'){
+          // minimalnie 2 punkty, żeby było co rysować
+          return closes.slice(-2);
+        }
+        let d=365;
+        if(range==='5D') d=5;
+        if(range==='1M') d=31;
+        if(range==='6M') d=183;
+        if(range==='1Y') d=365;
+
         const cutoff=new Date(now); cutoff.setDate(cutoff.getDate()-d);
         let idx = dates.findIndex(dt => new Date(dt) >= cutoff); if(idx<0) idx=0;
         const d2=dates.slice(idx), v2=closes.slice(idx);
-        if (range==='YTD') return resample(d2, v2, 'YTD').values;
+
         if (range==='6M' || range==='1Y') return resample(d2, v2, 'W').values;
-        if (range==='5Y') return resample(d2, v2, 'M').values;
         return v2;
       }
 
@@ -3835,6 +3835,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }
 
+      // domyślnie 1Y
       setRange($modal.querySelector('.wl-range button[data-range="1Y"]') || ranges[0]);
       ranges.forEach(btn => btn.onclick = () => setRange(btn));
     });
@@ -3842,27 +3843,45 @@ window.addEventListener('DOMContentLoaded', () => {
   $modal.querySelector('.wl-close')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
   $modal.querySelector('.wl-modal__backdrop')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
 
-  /* ===== top-bar ===== */
+  /* ===== top-bar + watchlist tabs ===== */
   function fillPicker(){
     const arr = mode==='fx' ? FX_ALL : STOCKS_ALL;
-    $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
+    if ($pick) $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
   }
   function applyMode(next){
-    mode = next; filter = next; fillPicker(); render();
+    if(next==='fx'){ mode='fx'; filter='fx'; }
+    else if(next==='stock'){ mode='stock'; filter='stock'; }
+    else { filter='all'; }
+    fillPicker(); render();
   }
+
+  // global topbar (jeśli jest)
   document.querySelectorAll('.topbar .tab[data-tab], #mfkMobileDrawer .tab[data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const t = btn.getAttribute('data-tab');
       if (t==='invest') applyMode('stock');
       if (t==='fx')     applyMode('fx');
-      if (t==='all')    { filter='all'; fillPicker(); render(); }
+      if (t==='all')    applyMode('all');
     });
   });
 
-  /* ===== dodawanie ===== */
+  // watchlist-local tabs: .wl-tabs [data-tab="all|stock|fx"]
+  document.querySelectorAll('.wl-tabs [data-tab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const t = btn.getAttribute('data-tab');
+      if (t==='stock') applyMode('stock');
+      if (t==='fx')    applyMode('fx');
+      if (t==='all')   applyMode('all');
+      // podświetlenie
+      document.querySelectorAll('.wl-tabs [data-tab]').forEach(b=>b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+    });
+  });
+
+  /* ===== add from picker ===== */
   $form?.addEventListener('submit', e=>{
     e.preventDefault();
-    const val = $pick.value;
+    const val = $pick?.value;
     if (!val) return;
     if (mode==='fx'){
       const p = parsePair(val); if (!p) return;
