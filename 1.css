@@ -3552,3 +3552,8 @@ width: 110px;
     0 8px 20px rgba(36, 13, 76, 0.28);
   transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
 }
+.wl-remove:hover{
+  background: var(--vio-bg-h);
+  border-color: var(--vio-bd-h);
+  transform: translateY(-1px);
+}
