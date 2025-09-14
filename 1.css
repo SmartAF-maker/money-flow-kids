@@ -3557,3 +3557,15 @@ width: 110px;
   border-color: var(--vio-bd-h);
   transform: translateY(-1px);
 }
+/* ===== MOBILE FIX: ukryj nazwę akcji i kwotę pod Set (tylko telefon) ===== */
+@media (max-width: 768px) {
+  .basket-row span, 
+  .basket-row div {
+    display: none;
+  }
+
+  .basket-row input,
+  .basket-row button {
+    display: inline-block;
+  }
+}
