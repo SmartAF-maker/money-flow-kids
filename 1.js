@@ -3512,9 +3512,12 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
- // ===== WATCHLIST (stocks + FX) v2 (fixed + FX CORS fallback + cache) =====
+// ===== WATCHLIST (stocks + FX) — single clean module =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
+
+  // DOM
+  const $panel = document.querySelector('.panel.watchlist'); // cały panel
   const $list  = document.getElementById('wl-list');
   const $form  = document.getElementById('wl-form');
   const $pick  = document.getElementById('wl-pick');
@@ -3525,22 +3528,25 @@ window.addEventListener('DOMContentLoaded', () => {
   const $mChg  = document.getElementById('wl-chg');
   const $big   = document.getElementById('wl-big');
 
+  // pickery
   const STOCKS_ALL = ['AAPL','MSFT','NVDA','GE','GOOGL','AMZN','META','TSLA','DIS','NFLX','NKE','INTC','AMD','BA','IBM','ORCL','PEP','KO','XOM'];
   const FX_ALL     = ['EUR/USD','USD/PLN','USD/EUR','GBP/USD','USD/JPY','CHF/PLN','EUR/PLN','AUD/USD','NZD/USD'];
 
-  let mode   = 'stock';
-  let filter = 'stock';
+  // stan
+  let mode   = 'stock';  // steruje selectem i dodawaniem
+  let filter = 'stock';  // filtr renderu: 'all' | 'stock' | 'fx'
   let watchlist = loadLS();
 
   // cache
-  const cacheFX     = new Map();   // key: "BASE/QUOTE"
-  const cacheStocks = new Map();   // key: "TICKER"
+  const cacheFX     = new Map();
+  const cacheStocks = new Map();
 
+  // utils
   function loadLS(){
     try{
       return JSON.parse(localStorage.getItem(LS_KEY)) ||
         [{type:'stock',symbol:'GE'},{type:'stock',symbol:'AAPL'},{type:'fx',base:'EUR',quote:'USD'}];
-    }catch(e){ return []; }
+    }catch(_){ return []; }
   }
   function saveLS(){ localStorage.setItem(LS_KEY, JSON.stringify(watchlist)); }
 
@@ -3560,7 +3566,6 @@ window.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
-  // fetch helper
   async function fetchJSON(url, {timeout=8000} = {}){
     const ctrl = new AbortController();
     const t = setTimeout(()=>ctrl.abort(), timeout);
@@ -3568,12 +3573,11 @@ window.addEventListener('DOMContentLoaded', () => {
       const r = await fetch(url, {signal: ctrl.signal});
       if (!r.ok) throw new Error('HTTP '+r.status);
       const ct = r.headers.get('content-type')||'';
-      const body = ct.includes('application/json') ? await r.json() : JSON.parse(await r.text());
-      return body;
+      return ct.includes('application/json') ? r.json() : JSON.parse(await r.text());
     } finally { clearTimeout(t); }
   }
 
-  /* ===== FX: 3 źródła (native -> proxy -> frankfurter) ===== */
+  // ===== FX sources
   async function fxHistory(base, quote, days=365*5){
     const key = `${base}/${quote}`;
     if (cacheFX.has(key)) return cacheFX.get(key);
@@ -3597,82 +3601,80 @@ window.addEventListener('DOMContentLoaded', () => {
       return j?.rates ? normalizeFX(j.rates, quote) : {dates:[],closes:[]};
     };
 
-    let out = {dates:[],closes:[]};
-    try{ out = await try1(); }catch(_){}
-    if (!out.closes.length){ try{ out = await try2(); }catch(_){ } }
-    if (!out.closes.length){ try{ out = await try3(); }catch(_){ } }
+    let out={dates:[],closes:[]};
+    try{ out=await try1(); }catch(_){}
+    if (!out.closes.length){ try{ out=await try2(); }catch(_){ } }
+    if (!out.closes.length){ try{ out=await try3(); }catch(_){ } }
 
-    cacheFX.set(key, out);
+    cacheFX.set(key,out);
     return out;
   }
   function normalizeFX(ratesObj, quote){
     const dates = Object.keys(ratesObj).sort();
-    const closes = dates.map(d => ratesObj[d]?.[quote]).filter(v=> typeof v==='number' && !Number.isNaN(v));
+    const closes = dates.map(d => ratesObj[d]?.[quote]).filter(v => typeof v==='number' && !Number.isNaN(v));
     return { dates: dates.slice(-closes.length), closes };
   }
 
-  /* ===== STOCKS: Stooq -> Yahoo + cache ===== */
+  // ===== Stocks sources
   async function stockHistory(symbol, days=365*5){
     const key = symbol.toUpperCase();
     if (cacheStocks.has(key)) return cacheStocks.get(key);
 
+    // 1) Stooq
     try{
       const code = stooqCode(symbol);
       const url  = `https://r.jina.ai/http://stooq.com/q/d/l/?s=${encodeURIComponent(code)}&i=d`;
       const txt  = await (await fetch(url)).text();
       const rows = txt.trim().split('\n').slice(1).map(l=>l.split(','));
-      const dates = rows.map(r=>r[0]);
-      const closes= rows.map(r=> Number(r[4])).filter(n=>!Number.isNaN(n));
-      if (closes.length > 10) {
-        const cut = Math.max(0, dates.length - days);
-        const out = { dates: dates.slice(cut), closes: closes.slice(cut) };
-        cacheStocks.set(key, out);
-        return out;
+      const dates= rows.map(r=>r[0]);
+      const closes=rows.map(r=> Number(r[4])).filter(n=>!Number.isNaN(n));
+      if (closes.length>10){
+        const cut=Math.max(0, dates.length-days);
+        const out={dates:dates.slice(cut), closes:closes.slice(cut)};
+        cacheStocks.set(key,out); return out;
       }
     }catch(_){}
 
+    // 2) Yahoo
     try{
-      const urlY = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5y&interval=1d`;
-      const jy = await fetchJSON(urlY);
-      const res = jy?.chart?.result?.[0];
-      const ts = res?.timestamp || [];
-      const cs = res?.indicators?.quote?.[0]?.close || [];
-      const dates = ts.map(t=> new Date(t*1000).toISOString().slice(0,10));
-      const values = cs.filter(v => v != null);
-      const out = { dates: dates.slice(-values.length), closes: values };
-      cacheStocks.set(key, out);
-      return out;
+      const urlY=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5y&interval=1d`;
+      const jy=await fetchJSON(urlY);
+      const res=jy?.chart?.result?.[0];
+      const ts=res?.timestamp||[];
+      const cs=res?.indicators?.quote?.[0]?.close||[];
+      const dates=ts.map(t=> new Date(t*1000).toISOString().slice(0,10));
+      const values=cs.filter(v=> v!=null);
+      const out={dates:dates.slice(-values.length), closes:values};
+      cacheStocks.set(key,out); return out;
     }catch(_){}
 
-    const empty = {dates:[],closes:[]};
-    cacheStocks.set(key, empty);
-    return empty;
+    const empty={dates:[],closes:[]};
+    cacheStocks.set(key,empty); return empty;
   }
 
-  /* ===== drawing ===== */
+  // ===== drawing
   function drawSpark(c, values){
-    const cssW = (c.clientWidth || c.offsetWidth || 220);
-    const cssH = (c.clientHeight || 38);
+    const cssW = c.clientWidth || c.offsetWidth || 220;
+    const cssH = c.clientHeight || 38;
     c.width  = Math.max(220, cssW) * devicePixelRatio;
     c.height = cssH * devicePixelRatio;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0,0,c.width,c.height);
-    if (!values || values.length < 2) return;
+    const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+    if (!values || values.length<2) return;
 
     const min=Math.min(...values), max=Math.max(...values);
-    const pad = c.height*0.18;
-    const step = (c.width)/(values.length-1);
+    const pad=c.height*0.18;
+    const step=(c.width)/(values.length-1);
     const yy = v => c.height - ((v-min)/(max-min||1))*(c.height-pad*2) - pad;
 
     ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
     values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
-    ctx.lineTo(c.width, c.height); ctx.lineTo(0, c.height); ctx.closePath();
+    ctx.lineTo(c.width,c.height); ctx.lineTo(0,c.height); ctx.closePath();
 
-    const up = values.at(-1)>=values[0];
-    const grad = ctx.createLinearGradient(0, 0, 0, c.height);
-    if (up) { grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
+    const up=values.at(-1)>=values[0];
+    const grad=ctx.createLinearGradient(0,0,0,c.height);
+    if (up){ grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
     else    { grad.addColorStop(0,"rgba(153,27,27,0.45)");  grad.addColorStop(1,"rgba(244,114,182,0.12)"); }
-    ctx.fillStyle = grad; ctx.fill();
+    ctx.fillStyle=grad; ctx.fill();
 
     ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
     values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
@@ -3680,39 +3682,39 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function drawBig(c, values){
-    const cssW = c.clientWidth || 720, cssH = 280;
-    c.width = cssW * devicePixelRatio; c.height = cssH * devicePixelRatio;
-    const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+    const cssW=c.clientWidth || 720, cssH=280;
+    c.width=cssW*devicePixelRatio; c.height=cssH*devicePixelRatio;
+    const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
     if (!values || values.length<2) return;
 
     const left=48*devicePixelRatio, right=16*devicePixelRatio, top=16*devicePixelRatio, bottom=32*devicePixelRatio;
     const min=Math.min(...values), max=Math.max(...values);
-    const w = c.width - left - right, h = c.height - top - bottom;
-    const step = w/(values.length-1);
-    const y = v => c.height - bottom - ((v-min)/(max-min||1))*h;
+    const w=c.width-left-right, h=c.height-top-bottom;
+    const step=w/(values.length-1);
+    const y=v=> c.height-bottom-((v-min)/(max-min||1))*h;
 
     ctx.strokeStyle='#23304d'; ctx.lineWidth=1*devicePixelRatio;
-    for(let i=0;i<=4;i++){ const yy = top + i*h/4; ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(left+w,yy); ctx.stroke(); }
-    ctx.fillStyle='#9ca3af'; ctx.font = `${12*devicePixelRatio}px system-ui,sans-serif`;
+    for(let i=0;i<=4;i++){ const yy=top+i*h/4; ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(left+w,yy); ctx.stroke(); }
+    ctx.fillStyle='#9ca3af'; ctx.font=`${12*devicePixelRatio}px system-ui,sans-serif`;
     ctx.fillText(min.toFixed(2), 8*devicePixelRatio, y(min)+4*devicePixelRatio);
     ctx.fillText(max.toFixed(2), 8*devicePixelRatio, y(max)+4*devicePixelRatio);
 
-    const up = values.at(-1) >= values[0];
+    const up=values.at(-1)>=values[0];
     ctx.beginPath(); ctx.moveTo(left, y(values[0]));
-    values.forEach((v,i)=> ctx.lineTo(left + i*step, y(v)));
-    ctx.lineTo(left + w, c.height - bottom); ctx.lineTo(left, c.height - bottom); ctx.closePath();
+    values.forEach((v,i)=> ctx.lineTo(left+i*step, y(v)));
+    ctx.lineTo(left+w, c.height-bottom); ctx.lineTo(left, c.height-bottom); ctx.closePath();
 
-    const grad = ctx.createLinearGradient(0, top, 0, c.height - bottom);
-    if (up) { grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
+    const grad=ctx.createLinearGradient(0, top, 0, c.height-bottom);
+    if (up){ grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
     else    { grad.addColorStop(0,"rgba(153,27,27,0.45)");  grad.addColorStop(1,"rgba(244,114,182,0.12)"); }
-    ctx.fillStyle = grad; ctx.fill();
+    ctx.fillStyle=grad; ctx.fill();
 
     ctx.beginPath(); ctx.moveTo(left, y(values[0]));
-    values.forEach((v,i)=> ctx.lineTo(left + i*step, y(v)));
+    values.forEach((v,i)=> ctx.lineTo(left+i*step, y(v)));
     ctx.lineWidth=2*devicePixelRatio; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
 
-  /* ===== resampling ===== */
+  // ===== resampling helpers
   function resample(dates, values, mode){
     if (!dates?.length || !values?.length) return {dates:[],values:[]};
     if (mode==='D') return {dates:[...dates], values:[...values]};
@@ -3724,16 +3726,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const day=dt.getUTCDay()||7; dt.setUTCDate(dt.getUTCDate()+4-day);
         const y=dt.getUTCFullYear(); const ys=new Date(Date.UTC(y,0,1));
         const w=Math.ceil((((dt-ys)/86400000)+1)/7); key=`${y}-W${String(w).padStart(2,'0')}`;
-      } else if (mode==='M'){
-        key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      }
+      } else if (mode==='M'){ key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
       if (key) map.set(key, {date: dates[i], val: values[i]});
     }
     [...map.values()].sort((a,b)=> a.date.localeCompare(b.date)).forEach(o=>{ outD.push(o.date); out.push(o.val); });
     return {dates: outD, values: out};
   }
 
-  /* ===== create card ===== */
+  // ===== create card
   async function mountCard(item){
     const el   = document.createElement('article'); el.className='wl-card'; el.setAttribute('role','listitem');
     const left = document.createElement('div');     left.className='wl-left';
@@ -3761,6 +3761,7 @@ window.addEventListener('DOMContentLoaded', () => {
       d.className   = 'wl-diff ' + (ch>=0?'pos':'neg');
       drawSpark(spark, vals);
     } else { p.textContent='—'; d.textContent='—'; }
+
     el.addEventListener('click', ()=> openModal(item));
     removeBtn.addEventListener('click', (e)=>{ e.stopPropagation();
       watchlist = watchlist.filter(x => !(x.type===item.type && ((x.symbol && x.symbol===item.symbol) || (x.base && x.base===item.base && x.quote===item.quote))));
@@ -3769,15 +3770,19 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function render(){
+    if (!$list) return;
     $list.innerHTML='';
     watchlist.filter(x => filter==='all' ? true : x.type===filter).forEach(mountCard);
   }
 
-  /* ===== modal ===== */
+  // ===== modal
   function openModal(item){
     $modal.setAttribute('aria-hidden','false');
     const ttl = item.type==='fx' ? `${item.base}/${item.quote}` : item.symbol.toUpperCase();
     $title.textContent = ttl;
+
+    // usuń guziki YTD i 5Y jeśli istnieją w HTML
+    $modal.querySelectorAll('.wl-range [data-range="YTD"], .wl-range [data-range="5Y"]').forEach(b => b.remove());
 
     const loader = item.type==='fx'
       ? () => fxHistory(item.base,item.quote, 365*5)
@@ -3787,6 +3792,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const dates = full?.dates || [];
       const closes= full?.closes || [];
       const ranges = $modal.querySelectorAll('.wl-range button');
+
+      // dopisz data-range z tekstu jeśli brak
+      ranges.forEach(b=>{
+        if(!b.dataset.range){
+          const t = b.textContent.trim().toUpperCase(); // "1D", "5D", ...
+          b.dataset.range = t;
+        }
+      });
 
       if (dates.length < 2 || closes.length < 2){
         $mPrice.textContent='—'; $mChg.textContent='Brak danych';
@@ -3799,11 +3812,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const now = new Date(dates.at(-1));
 
       function calc(range){
-        // ZOSTAWIAMY TYLKO: 1D, 5D, 1M, 6M, 1Y
-        if (range==='1D'){
-          // minimalnie 2 punkty, żeby było co rysować
-          return closes.slice(-2);
-        }
+        // ZOSTAWIAMY: 1D, 5D, 1M, 6M, 1Y (bez YTD i 5Y)
+        if (range==='1D') return closes.slice(-2);       // min 2 punkty, żeby było co rysować
         let d=365;
         if(range==='5D') d=5;
         if(range==='1M') d=31;
@@ -3835,7 +3845,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // domyślnie 1Y
       setRange($modal.querySelector('.wl-range button[data-range="1Y"]') || ranges[0]);
       ranges.forEach(btn => btn.onclick = () => setRange(btn));
     });
@@ -3843,42 +3852,50 @@ window.addEventListener('DOMContentLoaded', () => {
   $modal.querySelector('.wl-close')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
   $modal.querySelector('.wl-modal__backdrop')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
 
-  /* ===== top-bar + watchlist tabs ===== */
+  // ===== picker + tryb
   function fillPicker(){
     const arr = mode==='fx' ? FX_ALL : STOCKS_ALL;
     if ($pick) $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
   }
   function applyMode(next){
-    if(next==='fx'){ mode='fx'; filter='fx'; }
-    else if(next==='stock'){ mode='stock'; filter='stock'; }
-    else { filter='all'; }
+    mode = next;
+    if (filter!=='all') filter = next; // spójność filtrów
     fillPicker(); render();
+    // panel pokazujemy tylko na invest/fx
+    if ($panel) $panel.classList.toggle('hidden', !(next==='stock' || next==='fx'));
   }
 
-  // global topbar (jeśli jest)
+  // ===== guziki (global topbar)
   document.querySelectorAll('.topbar .tab[data-tab], #mfkMobileDrawer .tab[data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      const t = btn.getAttribute('data-tab');
+      const t = btn.getAttribute('data-tab');            // 'invest' | 'fx' | 'all' | ...
       if (t==='invest') applyMode('stock');
-      if (t==='fx')     applyMode('fx');
-      if (t==='all')    applyMode('all');
+      else if (t==='fx') applyMode('fx');
+      else { if ($panel) $panel.classList.add('hidden'); } // na innych zakładkach chowamy
     });
   });
 
-  // watchlist-local tabs: .wl-tabs [data-tab="all|stock|fx"]
-  document.querySelectorAll('.wl-tabs [data-tab]').forEach(btn=>{
+  // ===== guziki w sekcji Watchlist (All / Stocks / Currencies)
+  // działa i z data-filter="..." i tylko z tekstem guzika
+  document.querySelectorAll('.wl-tabs button, [data-filter="all"],[data-filter="stock"],[data-filter="fx"]').forEach(btn=>{
+    // normalizacja dataset
+    if (!btn.dataset.filter){
+      const t = (btn.textContent || '').trim().toLowerCase();
+      btn.dataset.filter = t==='stocks' ? 'stock' : t==='currencies' ? 'fx' : t;
+    }
     btn.addEventListener('click', ()=>{
-      const t = btn.getAttribute('data-tab');
-      if (t==='stock') applyMode('stock');
-      if (t==='fx')    applyMode('fx');
-      if (t==='all')   applyMode('all');
-      // podświetlenie
-      document.querySelectorAll('.wl-tabs [data-tab]').forEach(b=>b.classList.remove('is-active'));
-      btn.classList.add('is-active');
+      const f = btn.dataset.filter; // 'all'|'stock'|'fx'
+      filter = f;
+      if (f!=='all') mode = f;
+      fillPicker(); render();
+      // aktywny wygląd
+      document.querySelectorAll('.wl-tabs button,[data-filter]').forEach(b=> b.classList.toggle('is-active', b===btn));
+      // panel ma być widoczny gdy przełączamy na stock/fx/all w obrębie tych zakładek
+      if ($panel) $panel.classList.remove('hidden');
     });
   });
 
-  /* ===== add from picker ===== */
+  // ===== dodawanie z pickera
   $form?.addEventListener('submit', e=>{
     e.preventDefault();
     const val = $pick?.value;
