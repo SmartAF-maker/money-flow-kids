@@ -3557,15 +3557,26 @@ width: 110px;
   border-color: var(--vio-bd-h);
   transform: translateY(-1px);
 }
-/* ===== MOBILE FIX: ukryj nazwę akcji i kwotę pod Set (tylko telefon) ===== */
+/* ==== MOBILE: ukryj nazwę i cenę w wierszach koszyka (Stocks + Currencies) ==== */
 @media (max-width: 768px) {
-  .basket-row span, 
-  .basket-row div {
-    display: none;
+  /* ogólny wiersz koszyka */
+  .basket-row .ticker,
+  .basket-row .pair,
+  .basket-row .letter,
+  .basket-row .price,
+  .basket-row .rate,
+  .basket-row .mfk-cap {     /* na wypadek małych podpisów pod spodem */
+    display: none !important;
   }
 
+  /* zostawiamy ilość + Set widoczne */
   .basket-row input,
   .basket-row button {
-    display: inline-block;
+    display: inline-flex !important;
   }
+}
+
+/* (opcjonalnie – ciaśniejszy układ na mobile, jeśli się łamie) */
+@media (max-width: 768px) {
+  .basket-row { gap: .5rem; flex-wrap: nowrap; }
 }
