@@ -528,6 +528,60 @@
         <div id="globalTrendsSub" class="muted">World stock indices</div>
         <div id="globalTrendsList" class="trend-list"></div>
       </section>
+<!-- ===== WATCHLIST (stocks + FX, shared) ===== -->
+<section id="watchlist" class="panel watchlist">
+  <div class="panel-head">
+    <h2>Watchlist</h2>
+
+    <!-- Formularz dodawania pozycji -->
+<form id="wl-form" class="wl-form" autocomplete="off">
+  <select id="wl-pick" aria-label="Pick instrument"></select>
+  <button type="submit" class="btn-add">+ Add</button>
+</form>
+
+
+    <!-- Filtr listy (zsynchronizujemy z top-barem w JS) -->
+    <div class="wl-tabs">
+      <button data-filter="all" class="is-active">All</button>
+      <button data-filter="stock">Stocks</button>
+      <button data-filter="fx">Currencies</button>
+      <!-- szybkie linki do Twoich koszyków -->
+         </div>
+  </div>
+
+  <!-- Karty watchlisty generuje JS -->
+  <div id="wl-list" class="wl-list" role="list"></div>
+</section>
+
+<!-- ===== WATCHLIST — modal ze szczegółami i wykresem ===== -->
+<div id="wl-modal" class="wl-modal" aria-hidden="true">
+  <div class="wl-modal__backdrop"></div>
+  <div class="wl-modal__card" role="dialog" aria-modal="true">
+    <header class="wl-modal__head">
+      <h3 id="wl-modal-title">Instrument</h3>
+      <button class="wl-close" aria-label="Close">✕</button>
+    </header>
+
+    <div class="wl-modal__meta">
+      <span class="wl-price" id="wl-price">—</span>
+      <span class="wl-chg" id="wl-chg">—</span>
+
+      <!-- zakresy jak na Yahoo -->
+      <div class="wl-range">
+        <button data-range="1D">1D</button>
+        <button data-range="5D">5D</button>
+        <button data-range="1M">1M</button>
+        <button data-range="6M">6M</button>
+        <button data-range="YTD">YTD</button>
+        <button data-range="1Y" class="is-active">1Y</button>
+        <button data-range="5Y">5Y</button>
+      </div>
+    </div>
+
+    <!-- duży wykres -->
+    <canvas id="wl-big" width="720" height="280"></canvas>
+  </div>
+</div>
 
 <!-- Stocks -->
 <section id="tab-invest" class="grid">

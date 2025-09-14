@@ -33,16 +33,12 @@
     labelizeAll();   // tylko na mobile
   }
 }
-
 document.addEventListener('DOMContentLoaded', applyLabelizeIfMobile);
-
 const obs = new MutationObserver(applyLabelizeIfMobile);
 obs.observe(document.body, { childList: true, subtree: true });
-
 matchMedia('(max-width:640px)').addEventListener('change', applyLabelizeIfMobile);
 
 })();
-
 
 // ====== UTIL ======
 
@@ -52,10 +48,8 @@ const LANG_KEY = "pf_lang";
 // ===== Display currency per language (EN->USD, PL->PLN) =====
 const CURRENCY_KEY = "pf_display_currency";
 const DISPLAY_CURRENCY_BY_LANG = { en: "USD", pl: "PLN" };
-
 // (u Ciebie getLang/setLang już istnieją niżej przy tData – użyjmy tych)
 function currentLocale() { return (getLang() === 'pl') ? 'pl-PL' : 'en-US'; }
-
 function getDisplayCurrency() {
   return localStorage.getItem(CURRENCY_KEY) || DISPLAY_CURRENCY_BY_LANG[getLang()] || "USD";
 }
@@ -67,7 +61,6 @@ function fxQuote(){
   // UI: gdy PL -> pokazuj pary A/PLN; gdy EN -> A/USD
   return (getDisplayCurrency() === 'PLN') ? 'PLN' : 'USD';
 }
-
 // Konwersja: wartości aplikacji są w USD → na walutę wyświetlaną
 function convertFromUSD(usdAmount, toCur = getDisplayCurrency()) {
   const v = Number(usdAmount || 0);
@@ -78,7 +71,6 @@ function convertFromUSD(usdAmount, toCur = getDisplayCurrency()) {
   }
   return v;
 }
-
 // Odwrotna konwersja: kwoty w PLN → na USD (do logiki aplikacji)
 function convertToUSD(amount, fromCur = getDisplayCurrency()) {
   const v = Number(amount || 0);
@@ -110,8 +102,6 @@ function fmtMoneyNoFx(amount) {
     maximumFractionDigits: 2
   }).format(v);
 }
-
-
 // Legacy formatter – zostaje dla zgodności
 // ===== Walutowe formatery (spójne: wszystko pokazujemy w USD) =====
 const USD = v => fmtMoneyFromUSD(Number(v || 0));   // zachowujemy starą nazwę – teraz dynamiczna
@@ -127,8 +117,6 @@ const nowISO = () => { const d = new Date(); return d.toISOString().slice(0, 10)
 
 // ========== helper: licz jak „do grosza” ==========
 const toCents = v => Math.round(Number(v || 0) * 100) / 100;
-
-
 // ====== FX CONFIG ======
 const ISO = ["PLN", "USD", "EUR", "GBP", "CHF", "JPY", "AUD", "CAD", "NOK", "SEK", "DKK", "CZK", "HUF", "UAH", "RUB", "TRY", "ZAR", "CNY", "HKD", "NZD", "MXN", "BRL", "ILS", "INR", "KRW", "SGD"];
 
@@ -160,17 +148,14 @@ const CURRENCY_NAMES = {
     KWD: { name: "Kuwaiti Dinar",      pln: 12.70 },
     BHD: { name: "Bahraini Dinar",     pln: 10.33 },
     OMR: { name: "Omani Rial",         pln: 10.14 },
-
     THB: { name: "Thai Baht",          pln: 0.11 },
     PHP: { name: "Philippine Peso",    pln: 0.07 },
     MYR: { name: "Malaysian Ringgit",  pln: 0.82 },
     TWD: { name: "New Taiwan Dollar",  pln: 0.12 },
-
     RON: { name: "Romanian Leu",       pln: 0.86 },
     BGN: { name: "Bulgarian Lev",      pln: 2.18 },
     MAD: { name: "Moroccan Dirham",    pln: 0.38 },
     EGP: { name: "Egyptian Pound",     pln: 0.08 },
-
     CLP: { name: "Chilean Peso",       pln: 0.0043 },
     COP: { name: "Colombian Peso",     pln: 0.0010 },
     ARS: { name: "Argentine Peso",     pln: 0.0043 },
@@ -183,7 +168,6 @@ const CURRENCY_NAMES = {
     if (!CURRENCY_NAMES[code]) CURRENCY_NAMES[code] = d.name; // nazwa
   });
 })();
-
 
 // ====== STOCK UNIVERSE ======
 const STOCK_UNIVERSE = [
@@ -644,7 +628,6 @@ const IMG_FX = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
     <text x="64" y="228" fill="#e5e7eb" font-size="16">JPY/USD 0.0065</text>
   </svg>
 `);
-
 
 // 5) Kroki Tutorialu
 function makeSteps() {
@@ -3529,6 +3512,378 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
+// ===== WATCHLIST (stocks + FX) v2 (fixed) =====
+(() => {
+  const LS_KEY = 'mfk_watchlist_v1';
+  const $list  = document.getElementById('wl-list');
+  const $form  = document.getElementById('wl-form');
+  const $pick  = document.getElementById('wl-pick');
 
+  const $modal = document.getElementById('wl-modal');
+  const $title = document.getElementById('wl-modal-title');
+  const $mPrice= document.getElementById('wl-price');
+  const $mChg  = document.getElementById('wl-chg');
+  const $big   = document.getElementById('wl-big');
 
+  // listy wyboru
+  const STOCKS_ALL = ['AAPL','MSFT','NVDA','GE','GOOGL','AMZN','META','TSLA','DIS','NFLX','NKE','INTC','AMD','BA','IBM','ORCL','PEP','KO','XOM'];
+  const FX_ALL     = ['EUR/USD','USD/PLN','USD/EUR','GBP/USD','USD/JPY','CHF/PLN','EUR/PLN','AUD/USD','NZD/USD'];
 
+  /* ===== stan ===== */
+  let mode   = 'stock';     // 'stock' | 'fx'
+  let filter = 'stock';     // 'stock' | 'fx' | 'all'
+  let watchlist = loadLS();
+
+  function loadLS(){
+    try {
+      return JSON.parse(localStorage.getItem(LS_KEY)) ||
+        [{type:'stock',symbol:'GE'},{type:'stock',symbol:'AAPL'},{type:'fx',base:'EUR',quote:'USD'}];
+    } catch(e){ return []; }
+  }
+  function saveLS(){ localStorage.setItem(LS_KEY, JSON.stringify(watchlist)); }
+
+  /* ===== utils ===== */
+  const pct = (a,b)=> (b===0?0:((a-b)/b)*100);
+  const fmt = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
+
+  // GE -> ge.us (Stooq). Pozostaw z kropką jeśli podane.
+  function stooqCode(sym){
+    const s = (sym||'').toLowerCase();
+    if (/\./.test(s)) return s;
+    if (!/^[a-z.]{1,10}$/.test(s)) return s;
+    return s + '.us';
+  }
+  function parsePair(s){
+    const t = (s||'').toUpperCase().replace(/\s+/g,'');
+    if (t.includes('/')) {
+      const [a,b]=t.split('/');
+      if (a&&b&&a.length===3&&b.length===3) return {base:a,quote:b};
+    }
+    if (/^[A-Z]{6}$/.test(t)) return {base:t.slice(0,3), quote:t.slice(3,6)};
+    return null;
+  }
+
+  /* ===== fetch: FX ===== */
+  async function fxHistory(base, quote, days=365*5){
+    try{
+      const end=new Date(); const start=new Date(end); start.setDate(start.getDate()-days);
+      const s=start.toISOString().slice(0,10), e=end.toISOString().slice(0,10);
+      const url=`https://api.exchangerate.host/timeseries?start_date=${s}&end_date=${e}&base=${base}&symbols=${quote}`;
+      const r=await fetch(url); const j=await r.json();
+      if (!j || !j.rates) return {dates:[],closes:[]};
+      const dates=Object.keys(j.rates).sort();
+      const closes=dates.map(d=> j.rates[d]?.[quote]).filter(v=>typeof v==='number');
+      return {dates: dates.slice(-closes.length), closes};
+    }catch(e){ return {dates:[],closes:[]}; }
+  }
+
+  /* ===== fetch: STOCKS – Stooq z fallbackiem na Yahoo ===== */
+  async function stockHistory(symbol, days=365*5){
+    // 1) Stooq
+    try{
+      const code = stooqCode(symbol);
+      const url = `https://r.jina.ai/http://stooq.com/q/d/l/?s=${encodeURIComponent(code)}&i=d`;
+      const r = await fetch(url); const txt = await r.text();
+      const rows = txt.trim().split('\n').slice(1).map(l=>l.split(','));
+      const dates = rows.map(r=>r[0]);
+      const closes= rows.map(r=> Number(r[4])).filter(n=>!Number.isNaN(n));
+      if (closes.length > 10) {
+        const cut = Math.max(0, dates.length - days);
+        return { dates: dates.slice(cut), closes: closes.slice(cut) };
+      }
+    }catch(e){}
+    // 2) Yahoo fallback
+    try{
+      const urlY = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5y&interval=1d`;
+      const ry = await fetch(urlY); const jy = await ry.json();
+      const res = jy?.chart?.result?.[0];
+      if (!res) return {dates:[],closes:[]};
+      const ts = res.timestamp || [];
+      const cs = res?.indicators?.quote?.[0]?.close || [];
+      const dates = ts.map(t=> new Date(t*1000).toISOString().slice(0,10));
+      const values = cs.filter(v=> v!=null);
+      return { dates: dates.slice(-values.length), closes: values };
+    }catch(e){ return {dates:[],closes:[]}; }
+  }
+
+  /* ===== rysowanie ===== */
+  function drawSpark(c, values){
+    const cssW = (c.clientWidth || c.offsetWidth || 220);
+    const cssH = (c.clientHeight || 38);
+    c.width  = Math.max(220, cssW) * devicePixelRatio;
+    c.height = cssH * devicePixelRatio;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    if (!values || values.length < 2) return;
+
+    const min=Math.min(...values), max=Math.max(...values);
+    const pad = c.height*0.18;
+    const step = (c.width)/(values.length-1);
+    const yy = v => c.height - ((v-min)/(max-min||1))*(c.height-pad*2) - pad;
+
+    // ścieżka obszaru pod linią
+    ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
+    values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
+    ctx.lineTo(c.width, c.height); ctx.lineTo(0, c.height); ctx.closePath();
+
+    const up = values.at(-1)>=values[0];
+
+    // ✅ cieniowanie ZAWSZE błękitne (mocniejsze przy wzroście, delikatniejsze przy spadku)
+    const grad = ctx.createLinearGradient(0, 0, 0, c.height);
+    if (up) {
+      grad.addColorStop(0, "rgba(0,200,255,0.35)");
+      grad.addColorStop(1, "rgba(0,200,255,0.08)");
+    } else {
+      grad.addColorStop(0, "rgba(0,200,255,0.22)");
+      grad.addColorStop(1, "rgba(0,200,255,0.06)");
+    }
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // linia: neon-zielona ↑ / fioletowa ↓
+    ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
+    values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
+    ctx.lineWidth=2*devicePixelRatio;
+    ctx.strokeStyle = up ? "#00ff6a" : "#a78bfa";
+    ctx.stroke();
+  }
+
+  function drawBig(c, values){
+    const cssW = c.clientWidth || 720, cssH = 280;
+    c.width = cssW * devicePixelRatio; c.height = cssH * devicePixelRatio;
+    const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+    if (!values || values.length<2) return;
+
+    const left=48*devicePixelRatio, right=16*devicePixelRatio, top=16*devicePixelRatio, bottom=32*devicePixelRatio;
+    const min=Math.min(...values), max=Math.max(...values);
+    const w = c.width - left - right, h = c.height - top - bottom;
+    const step = w/(values.length-1);
+    const y = v => c.height - bottom - ((v-min)/(max-min||1))*h;
+
+    // grid + etykiety
+    ctx.strokeStyle='#23304d'; ctx.lineWidth=1*devicePixelRatio;
+    for(let i=0;i<=4;i++){ const yy = top + i*h/4; ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(left+w,yy); ctx.stroke(); }
+    ctx.fillStyle='#9ca3af'; ctx.font = `${12*devicePixelRatio}px system-ui,sans-serif`;
+    ctx.fillText(min.toFixed(2), 8*devicePixelRatio, y(min)+4*devicePixelRatio);
+    ctx.fillText(max.toFixed(2), 8*devicePixelRatio, y(max)+4*devicePixelRatio);
+
+    // === obszar pod linią — zawsze błękitny gradient ===
+    const up = values.at(-1) >= values[0];
+    ctx.beginPath(); ctx.moveTo(left, y(values[0]));
+    values.forEach((v,i)=> ctx.lineTo(left + i*step, y(v)));
+    ctx.lineTo(left + w, c.height - bottom);
+    ctx.lineTo(left,      c.height - bottom);
+    ctx.closePath();
+
+    const grad = ctx.createLinearGradient(0, top, 0, c.height - bottom);
+    if (up) {
+      grad.addColorStop(0, "rgba(0,200,255,0.35)");
+      grad.addColorStop(1, "rgba(0,200,255,0.08)");
+    } else {
+      grad.addColorStop(0, "rgba(0,200,255,0.22)");
+      grad.addColorStop(1, "rgba(0,200,255,0.06)");
+    }
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // linia: neon-zielona ↑ / fioletowa ↓
+    ctx.beginPath(); ctx.moveTo(left, y(values[0]));
+    values.forEach((v,i)=> ctx.lineTo(left + i*step, y(v)));
+    ctx.lineWidth=2*devicePixelRatio;
+    ctx.strokeStyle = up ? "#00ff6a" : "#a78bfa";
+    ctx.stroke();
+  }
+
+  /* ===== resampling ===== */
+  function resample(dates, values, mode){
+    if (!dates?.length || !values?.length) return {dates:[],values:[]};
+    if (mode==='D') return {dates:[...dates], values:[...values]};
+
+    const out=[], outD=[], map=new Map();
+    for(let i=0;i<dates.length;i++){
+      const d=new Date(dates[i]); let key=null;
+      if (mode==='W'){ // ISO week
+        const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+        const day=dt.getUTCDay()||7; dt.setUTCDate(dt.getUTCDate()+4-day);
+        const y=dt.getUTCFullYear(); const ys=new Date(Date.UTC(y,0,1));
+        const w=Math.ceil((((dt-ys)/86400000)+1)/7);
+        key=`${y}-W${String(w).padStart(2,'0')}`;
+      } else if (mode==='M'){
+        key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      } else if (mode==='YTD'){
+        const yStart = new Date(new Date().getFullYear(), 0, 1);
+        if (d < yStart) continue;
+        key = dates[i]; // wszystkie dni od 1 stycznia
+      }
+      if (key) map.set(key, {date: dates[i], val: values[i]}); // ostatnia wartość w kubełku
+    }
+    [...map.values()].sort((a,b)=> a.date.localeCompare(b.date)).forEach(o=>{ outD.push(o.date); out.push(o.val); });
+    return {dates: outD, values: out};
+  }
+
+  /* ===== render kart ===== */
+  async function mountCard(item){
+    const el   = document.createElement('article'); el.className='wl-card'; el.setAttribute('role','listitem');
+    const left = document.createElement('div');     left.className='wl-left';
+    const right= document.createElement('div');     right.className='wl-right';
+    const spark= document.createElement('canvas');  spark.className='wl-spark';
+
+    // „×” jak w Basket – usuwa bez confirm
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'wl-remove'; removeBtn.setAttribute('aria-label','Remove from Watchlist'); removeBtn.textContent = '×';
+
+    const t = document.createElement('div'); t.className='wl-ticker';
+    const n = document.createElement('div'); n.className='wl-name';
+    const p = document.createElement('div'); p.className='wl-price';
+    const d = document.createElement('div'); d.className='wl-diff';
+
+    left.appendChild(t); left.appendChild(n);
+    right.appendChild(p); right.appendChild(d);
+    el.appendChild(left); el.appendChild(right); el.appendChild(removeBtn); el.appendChild(spark);
+    $list.appendChild(el);
+
+    // dane
+    let hist;
+    if (item.type==='fx'){
+      hist  = await fxHistory(item.base,item.quote, 365);
+      t.textContent = `${item.base}/${item.quote}`; n.textContent='FX';
+    } else {
+      hist  = await stockHistory(item.symbol, 365*3);
+      t.textContent = item.symbol.toUpperCase();   n.textContent='Stock';
+    }
+
+    // mini wykres + liczby
+    const vals = (hist?.closes || []).slice(-120);
+    if (vals.length >= 2){
+      const last=vals.at(-1), prev=vals.at(-2);
+      p.textContent = fmt(last);
+      const ch = last - prev; const pc = pct(last, prev);
+      d.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+      d.className = 'wl-diff ' + (ch>=0?'pos':'neg');
+      drawSpark(spark, vals);
+    } else {
+      p.textContent = '—'; d.textContent = '—';
+    }
+
+    // klik karta -> modal
+    el.addEventListener('click', ()=> openModal(item));
+
+    // usuń bez otwierania modala
+    removeBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      watchlist = watchlist.filter(x =>
+        !(x.type===item.type &&
+          ((x.symbol && x.symbol===item.symbol) ||
+           (x.base && x.base===item.base && x.quote===item.quote)))
+      );
+      saveLS(); render();
+    });
+  }
+
+  function render(){
+    $list.innerHTML='';
+    watchlist
+      .filter(x => filter==='all' ? true : x.type===filter)
+      .forEach(mountCard);
+  }
+
+  /* ===== modal ===== */
+  function openModal(item){
+    $modal.setAttribute('aria-hidden','false');
+    const ttl = item.type==='fx' ? `${item.base}/${item.quote}` : item.symbol.toUpperCase();
+    $title.textContent = ttl;
+
+    const loader = item.type==='fx'
+      ? () => fxHistory(item.base,item.quote, 365*5)
+      : () => stockHistory(item.symbol, 365*5);
+
+    loader().then(full=>{
+      const dates = full?.dates || [];
+      const closes= full?.closes || [];
+      const ranges = $modal.querySelectorAll('.wl-range button');
+
+      // brak danych
+      if (dates.length < 2 || closes.length < 2){
+        $mPrice.textContent='—';
+        $mChg.textContent='Brak danych';
+        const ctx=$big.getContext('2d'); ctx.clearRect(0,0,$big.width,$big.height);
+        ranges.forEach(b=> b.disabled = true);
+        return;
+      }
+      ranges.forEach(b=> b.disabled = false);
+
+      const now = new Date(dates.at(-1));
+
+      function calc(range){
+        let d=365; if(range==='1D')d=7; if(range==='5D')d=14; if(range==='1M')d=31;
+        if(range==='6M')d=183; if(range==='1Y')d=365; if(range==='5Y')d=365*5; if(range==='YTD')d=366;
+
+        const cutoff=new Date(now); cutoff.setDate(cutoff.getDate()-d);
+        let idx = dates.findIndex(dt => new Date(dt) >= cutoff); if(idx<0) idx=0;
+        const d2 = dates.slice(idx), v2 = closes.slice(idx);
+
+        if (range==='YTD') return resample(d2, v2, 'YTD').values;
+        if (range==='6M' || range==='1Y') return resample(d2, v2, 'W').values;
+        if (range==='5Y') return resample(d2, v2, 'M').values;
+        return v2; // 1D/5D/1M
+      }
+
+      function setRange(btn){
+        ranges.forEach(b=>b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const vals = calc(btn.dataset.range);
+        if (vals && vals.length>=2){
+          const last=vals.at(-1), prev=vals.at(-2);
+          $mPrice.textContent = fmt(last);
+          const ch=last-prev, pc=pct(last,prev);
+          $mChg.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+          // 💚 przy wzroście, 💜 przy spadku
+          $mChg.style.color = ch>=0 ? 'var(--ok)' : '#a78bfa';
+          drawBig($big, vals);
+        } else {
+          $mPrice.textContent = '—'; $mChg.textContent = '—';
+          const ctx=$big.getContext('2d'); ctx.clearRect(0,0,$big.width,$big.height);
+        }
+      }
+
+      setRange($modal.querySelector('.wl-range button[data-range="1Y"]') || ranges[0]);
+      ranges.forEach(btn => btn.onclick = () => setRange(btn));
+    });
+  }
+  $modal.querySelector('.wl-close')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
+  $modal.querySelector('.wl-modal__backdrop')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
+
+  /* ===== top-bar: tryb + select ===== */
+  function fillPicker(){
+    const arr = mode==='fx' ? FX_ALL : STOCKS_ALL;
+    $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
+  }
+  function applyMode(next){
+    mode = next; filter = next; fillPicker(); render();
+  }
+  document.querySelectorAll('.topbar .tab[data-tab], #mfkMobileDrawer .tab[data-tab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const t = btn.getAttribute('data-tab');
+      if (t==='invest') applyMode('stock');
+      if (t==='fx')     applyMode('fx');
+      if (t==='all')    { filter='all'; fillPicker(); render(); }
+    });
+  });
+
+  /* ===== dodawanie z listy ===== */
+  $form?.addEventListener('submit', e=>{
+    e.preventDefault();
+    const val = $pick.value;
+    if (!val) return;
+    if (mode==='fx'){
+      const p = parsePair(val); if (!p) return;
+      watchlist.unshift({type:'fx', base:p.base, quote:p.quote});
+    } else {
+      watchlist.unshift({type:'stock', symbol: val.toUpperCase()});
+    }
+    saveLS(); render();
+  });
+
+  // start
+  applyMode('stock');
+})();
