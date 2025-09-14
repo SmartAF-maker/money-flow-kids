@@ -762,9 +762,9 @@ const miniEls = {
   spend:       document.getElementById('miniSpend'),
   give:        document.getElementById('miniGive'),
   invest:      document.getElementById('miniInvest'),
-  invFx:       document.getElementById('miniInvFx'),
-  invStocks:   document.getElementById('miniInvStocks'),
-  invTotal:    document.getElementById('miniInvTotal'),
+  invFx:       document.getElementById('miniFx'),
+  invStocks:   document.getElementById('miniStocks'),
+  invTotal:    document.getElementById('miniTotal'),
   // NEW: Profits in sticky bar
   totalEarned: document.getElementById('miniTotalEarned'),
   totalLoss:   document.getElementById('miniTotalLoss')
