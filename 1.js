@@ -4324,10 +4324,10 @@ window.addEventListener('DOMContentLoaded', () => {
   render();
 })();
 /* =========================================================================
- * Money Flow Kids — AI Agent v6 (clean, no robot, bigger FAB, no TTS/fonts)
+ * Money Flow Kids — AI Agent v6.3 (rich Tour, FAQ only, role-aware)
  * ========================================================================= */
 (() => {
-  if (window.__AIAgentV6__) return; window.__AIAgentV6__ = true;
+  if (window.__AIAgentV63__) return; window.__AIAgentV63__ = true;
 
   // ---------- helpers ----------
   const $  = (s, r=document) => r.querySelector(s);
@@ -4335,7 +4335,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const onReady = (fn)=> (document.readyState==='loading')
     ? document.addEventListener('DOMContentLoaded', fn, {once:true})
     : fn();
-
   const toNum = (x)=> { if(x==null) return 0; const t=String(x).replace(/[^\d.,-]/g,'').replace(',', '.'); const v=parseFloat(t); return Number.isFinite(v)?v:0; };
   const getLang = ()=> {
     const sel = $("#langSelect")?.value?.toLowerCase();
@@ -4353,6 +4352,14 @@ window.addEventListener('DOMContentLoaded', () => {
     try { return new Intl.NumberFormat(getLang()==='pl'?'pl-PL':'en-US',{style:'currency',currency:cur}).format(v); }
     catch { return (v!=null?v.toFixed(2):'—') + ' ' + cur; }
   };
+  const getRole = () => {
+    const t = $('#authBadge')?.textContent?.toLowerCase() || '';
+    return t.includes('parent') ? 'parent' : 'child';
+  };
+
+  // --- TTS (czytanie na głos) ---
+  const speak = (text)=>{ try{ window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(String(text||'')); u.lang=getLang()==='pl'?'pl-PL':'en-US'; speechSynthesis.speak(u);}catch{} };
+  const stopSpeak = ()=>{ try{ window.speechSynthesis.cancel(); }catch{} };
 
   // ---------- UI texts ----------
   const UI = {
@@ -4363,60 +4370,76 @@ window.addEventListener('DOMContentLoaded', () => {
     rebalance:{pl:"Sugestia portfela",en:"Rebalance tip"},
     send:{pl:"Wyślij",en:"Send"},
     tour:{pl:"Start tutorial",en:"Start tutorial"},
-    ph:{pl:"Napisz… (np. kurs AAPL, co to total loss, kup AAPL 1, pokaż wykres EUR/USD z tygodnia)",
-        en:"Type… (e.g., price AAPL, what is total loss, buy AAPL 1, show chart EUR/USD for week)"},
+    read:{pl:"Czytaj",en:"Read"},
+    stop:{pl:"Stop",en:"Stop"},
+    ph:{pl:"Napisz… (np. co to watchlist, kurs AAPL, kup AAPL 1, pokaż wykres EUR/USD z tygodnia)",
+        en:"Type… (e.g., what is watchlist, price AAPL, buy AAPL 1, show chart EUR/USD for week)"},
     noPrice:{pl:"Nie znalazłem kursu dla",en:"Couldn't find a price for"},
-    helpTitle:{pl:"Dostępne komendy:",en:"Available commands:"},
-    helpPl:[
-      "• kurs SYMBOL            (np. kurs AAPL, kurs EUR/USD)",
-      "• co to … / czym jest …  (np. co to total loss)",
-      "• ile …                   (np. ile oszczędności, ile net worth)",
-      "• kup SYMBOL ILOŚĆ       (np. kup AAPL 1)",
-      "• pokaż wykres SYM okres  (dzień/tydzień/miesiąc)",
-      "• rebalans               (sugestia 50/50)",
-      "• lang pl|en             (zmień język agenta)",
-      "• tutorial               (uruchom przewodnik)"
+    examplesTitle:{pl:"Przykładowe pytania (FAQ):",en:"Example questions (FAQ):"}
+  };
+
+  // ---------- FAQ / examples (PL/EN) ----------
+  const FAQ = {
+    pl: [
+      "co to Available Cash?", "co to Net Worth?", "co to watchlist?",
+      "co to Global Trends?", "co to Stock Market?", "co to Currency Market?",
+      "co to Basket i jak działa?", "co to portfolio akcji?",
+      "ile oszczędności?", "ile Net Worth?",
+      "kurs AAPL", "kurs EUR/USD",
+      "pokaż wykres AAPL z tygodnia", "pokaż wykres EUR/USD z miesiąca",
+      "kup AAPL 1", "rebalans", "zmień język na pl", "tutorial"
     ],
-    helpEn:[
-      "• price SYMBOL           (e.g., price AAPL, price EUR/USD)",
-      "• what is …              (e.g., what is total loss)",
-      "• how much …             (e.g., how much savings, how much net worth)",
-      "• buy SYMBOL QTY         (e.g., buy AAPL 1)",
-      "• show chart SYM period  (day/week/month)",
-      "• rebalance              (50/50 suggestion)",
-      "• lang pl|en             (switch agent language)",
-      "• tutorial               (start the guided tour)"
+    en: [
+      "what is Available Cash?", "what is Net Worth?", "what is watchlist?",
+      "what is Global Trends?", "what is Stock Market?", "what is Currency Market?",
+      "what is Basket and how it works?", "what is stock portfolio?",
+      "how much savings?", "how much net worth?",
+      "price AAPL", "price EUR/USD",
+      "show chart AAPL for week", "show chart EUR/USD for month",
+      "buy AAPL 1", "rebalance", "lang en", "tutorial"
     ]
   };
 
-  // ---------- knowledge (definitions + where to read value) ----------
+  // ---------- knowledge base ----------
   const KB = {
     availableCash:{aliases:["available cash","cash","gotówka","dostępna gotówka"], ids:["#availableCash","#miniCash"],
-      desc:{en:"Available Cash – money ready to spend/invest. Here it equals Savings + Earnings + Gifts.", pl:"Available Cash – środki dostępne od razu. Tu to suma: Oszczędności + Zarobki + Prezenty."}},
+      desc:{en:"Available Cash – money ready to spend/invest. Equals Savings + Earnings + Gifts.", pl:"Available Cash – środki dostępne od razu. Suma: Oszczędności + Zarobki + Prezenty."}},
     netWorth:{aliases:["net worth","wartość netto","wartosc netto"], ids:["#netWorth"],
-      desc:{en:"Net Worth – total jars + stock portfolio + FX portfolio.", pl:"Wartość netto – suma słoików + portfel akcji + portfel walut."}},
-    savings:{aliases:["savings","oszczędności","oszczednosci","słoik oszczędności","sloik oszczednosci","jar savings"], ids:["#saveAmt"],
-      desc:{en:"Savings jar – long-term savings. Add with +Add under the jar.", pl:"Słoik Oszczędności – dłuższe odkładanie. Dodajesz +Add pod słoikiem."}},
-    earnings:{aliases:["earnings","zarobki","słoik zarobków","sloik zarobkow","jar earnings"], ids:["#spendAmt"],
-      desc:{en:"Earnings jar – money earned (chores).", pl:"Słoik Zarobków – pieniądze za obowiązki/zadania."}},
-    gifts:{aliases:["gifts","prezenty","słoik prezentów","sloik prezentow","jar gifts"], ids:["#giveAmt"],
+      desc:{en:"Net Worth – total jars + stock portfolio + FX portfolio.", pl:"Wartość netto – suma słoików oraz portfeli: akcji i walut."}},
+    savings:{aliases:["savings","oszczędności","oszczednosci","słoik oszczędności"], ids:["#saveAmt"],
+      desc:{en:"Savings jar – long-term saving. Use +Add under the jar.", pl:"Słoik Oszczędności – odkładanie na dłużej. Użyj +Add pod słoikiem."}},
+    earnings:{aliases:["earnings","zarobki","słoik zarobków"], ids:["#spendAmt"],
+      desc:{en:"Earnings jar – money you earned (chores).", pl:"Słoik Zarobków – pieniądze za obowiązki/zadania."}},
+    gifts:{aliases:["gifts","prezenty","słoik prezentów"], ids:["#giveAmt"],
       desc:{en:"Gifts jar – money received as gifts.", pl:"Słoik Prezentów – pieniądze otrzymane w prezencie."}},
-    investCash:{aliases:["investments","inwestycje","investment cash","słoik inwestycje","sloik inwestycje"], ids:["#investAmt"],
+    investCash:{aliases:["investments","inwestycje","słoik inwestycje"], ids:["#investAmt"],
       desc:{en:"Investments jar – cash dedicated for buying assets.", pl:"Słoik Inwestycje – gotówka na zakup aktywów."}},
-    invFx:{aliases:["inv value fx","fx value","wartość fx","wartosc fx","inv fx"], ids:["#miniInvFx"],
+    invFx:{aliases:["inv value fx","fx value","wartość fx","inv fx"], ids:["#miniInvFx"],
       desc:{en:"INV. value FX – market value of currency positions.", pl:"INV. value FX – wartość pozycji walutowych."}},
-    invStocks:{aliases:["inv value stocks","wartość akcji","wartosc akcji","inv stocks"], ids:["#miniInvStocks"],
+    invStocks:{aliases:["inv value stocks","wartość akcji","inv stocks"], ids:["#miniInvStocks"],
       desc:{en:"INV. value Stocks – market value of stock positions.", pl:"INV. value Stocks – wartość pozycji akcyjnych."}},
-    invTotal:{aliases:["inv value total","wartość portfela","wartosc portfela","inv total"], ids:["#miniInvTotal"],
-      desc:{en:"INV. value Total – FX + Stocks combined market value.", pl:"INV. value Total – łączna wartość FX + akcji."}},
-    totalEarned:{aliases:["total earned","zarobiono łącznie","profit total"], ids:["#miniTotalEarned","#kpiTotal"],
+    invTotal:{aliases:["inv value total","wartość portfela","inv total"], ids:["#miniInvTotal"],
+      desc:{en:"INV. value Total – combined market value of FX + Stocks.", pl:"INV. value Total – łączna wartość FX + akcji."}},
+    totalEarned:{aliases:["total earned","zarobiono łącznie"], ids:["#miniTotalEarned","#kpiTotal"],
       desc:{en:"Total earned – accumulated realized profits.", pl:"Total earned – skumulowane zrealizowane zyski."}},
-    totalLoss:{aliases:["total loss","łączne straty","strata łączna","loss total"], ids:["#miniTotalLoss","#kpiTotalLoss"],
-      desc:{en:"Total loss – accumulated realized losses. Unrealized P/L appears in tables.", pl:"Total loss – skumulowane zrealizowane straty. Niezrealizowany P/L widzisz w tabelach."}},
-    quickActions:{aliases:["quick actions","szybkie akcje","allowance","kieszonkowe"], ids:["#addAllowance","#moveSpendSave","#moveDonToSave"],
-      desc:{en:"Quick Actions – allowance, move Earnings→Savings, move Gifts→Savings.", pl:"Skróty: kieszonkowe, przenieś Zarobki→Oszczędności, Prezenty→Oszczędności."}},
-    dataMode:{aliases:["data mode","simulation","live mode","tryb danych"], ids:["#liveModeLabel","#liveStatus"],
-      desc:{en:"Simulation uses local/demo data; Live uses backend quotes.", pl:"Symulacja używa danych demo; Live pobiera kursy z backendu."}}
+    totalLoss:{aliases:["total loss","łączne straty"], ids:["#miniTotalLoss","#kpiTotalLoss"],
+      desc:{en:"Total loss – accumulated realized losses (unrealized P/L in tables).", pl:"Total loss – skumulowane zrealizowane straty (niezrealizowany P/L w tabelach)."}},
+    trends:{aliases:["global trends","trendy"], ids:["#globalTrendsCard",".global-trends"],
+      desc:{en:"Global Trends – snapshot of world indices/large caps.", pl:"Global Trends – migawka światowych indeksów/spółek."}},
+    watchlist:{aliases:["watchlist","lista obserwacyjna"], ids:["#watchlist",".watchlist",".wl-container"],
+      desc:{en:"Watchlist – your instruments with mini charts; use +Add to append.", pl:"Watchlist – lista obserwowanych; dodawaj przyciskiem +Add."}},
+    stockMarket:{aliases:["stock market","stocks","rynek akcji"], ids:["#stockMarket",".stock-market",".tab-stocks"],
+      desc:{en:"Stock Market – browse stocks, set quantity, add to Basket.", pl:"Stock Market – przegląd akcji, ustaw ilość i dodaj do koszyka."}},
+    currencyMarket:{aliases:["currency market","fx market","currencies","waluty"], ids:["#fxMarket",".fx-market",".tab-fx"],
+      desc:{en:"Currency Market – currency pairs and (optional) FX basket.", pl:"Currency Market – pary walutowe i (opcjonalnie) koszyk FX."}},
+    basket:{aliases:["basket","koszyk"], ids:['[data-basket-list="stocks"]','.basket-stocks','#basketStocks'],
+      desc:{en:"Basket – temporary buy list funded with Investment cash. Execute Buy.", pl:"Basket – tymczasowa lista zakupów z gotówki inwestycyjnej. Zatwierdź przyciskiem Buy."}},
+    portfolio:{aliases:["portfolio","stock portfolio","portfel akcji"], ids:["#portfolioBody",".stock-portfolio"],
+      desc:{en:"Stock Portfolio – table of positions: ticker, shares, avg cost, price, value, P/L.", pl:"Stock Portfolio – tabela pozycji: ticker, ilość, śr. koszt, cena, wartość, P/L."}},
+    quickActions:{aliases:["quick actions","szybkie akcje","allowance"], ids:["#addAllowance","#moveSpendSave","#moveDonToSave",".quick-actions"],
+      desc:{en:"Quick Actions: Allowance 10 USD; Move Earnings → Savings; Move Gifts → Savings.", pl:"Szybkie Akcje: Allowance 10 USD; Przenieś Zarobki → Oszczędności; Przenieś Prezenty → Oszczędności."}},
+    dataMode:{aliases:["data mode","simulation","live mode","tryb danych"], ids:["#liveModeLabel","#liveStatus",".data-mode"],
+      desc:{en:"Data Mode – Simulation uses demo; Live pulls real quotes (backend).", pl:"Tryb danych – Symulacja używa demo; Live pobiera realne kursy (backend)."}}
   };
   const resolveConcept = (q)=>{
     const t = q.toLowerCase();
@@ -4428,7 +4451,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return null;
   };
 
-  // ---------- price + rebalans + explain ----------
+  // ---------- finance helpers ----------
   async function checkPrice(symbol){
     const lang=getLang();
     try{
@@ -4465,13 +4488,7 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   // ---------- panel + FAB ----------
-  function removeOldRobots(){
-    // stary przycisk/obrazek robota
-    $$('#aiAgentBtn, .ai-agent-btn').forEach(el=>el.remove());
-    // poprzednie duplikaty FAB
-    $$('#ai-fab').forEach(el=>el.remove());
-  }
-
+  function removeOldRobots(){ $$('#aiAgentBtn, .ai-agent-btn, #ai-fab').forEach(el=>el.remove()); }
   function ensureFab(){
     if($('#ai-fab')) return;
     const b=document.createElement('button');
@@ -4488,10 +4505,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const lang=getLang();
     const root=document.createElement('div'); root.id='ai-agent'; root.style.cssText="position:fixed;right:18px;bottom:18px;z-index:9999;font-family:inherit;color:#e5e7eb";
     root.innerHTML=`
-      <div style="width:340px;max-width:92vw;background:rgba(8,12,22,.94);border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55)">
+      <div style="width:360px;max-width:92vw;background:rgba(8,12,22,.94);border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55)">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;">
           <div><div id="ai-t" style="font-weight:800">${UI.title[lang]}</div><div id="ai-st" style="font-size:12px;opacity:.8">${UI.subtitle[lang]}</div></div>
-          <div style="display:flex;gap:6px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button id="ai-read" class="abtn" style="background:#0b1324;border:1px solid #334155">${getLang()==='pl'?'Czytaj':'Read'}</button>
+            <button id="ai-stop" class="abtn" style="background:#0b1324;border:1px solid #334155">${getLang()==='pl'?'Stop':'Stop'}</button>
             <button id="ai-tour" class="abtn" style="background:#0b1324;border:1px solid #334155">${UI.tour[lang]}</button>
             <button id="ai-x" class="abtn" style="background:#111827;border:1px solid #334155">×</button>
           </div>
@@ -4505,7 +4524,7 @@ window.addEventListener('DOMContentLoaded', () => {
           <input id="ai-input" placeholder="${UI.ph[lang]}" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1324;color:#e5e7eb" />
           <button id="ai-send" class="abtn">${UI.send[lang]}</button>
         </div>
-        <div id="ai-log" style="margin:0 12px 12px 12px;border:1px dashed rgba(255,255,255,.12);border-radius:10px;padding:10px;font-size:14px;min-height:48px;white-space:pre-wrap"></div>
+        <div id="ai-log" style="margin:0 12px 12px 12px;border:1px dashed rgba(255,255,255,.12);border-radius:10px;padding:10px;font-size:14px;min-height:56px;white-space:pre-wrap"></div>
       </div>`;
     root.querySelectorAll('.abtn').forEach(b=>b.style.cssText += ';color:#e5e7eb;border-radius:10px;padding:8px 10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center');
 
@@ -4516,6 +4535,8 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#ai-rebal').onclick   = ()=> log(rebalanceTip());
     $('#ai-send').onclick    = ()=> { const v=$('#ai-input').value.trim(); if(v) runCmd(v); };
     $('#ai-input').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#ai-send').click(); }});
+    $('#ai-read').onclick    = ()=> { const t=$('#ai-log')?.textContent||''; if(t) speak(t); };
+    $('#ai-stop').onclick    = ()=> stopSpeak();
     $('#ai-tour').onclick    = ()=> startTour();
 
     log(helpText()); // start
@@ -4530,56 +4551,137 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#ai-rebal') && ($('#ai-rebal').textContent = UI.rebalance[lang]);
     $('#ai-send') && ($('#ai-send').textContent = UI.send[lang]);
     $('#ai-tour') && ($('#ai-tour').textContent = UI.tour[lang]);
+    $('#ai-read') && ($('#ai-read').textContent = UI.read[lang]);
+    $('#ai-stop') && ($('#ai-stop').textContent = UI.stop[lang]);
     $('#ai-input') && ($('#ai-input').placeholder = UI.ph[lang]);
     if($('#ai-log')?.dataset?.help==='1') log(helpText());
   }
 
-  function log(t){ const el=$('#ai-log'); if(el){ el.dataset.help = (t===helpText()?'1':''); el.textContent=String(t||''); } }
-  const helpText = ()=> {
+  // --- HELP/FAQ: tylko przykłady (bez listy komend) ---
+  function buildHelp(){
     const lang=getLang();
-    const list = (lang==='pl'?UI.helpPl:UI.helpEn).join('\n');
-    return `${UI.helpTitle[lang]}\n\n${list}`;
-  };
+    const exs  = (FAQ[lang]||[]).map(x=>'• '+x).join('\n');
+    return `${UI.examplesTitle[lang]}\n\n${exs}`;
+  }
+  function log(t){ const el=$('#ai-log'); if(el){ el.dataset.help = (t===buildHelp()?'1':''); el.textContent=String(t||''); } }
+  const helpText = ()=> buildHelp();
 
-  // ---------- guided tour (multi-step, non-blocking) ----------
+  // ---------- TOUR (rozbudowany, dopasowany do roli) ----------
+  function findByText(text){
+    const q = text.toLowerCase();
+    const nodes = $$('button, a, span, div');
+    return nodes.find(el => el.textContent?.trim().toLowerCase().includes(q)) || null;
+  }
+  function firstExisting(arr){ for(const s of arr){ const el=$(s); if(el) return el; } return null; }
+  function anchorFor(step){
+    // spróbuj po selektorach; jeśli nie – po tekście
+    let el = step.sels ? firstExisting(step.sels) : null;
+    if (!el && step.textMatch) el = findByText(step.textMatch);
+    return el || $('#ai-fab');
+  }
+  function highlight(el){
+    if(!el) return;
+    el._ai_css_backup = el.style.outline;
+    el.style.outline = '2px solid #60a5fa';
+    setTimeout(()=>{ el.style.outline = el._ai_css_backup || ''; }, 1200);
+  }
+  function placeBubble(bubble, ref){
+    ref.scrollIntoView({behavior:'instant', block:'center', inline:'center'});
+    const r = ref.getBoundingClientRect();
+    const B = {w:360,h:bubble.offsetHeight||140};
+    let left = r.left + window.scrollX;
+    let top  = r.top + window.scrollY + r.height + 10;
+    if (top + B.h > window.scrollY + window.innerHeight) top = r.top + window.scrollY - B.h - 10; // powyżej, jeśli brakuje miejsca
+    if (left + 380 > window.scrollX + window.innerWidth) left = window.scrollX + window.innerWidth - 380; // w granicach ekranu
+    bubble.style.left = Math.max(10,left) + 'px';
+    bubble.style.top  = Math.max(10,top)  + 'px';
+  }
   function startTour(){
-    const lang = getLang();
-    const steps = [
-      { sel:'#addAllowance',     pl:'Kieszonkowe – szybki zastrzyk środków jednym kliknięciem.', en:'Allowance – quickly add money with one click.' },
-      { sel:'#netWorth',         pl:'Wartość netto – suma słoików + portfele.',                   en:'Net Worth – jars + portfolios combined.' },
-      { sel:'#globalTrendsCard', pl:'Trendy – sprawdź co rośnie/spada (kliknij w kartę).',       en:'Trends – see what’s up/down (tap the card).' },
-      { sel:'#ai-fab',           pl:'Ten przycisk otwiera panel AI. Pytaj: „co to total loss”, „kurs EUR/USD”.', en:'This button opens AI. Ask: “what is total loss”, “price EUR/USD”.' }
+    const L = getLang();
+    const S = (pl,en)=> (L==='pl'?pl:en);
+    const role = getRole();
+
+    const stepsAll = [
+      // TOPBAR buttons
+      ...(role==='parent' ? [{textMatch:'+ add child',  pl:'Dodajesz nowe konto dziecka.', en:'Add a new child account.'}] : []),
+      { textMatch:'stocks',         pl:'Wejście do rynku akcji.',                en:'Enter the Stocks market.' },
+      { textMatch:'currencies (fx)',pl:'Rynek walut (FX).',                      en:'Currencies (FX) market.' },
+      { textMatch:'profits',        pl:'Zestawienie zysków/strat.',              en:'Profits panel – realized P/L.' },
+      ...(role==='parent' ? [{ textMatch:'parent', pl:'Panel rodzica i ustawienia.', en:'Parent panel & settings.' }] : []),
+      { textMatch:'tutorial',       pl:'Uruchom przewodnik po aplikacji.',       en:'Launch the in-app tutorial.' },
+
+      // MINI JARS (nagłówek)
+      { textMatch:'available cash', pl:'Pieniądze dostępne od razu.', en:'Money ready to use now.' },
+      { textMatch:'savings',        pl:'Suma środków w słoiku Oszczędności.', en:'Savings jar amount.' },
+      { textMatch:'earnings',       pl:'Suma środków w słoiku Zarobków.', en:'Earnings jar amount.' },
+      { textMatch:'gifts',          pl:'Suma środków w słoiku Prezentów.', en:'Gifts jar amount.' },
+      { textMatch:'investments',    pl:'Gotówka przeznaczona na inwestycje.', en:'Cash dedicated for investments.' },
+
+      // INVESTMENT KPIs
+      { textMatch:'inv. value fx',      pl:'Wartość pozycji walutowych (FX).', en:'Market value of FX positions.' },
+      { textMatch:'inv. value stocks',  pl:'Wartość pozycji akcyjnych.',       en:'Market value of stock positions.' },
+      { textMatch:'inv. value total',   pl:'Łączna wartość FX + akcji.',       en:'Combined value of FX + Stocks.' },
+      { textMatch:'total earned',       pl:'Skumulowane zrealizowane zyski.',  en:'Accumulated realized profits.' },
+      { textMatch:'total loss',         pl:'Skumulowane zrealizowane straty.', en:'Accumulated realized losses.' },
+
+      // JARS (duże)
+      { sels:['#saveAmt'],   pl:'Słoik Oszczędności – odkładanie na cele. +Add dodaje środki.', en:'Savings jar – long-term saving. Use +Add.' },
+      { sels:['#spendAmt'],  pl:'Słoik Zarobków – pieniądze, które zarobiłaś/eś.',               en:'Earnings jar – money you earned.' },
+      { sels:['#giveAmt'],   pl:'Słoik Prezentów – środki z prezentów.',                         en:'Gifts jar – money from gifts.' },
+      { sels:['#investAmt'], pl:'Słoik Inwestycje – gotówka na zakup aktywów.',                  en:'Investments jar – cash to buy assets.' },
+
+      // KPI cards
+      { sels:['#netWorth'],                       pl:'Wartość netto – słoiki + portfele.',            en:'Net Worth – jars + portfolios.' },
+      { sels:['#availableCash','#miniCash'],      pl:'Available Cash – suma Oszczędności, Zarobków i Prezentów.', en:'Available Cash – Savings + Earnings + Gifts.' },
+
+      // Quick Actions
+      { sels:['#addAllowance'],   pl:'Allowance 10 USD – szybkie kieszonkowe.',                 en:'Allowance 10 USD – quick pocket money.' },
+      { sels:['#moveSpendSave'],  pl:'Move Earnings → Savings – przenieś zarobki do oszczędności.', en:'Move Earnings → Savings.' },
+      { sels:['#moveDonToSave'],  pl:'Move Gifts → Savings – przenieś prezenty do oszczędności.',  en:'Move Gifts → Savings.' },
+
+      // Rest of the app
+      { sels:['#globalTrendsCard','.global-trends'],                 pl:'Global Trends – migawka świata.', en:'Global Trends – world snapshot.' },
+      { sels:['#watchlist','.watchlist','.wl-container'],            pl:'Watchlist – Twoja lista obserwowanych.', en:'Watchlist – your list of instruments.' },
+      { sels:['#stockMarket','.stock-market','.tab-stocks'],         pl:'Stock Market – wybierz spółkę, dodaj do koszyka.', en:'Stock Market – pick a stock, add to basket.' },
+      { sels:['#fxMarket','.fx-market','.tab-fx'],                   pl:'Currency Market – pary walutowe i kursy.', en:'Currency Market – currency pairs and rates.' },
+      { sels:['[data-basket-list="stocks"]','.basket-stocks','#basketStocks'], pl:'Basket – koszyk zakupów z gotówki inwestycyjnej.', en:'Basket – investment-cash buy list.' },
+      { sels:['#portfolioBody','.stock-portfolio'],                  pl:'Portfolio – tabela pozycji i P/L.', en:'Portfolio – positions and P/L.' },
+      { sels:['.data-mode','#liveModeLabel','#liveStatus'],          pl:'Data Mode – Symulacja vs Live.', en:'Data Mode – Simulation vs Live.' },
+      { sels:['#ai-fab'],                                            pl:'Przycisk „AI” – zadaj pytania, np. „kurs AAPL”, „co to watchlist”.', en:'“AI” button – ask “price AAPL”, “what is watchlist”.' }
     ];
+
+    // Usuń kroki "Add child" i "Parent" gdy role=child
+    const steps = stepsAll.filter(st => !(role==='child' && (st.textMatch?.includes('add child') || st.textMatch?.includes('parent'))));
+
     let i=0;
     const overlay = document.createElement('div');
     overlay.id='ai-tour';
     overlay.style.cssText="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.28);pointer-events:none";
     const bubble = document.createElement('div');
-    bubble.style.cssText="position:absolute;max-width:340px;background:#0b1324;border:1px solid #334155;color:#e5e7eb;padding:10px 12px;border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);pointer-events:auto";
-    const next = document.createElement('button');
-    next.textContent = lang==='pl'?'Dalej':'Next';
-    next.style.cssText="margin-top:8px;background:#111827;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
-    const close = document.createElement('button');
-    close.textContent = lang==='pl'?'Zamknij':'Close';
-    close.style.cssText="margin:8px 0 0 8px;background:#1f2937;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
+    bubble.style.cssText="position:absolute;max-width:360px;background:#0b1324;border:1px solid #334155;color:#e5e7eb;padding:10px 12px;border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);pointer-events:auto";
+    const meta = document.createElement('div'); meta.style.cssText="font-size:12px;opacity:.7;margin-bottom:6px";
+    const next = document.createElement('button'); next.style.cssText="margin-top:8px;background:#111827;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
+    const close = document.createElement('button'); close.style.cssText="margin:8px 0 0 8px;background:#1f2937;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
+    next.textContent = S('Dalej','Next'); close.textContent = S('Zamknij','Close');
 
-    function place(){
+    function stepToText(st){ return S(st.pl, st.en); }
+    function showStep(){
       const st=steps[i]; if(!st){ overlay.remove(); return; }
-      const el=$(st.sel);
-      // jeśli nie ma elementu – pokaż przy FAB, ale idź dalej (nie blokuj)
-      const ref = el || $('#ai-fab');
-      const r=ref.getBoundingClientRect();
-      bubble.innerHTML = (lang==='pl'?st.pl:st.en);
+      const ref = anchorFor(st);
+      highlight(ref);
+      // build bubble
+      bubble.innerHTML=''; meta.textContent = S(`Krok ${i+1}/${steps.length}`, `Step ${i+1}/${steps.length}`);
+      bubble.appendChild(meta); bubble.appendChild(document.createTextNode(stepToText(st)));
       bubble.appendChild(document.createElement('br')); bubble.appendChild(next); bubble.appendChild(close);
-      bubble.style.left = Math.min(r.left+window.scrollX, window.innerWidth-360)+'px';
-      bubble.style.top  = (r.top+window.scrollY+r.height+10)+'px';
+      // place
+      placeBubble(bubble, ref);
     }
-    next.onclick=()=>{ i++; place(); };
+    next.onclick=()=>{ i++; showStep(); };
     close.onclick=()=> overlay.remove();
-    overlay.appendChild(bubble); document.body.appendChild(overlay); place();
+    overlay.appendChild(bubble); document.body.appendChild(overlay); showStep();
   }
 
-  // ---------- command parser ----------
+  // ---------- commands ----------
   async function runCmd(raw){
     const q = String(raw||'').trim();
     if(!q){ log(helpText()); return; }
@@ -4588,11 +4690,15 @@ window.addEventListener('DOMContentLoaded', () => {
     let m = q.match(/^lang\s+(pl|en)$/i);
     if(m){ setLang(m[1]); log(helpText()); return; }
 
+    // TTS on/off
+    if (/^(czytaj|read)$/i.test(q)) { const t=$('#ai-log')?.textContent||''; if(t) speak(t); return; }
+    if (/^(stop|pause|przestań|przestan)$/i.test(q)) { stopSpeak(); return; }
+
     // price/kurs SYMBOL
     m = q.match(/\b(?:price|kurs)\s+([A-Z]{2,5}(?:\/[A-Z]{2,5})?)\b/i);
     if(m){ await checkPrice(m[1].toUpperCase()); return; }
 
-    // buy/kup SYMBOL QTY  -> event: mfk:buy
+    // buy/kup SYMBOL QTY
     m = q.match(/\b(?:buy|kup)\s+([A-Z]{1,5})\s+(\d+(?:\.\d+)?)\b/i);
     if(m){
       const detail={type:'stock',symbol:m[1].toUpperCase(),qty:parseFloat(m[2])};
@@ -4602,7 +4708,7 @@ window.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // show chart / pokaż wykres SYM period -> event: mfk:showChart
+    // show chart / pokaż wykres
     m = q.match(/\b(?:show chart|pokaż wykres|pokaz wykres)\s+([A-Z]{2,5}(?:\/[A-Z]{2,5})?)\s+(?:for\s+|z\s+)?(day|week|month|dnia|tygodnia|miesiąca|miesiaca)\b/i);
     if(m){
       const sym=m[1].toUpperCase();
@@ -4622,7 +4728,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // definicje: co to / czym jest / what is / explain
+    // definicje: co to / what is
     if (/^(co to|czym jest|co to jest|what is|explain)\b/i.test(q) || true){
       const key = resolveConcept(q);
       if(key){
@@ -4640,16 +4746,20 @@ window.addEventListener('DOMContentLoaded', () => {
     log(helpText());
   }
 
-  // ---------- start ----------
-  onReady(() => {
-    removeOldRobots();   // usuń starego „robota” i duplikaty
-    ensureFab();         // pokaż nowy, większy przycisk AI
-    $('#langSelect')?.addEventListener('change', refreshPanelLang); // odśwież napisy w panelu, jeśli otwarty
+  // ---------- shortcuts ----------
+  document.addEventListener('keydown', (e)=>{
+    if(!(e.altKey && e.shiftKey)) return;
+    if(e.code==='KeyA'){ e.preventDefault(); ensurePanel(); }
+    if(e.code==='KeyR'){ e.preventDefault(); const t=$('#ai-log')?.textContent||''; if(t) speak(t); }
+    if(e.code==='KeyS'){ e.preventDefault(); stopSpeak(); }
   });
 
-  // (opcjonalnie) nasłuchy do spięcia z Twoją logiką:
-  // document.addEventListener('mfk:buy', e => { buyStock(e.detail.symbol, e.detail.qty); });
-  // document.addEventListener('mfk:showChart', e => { showChart(e.detail.symbol, e.detail.range); });
+  // ---------- start ----------
+  onReady(() => {
+    removeOldRobots();
+    ensureFab();
+    $('#langSelect')?.addEventListener('change', refreshPanelLang);
+  });
 
 })();
 
