@@ -3643,3 +3643,57 @@ width: 110px;
   background:#0f172a; color:#e5e7eb; border:1px solid #233046; border-radius:10px;
   padding: 10px 12px; font-weight:600; cursor:pointer;
 }
+/* ===== AI Agent (panel + FAB) ===== */
+#ai-fab{
+  position: fixed; right: 18px; bottom: 18px; z-index: 400;
+  width: 60px; height: 60px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-weight: 900; letter-spacing: .5px;
+  background: linear-gradient(135deg,#3b82f6,#22c55e);
+  color: #0b1220; border: 0; box-shadow: 0 10px 30px rgba(2,8,23,.45);
+}
+#ai-panel{
+  position: fixed; right: 18px; bottom: 90px; z-index: 401;
+  width: min(360px, 92vw); max-height: min(70vh, 620px);
+  background: rgba(11,18,32,.96); color: #e5e7eb;
+  border: 1px solid rgba(255,255,255,.10); border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(2,8,23,.55);
+  display: none; flex-direction: column; overflow: hidden;
+}
+#ai-panel._open{ display: flex; }
+
+#ai-panel .ai-h{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:8px; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.08);
+}
+#ai-panel .ai-title{ font-weight: 800; }
+#ai-panel .ai-actions{ display:flex; gap:8px; }
+#ai-panel .ai-actions button,
+#ai-panel .ai-btns button,
+#ai-panel #ai-send{
+  background:#162033; border:1px solid #334155; color:#fff;
+  padding:8px 10px; border-radius:8px; cursor:pointer;
+}
+#ai-panel .ai-actions #ai-close{ width:34px; height:34px; padding:0; font-size:18px; line-height:1 }
+
+#ai-panel .ai-btns{ display:flex; gap:8px; padding:10px 12px; flex-wrap:wrap; }
+#ai-panel .ai-inp{ display:flex; gap:8px; padding:0 12px 10px; }
+#ai-panel #ai-input{
+  flex:1; min-width:0; padding:8px 10px; border-radius:8px;
+  background:#0c1528; border:1px solid #334155; color:#fff;
+}
+
+#ai-out{
+  padding:10px 12px; overflow:auto; flex:1;
+  border-top:1px solid rgba(255,255,255,.06);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.ai-msg{ background:#0b1220; border:1px solid rgba(255,255,255,.07);
+  padding:8px 10px; border-radius:8px; margin-bottom:8px; }
+
+.ai-faq{ padding:10px 12px; }
+.ai-faq-title{ font-weight:700; margin-bottom:6px; }
+.ai-faq-list{ display:grid; gap:6px; max-height:160px; overflow:auto; }
+.ai-faq-i{ background:#0f172a; border:1px solid #1f2937; padding:6px 8px; border-radius:8px; cursor:pointer; }
+.ai-faq-i:hover{ background:#111f34; }
+

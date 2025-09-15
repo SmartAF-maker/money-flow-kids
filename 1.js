@@ -4323,12 +4323,11 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
-
 /* =========================================================================
- * Money Flow Kids — AI Agent v6.1 (bigger FAB, no robot, TTS Read/Stop)
+ * Money Flow Kids — AI Agent v6 (clean, no robot, bigger FAB, no TTS/fonts)
  * ========================================================================= */
 (() => {
-  if (window.__AIAgentV61__) return; window.__AIAgentV61__ = true;
+  if (window.__AIAgentV6__) return; window.__AIAgentV6__ = true;
 
   // ---------- helpers ----------
   const $  = (s, r=document) => r.querySelector(s);
@@ -4336,6 +4335,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const onReady = (fn)=> (document.readyState==='loading')
     ? document.addEventListener('DOMContentLoaded', fn, {once:true})
     : fn();
+
   const toNum = (x)=> { if(x==null) return 0; const t=String(x).replace(/[^\d.,-]/g,'').replace(',', '.'); const v=parseFloat(t); return Number.isFinite(v)?v:0; };
   const getLang = ()=> {
     const sel = $("#langSelect")?.value?.toLowerCase();
@@ -4354,10 +4354,6 @@ window.addEventListener('DOMContentLoaded', () => {
     catch { return (v!=null?v.toFixed(2):'—') + ' ' + cur; }
   };
 
-  // --- TTS (czytanie na głos) ---
-  const speak = (text)=>{ try{ window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(String(text||'')); u.lang=getLang()==='pl'?'pl-PL':'en-US'; speechSynthesis.speak(u);}catch{} };
-  const stopSpeak = ()=>{ try{ window.speechSynthesis.cancel(); }catch{} };
-
   // ---------- UI texts ----------
   const UI = {
     title:{pl:"Agent AI",en:"AI Agent"},
@@ -4367,8 +4363,6 @@ window.addEventListener('DOMContentLoaded', () => {
     rebalance:{pl:"Sugestia portfela",en:"Rebalance tip"},
     send:{pl:"Wyślij",en:"Send"},
     tour:{pl:"Start tutorial",en:"Start tutorial"},
-    read:{pl:"Czytaj",en:"Read"},
-    stop:{pl:"Stop",en:"Stop"},
     ph:{pl:"Napisz… (np. kurs AAPL, co to total loss, kup AAPL 1, pokaż wykres EUR/USD z tygodnia)",
         en:"Type… (e.g., price AAPL, what is total loss, buy AAPL 1, show chart EUR/USD for week)"},
     noPrice:{pl:"Nie znalazłem kursu dla",en:"Couldn't find a price for"},
@@ -4381,7 +4375,6 @@ window.addEventListener('DOMContentLoaded', () => {
       "• pokaż wykres SYM okres  (dzień/tydzień/miesiąc)",
       "• rebalans               (sugestia 50/50)",
       "• lang pl|en             (zmień język agenta)",
-      "• czytaj / stop          (włącz/wyłącz czytanie)",
       "• tutorial               (uruchom przewodnik)"
     ],
     helpEn:[
@@ -4392,7 +4385,6 @@ window.addEventListener('DOMContentLoaded', () => {
       "• show chart SYM period  (day/week/month)",
       "• rebalance              (50/50 suggestion)",
       "• lang pl|en             (switch agent language)",
-      "• read / stop            (turn TTS on/off)",
       "• tutorial               (start the guided tour)"
     ]
   };
@@ -4426,8 +4418,15 @@ window.addEventListener('DOMContentLoaded', () => {
     dataMode:{aliases:["data mode","simulation","live mode","tryb danych"], ids:["#liveModeLabel","#liveStatus"],
       desc:{en:"Simulation uses local/demo data; Live uses backend quotes.", pl:"Symulacja używa danych demo; Live pobiera kursy z backendu."}}
   };
-  const resolveConcept = (q)=>{ const t=q.toLowerCase(); for(const [k,v] of Object.entries(KB)) if(v.aliases.some(a=>t.includes(a))) return k; return null; };
-  const readValue = (ids)=>{ for(const sel of ids||[]){ const el=$(sel); const txt=el?.textContent?.trim(); if(txt) return txt; } return null; };
+  const resolveConcept = (q)=>{
+    const t = q.toLowerCase();
+    for (const [k,v] of Object.entries(KB)) if (v.aliases.some(a=>t.includes(a))) return k;
+    return null;
+  };
+  const readValue = (ids)=> {
+    for(const sel of ids||[]){ const el=$(sel); const txt=el?.textContent?.trim(); if(txt) return txt; }
+    return null;
+  };
 
   // ---------- price + rebalans + explain ----------
   async function checkPrice(symbol){
@@ -4466,7 +4465,12 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   // ---------- panel + FAB ----------
-  function removeOldRobots(){ $$('#aiAgentBtn, .ai-agent-btn, #ai-fab').forEach(el=>el.remove()); }
+  function removeOldRobots(){
+    // stary przycisk/obrazek robota
+    $$('#aiAgentBtn, .ai-agent-btn').forEach(el=>el.remove());
+    // poprzednie duplikaty FAB
+    $$('#ai-fab').forEach(el=>el.remove());
+  }
 
   function ensureFab(){
     if($('#ai-fab')) return;
@@ -4488,8 +4492,6 @@ window.addEventListener('DOMContentLoaded', () => {
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;">
           <div><div id="ai-t" style="font-weight:800">${UI.title[lang]}</div><div id="ai-st" style="font-size:12px;opacity:.8">${UI.subtitle[lang]}</div></div>
           <div style="display:flex;gap:6px">
-            <button id="ai-read" class="abtn" style="background:#0b1324;border:1px solid #334155">${UI.read[lang]}</button>
-            <button id="ai-stop" class="abtn" style="background:#0b1324;border:1px solid #334155">${UI.stop[lang]}</button>
             <button id="ai-tour" class="abtn" style="background:#0b1324;border:1px solid #334155">${UI.tour[lang]}</button>
             <button id="ai-x" class="abtn" style="background:#111827;border:1px solid #334155">×</button>
           </div>
@@ -4514,8 +4516,6 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#ai-rebal').onclick   = ()=> log(rebalanceTip());
     $('#ai-send').onclick    = ()=> { const v=$('#ai-input').value.trim(); if(v) runCmd(v); };
     $('#ai-input').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#ai-send').click(); }});
-    $('#ai-read').onclick    = ()=> { const t=$('#ai-log')?.textContent||''; if(t) speak(t); };
-    $('#ai-stop').onclick    = ()=> stopSpeak();
     $('#ai-tour').onclick    = ()=> startTour();
 
     log(helpText()); // start
@@ -4530,8 +4530,6 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#ai-rebal') && ($('#ai-rebal').textContent = UI.rebalance[lang]);
     $('#ai-send') && ($('#ai-send').textContent = UI.send[lang]);
     $('#ai-tour') && ($('#ai-tour').textContent = UI.tour[lang]);
-    $('#ai-read') && ($('#ai-read').textContent = UI.read[lang]);
-    $('#ai-stop') && ($('#ai-stop').textContent = UI.stop[lang]);
     $('#ai-input') && ($('#ai-input').placeholder = UI.ph[lang]);
     if($('#ai-log')?.dataset?.help==='1') log(helpText());
   }
@@ -4543,7 +4541,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return `${UI.helpTitle[lang]}\n\n${list}`;
   };
 
-  // ---------- guided tour (4 kroki, nieblokujący) ----------
+  // ---------- guided tour (multi-step, non-blocking) ----------
   function startTour(){
     const lang = getLang();
     const steps = [
@@ -4567,7 +4565,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function place(){
       const st=steps[i]; if(!st){ overlay.remove(); return; }
-      const ref = $(st.sel) || $('#ai-fab');
+      const el=$(st.sel);
+      // jeśli nie ma elementu – pokaż przy FAB, ale idź dalej (nie blokuj)
+      const ref = el || $('#ai-fab');
       const r=ref.getBoundingClientRect();
       bubble.innerHTML = (lang==='pl'?st.pl:st.en);
       bubble.appendChild(document.createElement('br')); bubble.appendChild(next); bubble.appendChild(close);
@@ -4587,10 +4587,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // language
     let m = q.match(/^lang\s+(pl|en)$/i);
     if(m){ setLang(m[1]); log(helpText()); return; }
-
-    // TTS on/off
-    if (/^(czytaj|read)$/i.test(q)) { const t=$('#ai-log')?.textContent||''; if(t) speak(t); return; }
-    if (/^(stop|pause|przestań|przestan)$/i.test(q)) { stopSpeak(); return; }
 
     // price/kurs SYMBOL
     m = q.match(/\b(?:price|kurs)\s+([A-Z]{2,5}(?:\/[A-Z]{2,5})?)\b/i);
@@ -4644,19 +4640,16 @@ window.addEventListener('DOMContentLoaded', () => {
     log(helpText());
   }
 
-  // ---------- shortcuts ----------
-  document.addEventListener('keydown', (e)=>{
-    if(!(e.altKey && e.shiftKey)) return;
-    if(e.code==='KeyA'){ e.preventDefault(); ensurePanel(); }
-    if(e.code==='KeyR'){ e.preventDefault(); const t=$('#ai-log')?.textContent||''; if(t) speak(t); }
-    if(e.code==='KeyS'){ e.preventDefault(); stopSpeak(); }
-  });
-
   // ---------- start ----------
   onReady(() => {
-    removeOldRobots();
-    ensureFab();
-    $('#langSelect')?.addEventListener('change', refreshPanelLang);
+    removeOldRobots();   // usuń starego „robota” i duplikaty
+    ensureFab();         // pokaż nowy, większy przycisk AI
+    $('#langSelect')?.addEventListener('change', refreshPanelLang); // odśwież napisy w panelu, jeśli otwarty
   });
 
+  // (opcjonalnie) nasłuchy do spięcia z Twoją logiką:
+  // document.addEventListener('mfk:buy', e => { buyStock(e.detail.symbol, e.detail.qty); });
+  // document.addEventListener('mfk:showChart', e => { showChart(e.detail.symbol, e.detail.range); });
+
 })();
+
