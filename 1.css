@@ -3557,3 +3557,12 @@ width: 110px;
   border-color: var(--vio-bd-h);
   transform: translateY(-1px);
 }
+.wl-price.is-live {
+  animation: wlPulse 0.6s ease-out;
+}
+
+@keyframes wlPulse {
+  0%   { transform: scale(1.00); filter: brightness(1.0); }
+  30%  { transform: scale(1.02); filter: brightness(1.25); }
+  100% { transform: scale(1.00); filter: brightness(1.0); }
+}
