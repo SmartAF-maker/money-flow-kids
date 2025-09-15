@@ -1207,6 +1207,37 @@
   }
 })();
 </script>
+<!-- === AI Agent (robot) === -->
+<button id="aiAgentBtn" class="ai-agent-btn" aria-label="Open AI Agent">
+  <!-- U Ciebie plik nazywa się AI.png -->
+  <img src="./AI.png" alt="AI Agent" onerror="this.style.display='none'"/>
+</button>
+
+<div id="aiAgentPanel" class="ai-agent-panel hidden" role="dialog" aria-modal="false" aria-labelledby="aiAgentTitle">
+  <div class="ai-agent-head">
+    <img src="./AI.png" alt="" class="ai-agent-avatar" onerror="this.style.display='none'"/>
+    <div>
+      <div id="aiAgentTitle" class="ai-agent-title" data-i18n="agent.title">AI Agent</div>
+      <div class="ai-agent-sub" data-i18n="agent.sub">Quick, in-context tips</div>
+    </div>
+    <button id="aiAgentClose" class="ai-agent-x" aria-label="Close">✕</button>
+  </div>
+
+  <div class="ai-agent-actions">
+    <button class="btn" data-ai="explain-chart" data-i18n="agent.action.explain">Explain chart</button>
+    <button class="btn" data-ai="check-price"   data-i18n="agent.action.check">Check price</button>
+    <button class="btn" data-ai="rebalance"     data-i18n="agent.action.rebalance">Rebalance tip</button>
+  </div>
+
+  <!-- NOWE: pole do wpisywania komend -->
+  <div class="ai-agent-chat">
+    <input id="aiAgentChat" type="text" data-i18n-ph="agent.chat.ph" placeholder="Type a command… (e.g., price AAPL)"/>
+    <button id="aiAgentSend" class="btn" data-i18n="agent.chat.send">Send</button>
+  </div>
+
+  <div id="aiAgentOut" class="ai-agent-output" data-i18n="agent.out.ready">Ready? Pick an action above or type a command.</div>
+</div>
+<!-- === /AI Agent === -->
 
 </body>
 </html>
