@@ -62,6 +62,7 @@ function fxQuote(){
   // UI: gdy PL -> pokazuj pary A/PLN; gdy EN -> A/USD
   return (getDisplayCurrency() === 'PLN') ? 'PLN' : 'USD';
 }
+window.fxQuote = fxQuote;
 // Konwersja: wartości aplikacji są w USD → na walutę wyświetlaną
 function convertFromUSD(usdAmount, toCur = getDisplayCurrency()) {
   const v = Number(usdAmount || 0);
@@ -139,6 +140,47 @@ const CURRENCY_NAMES = {
   BRL: "Brazilian Real", ILS: "Israeli New Shekel", INR: "Indian Rupee", KRW: "South Korean Won",
   SGD: "Singapore Dollar"
 };
+// ==== LIVE PRICE HUB (wspólne ceny dla wszystkich modułów) ====
+// Akcje: "AAPL", "MSFT" ...  FX: klucz bez "/" (np. "EURUSD")
+const PRICE_HUB = (() => {
+  const store = new Map();
+  const listeners = new Set();
+  const norm = (sym) => {
+    if (!sym) return '';
+    const s = String(sym).trim().toUpperCase();
+    return s.includes('/') ? s.replace('/', '') : s.replace(/\s+/g, '');
+  };
+  return {
+    set(symbol, price) {
+      const key = norm(symbol);
+      const val = Number(price);
+      if (!key || !Number.isFinite(val)) return;
+      store.set(key, val);
+      listeners.forEach(fn => { try { fn(key, val); } catch(e){} });
+    },
+    get(symbol) {
+      const key = norm(symbol);
+      return store.has(key) ? store.get(key) : null;
+    },
+    use(symbol, fallback=null) {
+      const v = this.get(symbol);
+      return (v == null) ? fallback : v;
+    },
+    has(symbol){ return store.has(norm(symbol)); },
+    subscribe(fn){ listeners.add(fn); return () => listeners.delete(fn); },
+    _norm: norm
+  };
+})();
+// Udostępnij HUB dla innych skryptów (np. Watchlist)
+window.PRICE_HUB = PRICE_HUB;
+
+// Pomocniki: 1) cena akcji z HUB-a z bezpiecznym fallbackiem
+function priceOfStock(ticker, fallback){
+  return PRICE_HUB.use(ticker, fallback);
+}
+// 2) klucz FX "EUR/USD" -> "EURUSD"
+function fxKey(pair){ return PRICE_HUB._norm(pair); }
+
 // === DODATKOWE POPULARNE WALUTY (offline) – PLNy za 1 jednostkę ===
 // Wklej ten blok po ISO / baseFx / CURRENCY_NAMES
 (function extendCurrenciesWithPopular() {
@@ -997,13 +1039,18 @@ let selectedStock = null;
 let selectedFxPair = null;
 setInterval(() => {
   if (app.liveMode) return;
-  Object.values(app.children).forEach(ch => {
-    ch.stocks = ch.stocks.map(s => {
-      const drift = 1 + (Math.random() - 0.5) * 0.01;
-      const np = clamp(s.p * drift, 1, 9999);
-      return { ...s, p: Number(np.toFixed(2)) };
-    });
+Object.values(app.children).forEach(ch => {
+  ch.stocks = ch.stocks.map(s => {
+    const drift = 1 + (Math.random() - 0.5) * 0.01;
+    const np = clamp(s.p * drift, 1, 9999);
+    const px = Number(np.toFixed(2));
+    // ▲ zapisuj cenę także do HUB-a, aby wszystkie sekcje miały identyczną cenę
+    PRICE_HUB.set(s.t, px);
+    return { ...s, p: px };
   });
+});
+
+
   save(app);
   if (!__qtyTyping) {
   renderStocks(stockSearch?.value || "");
@@ -1056,13 +1103,18 @@ let lastFxUiPrice = null;
 let lastStockUiPrice = null;
 setInterval(() => {
   if (app.liveMode) return;
-  Object.values(app.children).forEach(ch => {
-    ch.stocks = ch.stocks.map(s => {
-      const drift = 1 + (Math.random() - 0.5) * 0.01;
-      const np = clamp(s.p * drift, 1, 9999);
-      return { ...s, p: Number(np.toFixed(2)) };
-    });
+Object.values(app.children).forEach(ch => {
+  ch.stocks = ch.stocks.map(s => {
+    const drift = 1 + (Math.random() - 0.5) * 0.01;
+    const np = clamp(s.p * drift, 1, 9999);
+    const px = Number(np.toFixed(2));
+    // ▲ zapisuj cenę także do HUB-a, aby wszystkie sekcje miały identyczną cenę
+    PRICE_HUB.set(s.t, px);
+    return { ...s, p: px };
   });
+});
+
+
   save(app);
   if (!__qtyTyping) {
   renderStocks(stockSearch?.value || "");
@@ -1135,6 +1187,36 @@ function fxRate(pair) {
   if (!Number.isFinite(a) || !Number.isFinite(b) || b <= 0) return null;
   return a / b;
 }
+// Udostępnij kursy FX do całej apki (Watchlist też to zobaczy)
+window.fxRate = fxRate;
+
+// Udostępnij JEDNĄ funkcję do pobierania spotu akcji – ten sam dla wszystkich paneli
+(function () {
+  const HUB = (typeof window !== 'undefined' && window.PRICE_HUB) ? window.PRICE_HUB : null;
+  const norm = s => String(s || '').trim().toUpperCase().replace(/\.US$/, '');
+
+  function pickNumber(v){
+    if (v && typeof v === 'object') v = v.price ?? v.last ?? v.value ?? null;
+    v = Number(v);
+    return (Number.isFinite(v) && v > 0) ? v : null;
+  }
+
+  function readFromHub(k){
+    if (!HUB) return null;
+    let v = null;
+    if (typeof HUB.use === 'function') v = pickNumber(HUB.use(k, null));
+    else if (typeof HUB.get === 'function') v = pickNumber(HUB.get(k));
+    else if (k in HUB) v = pickNumber(HUB[k]);
+    return v;
+  }
+
+  // Jedno API dla wszystkich modułów
+  window.getSpot = function getSpot(sym, fallback = null){
+    const k = norm(sym);
+    return readFromHub(k) ?? readFromHub(k + '.US') ?? fallback;
+  };
+})();
+
 
 // cena BASE/USD niezależnie od QUOTE pary
 function rateUsdFromPair(pair) {
@@ -1144,6 +1226,9 @@ function rateUsdFromPair(pair) {
   if (!Number.isFinite(a) || !Number.isFinite(usd) || usd <= 0) return null;
   return a / usd;
 }
+// Udostępnij dla Watchlist i innych modułów
+window.fxRate = fxRate;
+
 
 function fxValueUsd(pair, qty) {
   const rUsd = rateUsdFromPair(pair);
@@ -1295,7 +1380,7 @@ function renderGlobalTrends(mode) {
 
       el.querySelector('.code').textContent = s.t;
       el.querySelector('.name').textContent = s.n || '';
-      el.querySelector('.px').innerHTML    = `${PLN(s.p)} ${arrowHtml(dir)}`;
+  el.querySelector('.px').innerHTML    = `${PLN(priceOfStock(s.t, s.p))} ${arrowHtml(dir)}`;
       el.querySelector('.q').textContent    = ''; // brak „vs …” dla akcji
       el.querySelector('.chg').textContent  = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
     });
@@ -1339,15 +1424,18 @@ function renderChildSelector() {
 function portfolioValueStocks(ch) {
   return Object.entries(ch.portfolio).reduce((sum, [t, p]) => {
     const s = ch.stocks.find(x => x.t === t) || { p: p.b };
-    return sum + (p.s || 0) * s.p;
+    const cur = priceOfStock(t, s.p);         // ⬅ HUB
+    return sum + (p.s || 0) * cur;
   }, 0);
 }
 function unrealizedStocks(ch) {
   return Object.entries(ch.portfolio).reduce((sum, [t, p]) => {
     const s = ch.stocks.find(x => x.t === t) || { p: p.b };
-    return sum + ((s.p - p.b) * (p.s || 0));
+    const cur = priceOfStock(t, s.p);         // ⬅ HUB
+    return sum + ((cur - p.b) * (p.s || 0));
   }, 0);
 }
+
 
 // >>> USD dla FX (wartość netto do słoików)
 function portfolioValueFx(ch) {
@@ -1409,6 +1497,8 @@ function renderStocks(filter = "") {
   const limit = isDefaultView ? (stockExpanded ? 500 : 5) : 500;
 
   data.slice(0, limit).forEach(s => {
+    const cur = priceOfStock(s.t, s.p); // ← czytaj cenę z HUB-a (fallback: s.p)
+
     const dir = stockTrendDir(s.t, s.p);
     const btn = document.createElement("button");
     btn.className = "stock" + (selectedStock === s.t ? " active" : "");
@@ -1419,7 +1509,7 @@ function renderStocks(filter = "") {
           <div class="muted" style="font-size:12px">${s.n || ""}</div>
         </div>
         <div class="right" style="text-align:right">
-          <div style="font-weight:700">${PLN(s.p)} ${arrowHtml(dir)}</div>
+          <div style="font-weight:700">${PLN(cur)} ${arrowHtml(dir)}</div>
           <div class="muted" style="font-size:11px">${app.liveMode ? TT().live : TT().sim}</div>
         </div>
       </div>`;
@@ -1802,13 +1892,18 @@ function ensureSellButtons() {
 function updateTradeBox() {
   ensureSellButtons();
   const ch = activeChild();
-  if (!tradeBox || !ch || !selectedStock) { tradeBox && (tradeBox.style.display = "none"); return; }
+  if (!tradeBox || !ch || !selectedStock) { 
+    tradeBox && (tradeBox.style.display = "none"); 
+    return; 
+  }
   const s = ch.stocks.find(x => x.t === selectedStock);
   const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
-  lastStockUiPrice = s.p;
+  const cur = priceOfStock(s.t, s.p); // ⬅️ pobierz cenę z HUB-a
+  lastStockUiPrice = cur;
   if (tradeTitle) tradeTitle.textContent = `Trade ${s.t}`;
-  if (costEl) costEl.textContent = PLN(qty * s.p);
-  tradeBox.style.display = "block";  const sellBtn = document.getElementById('sellBtn');
+  if (costEl) costEl.textContent = PLN(qty * cur);
+  tradeBox.style.display = "block";  
+  const sellBtn = document.getElementById('sellBtn');
   if (sellBtn) {
     const pos = ch.portfolio?.[s.t];
     const canSell = !!(pos && pos.s > 0);
@@ -1821,7 +1916,7 @@ function buyStock() {
   const ch = activeChild(); if (!ch || !selectedStock) return;
   const s = ch.stocks.find(x => x.t === selectedStock);
   const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
-  const price = (lastStockUiPrice ?? s.p);
+const price = (lastStockUiPrice ?? priceOfStock(s.t, s.p));
   const cost = qty * price;
   if (cost > ch.jars.save) return toast(TT().needFunds(PLN(cost)));
   ch.jars.save -= cost;
@@ -3536,9 +3631,55 @@ window.addEventListener('DOMContentLoaded', () => {
   // Head tabs in the watchlist panel (All / Stocks / Currencies)
   const $wlTabs = $panel?.querySelector('.wl-tabs') || null;
 
-  // picker lists
-  const STOCKS_ALL = ['AAPL','MSFT','NVDA','GE','GOOGL','AMZN','META','TSLA','DIS','NFLX','NKE','INTC','AMD','BA','IBM','ORCL','PEP','KO','XOM'];
-  const FX_ALL     = ['EUR/USD','USD/PLN','USD/EUR','GBP/USD','USD/JPY','CHF/PLN','EUR/PLN','AUD/USD','NZD/USD'];
+  // picker lists — pełne, uporządkowane
+  const STOCKS_ALL = [
+    // Big Tech / FAANG(+)
+    'AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','NFLX','ADBE','CRM','NOW','INTU',
+    // Semi & hardware
+    'AVGO','QCOM','TXN','MU','AMD','INTC','SMCI','ASML','TSM','IBM',
+    // Commerce / travel / sharing
+    'SHOP','ABNB','BKNG','UBER','LYFT','ETSY',
+    // Cybersecurity / data
+    'PANW','CRWD','ZS','OKTA','SNOW','MDB',
+    // Industrials / aero
+    'GE','BA','CAT','DE','MMM','HON','LMT','NOC','RTX',
+    // Consumer
+    'NKE','SBUX','MCD','CMG','KO','PEP','PG','COST','WMT','TGT','HD','LOW',
+    // Energy / materials
+    'XOM','CVX','COP','SLB','BP','SHEL','RIO','BHP',
+    // Healthcare
+    'JNJ','PFE','MRK','ABBV','TMO','UNH','LLY','GILD',
+    // Financials
+    'JPM','BAC','WFC','GS','MS','C','V','MA','PYPL','AXP','SQ',
+    // Media / telecom
+    'DIS','PARA','WBD','T','VZ','CMCSA',
+    // Auto & EV
+    'F','GM','RIVN','NIO','LI','TM',
+    // China / other ADRs (duże spółki)
+    'BABA','PDD','BIDU','NTES','SONY','SAP'
+  ];
+
+  const FX_ALL = [
+    // Majors
+    'EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD',
+    // Euro crosses
+    'EUR/GBP','EUR/JPY','EUR/CHF','EUR/CAD','EUR/AUD','EUR/NZD',
+    // GBP crosses
+    'GBP/JPY','GBP/CHF','GBP/CAD','GBP/AUD','GBP/NZD',
+    // JPY crosses
+    'AUD/JPY','NZD/JPY','CAD/JPY','CHF/JPY','GBP/JPY','EUR/JPY',
+    // CHF crosses
+    'AUD/CHF','NZD/CHF','CAD/CHF',
+    // Commodity crosses
+    'AUD/NZD','AUD/CAD','NZD/CAD',
+    // Nordics & others
+    'USD/NOK','USD/SEK','USD/DKK','USD/TRY','USD/ZAR','USD/MXN',
+    // Europa Środkowa
+    'USD/PLN','EUR/PLN','GBP/PLN','CHF/PLN','JPY/PLN',
+    'USD/CZK','EUR/CZK','USD/HUF','EUR/HUF',
+    // Dodatkowe często spotykane
+    'USD/CNH','USD/HKD','USD/SGD'
+  ];
 
   // ---------- STATE ----------
   let mode   = 'stock';
@@ -3628,12 +3769,10 @@ window.addEventListener('DOMContentLoaded', () => {
       return j?.rates ? normalizeFX(j.rates, quote) : emptySeries();
     };
     const try3 = async () => {
-      // przez r.jina.ai, aby nie wymagać dopisywania frankfurter do allowlisty
       const j = await fetchJSON(`https://r.jina.ai/http://api.frankfurter.app/${s}..${e}?from=${base}&to=${quote}`);
       return j?.rates ? normalizeFX(j.rates, quote) : emptySeries();
     };
     const try4 = async () => {
-      // Stooq CSV fallback (np. eurusd)
       const code = stooqFxCode(base, quote);
       const txt  = await (await fetch(`https://r.jina.ai/http://stooq.com/q/d/l/?s=${encodeURIComponent(code)}&i=d`)).text();
       const lines = txt.trim().split('\n');
@@ -3710,6 +3849,78 @@ window.addEventListener('DOMContentLoaded', () => {
     cacheStocks.set(memKey, empty);
     setSeriesCache(lsKey, empty);
     return empty;
+  }
+
+  // ---------- LIVE PRICE (spięcie z resztą aplikacji) ----------
+  function priceOfStock(sym, fallback){
+    // preferuj wspólne API jeśli masz (powinno być wystawione w Twoim głównym kodzie)
+    if (typeof window.getSpot === 'function') {
+      const v = Number(window.getSpot(sym, null));
+      if (Number.isFinite(v) && v > 0) return v;
+    }
+    // awaryjnie spróbuj bezpośrednio z PRICE_HUB różnymi wariantami
+    const HUB = (typeof window !== 'undefined') ? window.PRICE_HUB : null;
+    if (HUB) {
+      const up = String(sym||'').toUpperCase();
+      let v = null;
+      if (typeof HUB.use === 'function') v = HUB.use(up, null);
+      else if (typeof HUB.get === 'function') v = HUB.get(up);
+      else if (up in HUB) v = HUB[up];
+      if (v && typeof v === 'object') v = v.price ?? v.last ?? v.value ?? null;
+      v = Number(v);
+      if (Number.isFinite(v) && v > 0) return v;
+      if (typeof HUB.get === 'function') {
+        let v2 = HUB.get(up + '.US');
+        if (v2 && typeof v2 === 'object') v2 = v2.price ?? v2.last ?? v2.value ?? null;
+        v2 = Number(v2);
+        if (Number.isFinite(v2) && v2 > 0) return v2;
+      }
+    }
+    return fallback;
+  }
+
+  function priceOfFx(base, quote, fallback){
+    const pair = `${String(base||'').toUpperCase()}/${String(quote||'').toUpperCase()}`;
+    const fx = (typeof window.fxRate === 'function') ? Number(window.fxRate(pair)) : NaN;
+    return (Number.isFinite(fx) && fx > 0) ? fx : fallback;
+  }
+
+  // === LIVE UPDATE pomiędzy Watchlist a HUB/fxRate ===
+  function updateCardFromLive(card){
+    const item = card._wl_item;
+    if (!item) return;
+
+    // historyczny fallback z serii (ostatni i poprzedni close)
+    let lastHist = card._wl_lastHist;
+    const prev   = card._wl_prev;
+    if (lastHist == null || prev == null) return;
+
+    // dobierz spot z HUB/fxRate; jeśli brak – zostań na historycznym last
+    let last = lastHist;
+    if (item.type === 'stock') {
+      last = priceOfStock(item.symbol, last);
+    } else {
+      last = priceOfFx(item.base, item.quote, last);
+    }
+
+    const pEl = card.querySelector('.wl-price');
+    const dEl = card.querySelector('.wl-diff');
+    if (!pEl || !dEl) return;
+
+    pEl.textContent = Number(last).toLocaleString(undefined,{maximumFractionDigits:2});
+    const ch = last - (prev ?? last);
+    const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
+    dEl.textContent = `${ch>=0?'+':''}${Number(ch).toLocaleString(undefined,{maximumFractionDigits:2})} (${pc.toFixed(2)}%)`;
+    dEl.className   = 'wl-diff ' + (ch>=0 ? 'pos' : 'neg');
+  }
+
+  // ticker – odświeżaj wszystkie karty co 2 sekundy (gdy HUB/fxRate „dojadą”, Watchlist się sam wyrówna)
+  let WL_TICK = null;
+  function startWatchlistTicker(){
+    if (WL_TICK) return;
+    WL_TICK = setInterval(() => {
+      document.querySelectorAll('.wl-card').forEach(updateCardFromLive);
+    }, 2000);
   }
 
   // ---------- RYSOWANIE ----------
@@ -3841,18 +4052,22 @@ window.addEventListener('DOMContentLoaded', () => {
       hist=await stockHistory(item.symbol, DAYS_SPARK_STOCK);
     }
 
-    const vals = (hist?.closes||[]).slice(-120);
-    if (vals.length>=2){
-      const last=vals.at(-1), prev=vals.at(-2);
-      p.textContent = fmt(last);
-      const ch=last-prev, pc=pct(last,prev);
-      d.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
-      d.className   = 'wl-diff ' + (ch>=0?'pos':'neg');
+    const vals = (hist?.closes || []).slice(-120);
 
-      // lazy draw – rysuj dopiero gdy karta jest widoczna
+    if (vals.length >= 2){
+      // zapisz dane potrzebne do liczenia % (z historii), a cenę bieżącą pobierzemy z HUB/fx
+      el._wl_item     = item;
+      el._wl_lastHist = vals.at(-1); // ostatni close – fallback na wypadek braku spotu
+      el._wl_prev     = vals.at(-2); // poprzedni close – punkt odniesienia dla %
+
+      // rysowanie sparka z historii (bez zmian)
       el._wl_values = vals;
       if (io) io.observe(el);
       else requestAnimationFrame(() => drawSpark(spark, vals));
+
+      // od razu policz na bieżąco i włącz cykliczne odświeżanie
+      updateCardFromLive(el);
+      startWatchlistTicker();
     } else {
       p.textContent='—'; d.textContent='—';
     }
@@ -3921,9 +4136,18 @@ window.addEventListener('DOMContentLoaded', () => {
         let vals = calc(btn.dataset.range);
         if (!vals || vals.length < 2) vals = closes.slice(-2);
         if (vals && vals.length>=2){
-          const last=vals.at(-1), prev=vals.at(-2);
+          let last = vals.at(-1), prev = vals.at(-2);
+
+          // dla akcji pokaż live z HUB-a, dla FX kurs z fxRate – spójnie z pozostałymi panelami
+          if (item.type === 'stock') {
+            last = priceOfStock(item.symbol, last);
+          } else {
+            last = priceOfFx(item.base, item.quote, last);
+          }
+
           $mPrice.textContent = fmt(last);
-          const ch=last-prev, pc=pct(last,prev);
+          const ch = last - (prev ?? last);
+          const pc = (prev && prev !== 0) ? (ch / prev) * 100 : 0;
           $mChg.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
           $mChg.style.color = ch>=0?'var(--ok)':'#b91c1c';
           drawBig($big, vals);
