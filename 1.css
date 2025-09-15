@@ -3566,3 +3566,15 @@ width: 110px;
   30%  { transform: scale(1.02); filter: brightness(1.25); }
   100% { transform: scale(1.00); filter: brightness(1.0); }
 }
+/* Watchlist – kolory zmian */
+.wl-diff.pos { color: var(--ok, #10b981); }
+.wl-diff.neg { color: #b91c1c; }
+
+/* Miganie na świeży tick (is-live) */
+.wl-price.is-live {
+  animation: wlFlash 700ms ease-out 1;
+}
+@keyframes wlFlash {
+  0%   { background: rgba(255,255,255,0.10); border-radius: 6px; }
+  100% { background: transparent; }
+}

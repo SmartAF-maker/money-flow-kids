@@ -3606,20 +3606,15 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-/// ===== WATCHLIST (stocks + FX) v3 — live sync, precision, flash, pause on hidden =====
+/// ===== WATCHLIST (stocks + FX) v2 — perf tuned (DPR cap, TTL cache, lazy draw) =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
 
-  // ---------- CONFIG ----------
-  const DPR                   = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-  const DAYS_SPARK_STOCK      = 420;
-  const DAYS_SPARK_FX         = 210;
-  const SERIES_TTL_MS         = 2 * 60 * 60 * 1000; // 2h
-  const WL_REFRESH_MS         = 1000;               // live odświeżanie co 1s
-  const PRICE_DEC_STOCK       = 2;                  // miejsca po przecinku — akcje
-  const PRICE_DEC_FX          = 4;                  // miejsca po przecinku — FX
-  const CHANGE_DEC            = 2;
-  const EPSILON               = 1e-8;               // próg do wykrywania zmiany ceny
+  // ---------- PERF CONSTANTS ----------
+  const DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1)); // mniejszy koszt rysowania
+  const DAYS_SPARK_STOCK = 420;  // ~14 mies. do małych sparków
+  const DAYS_SPARK_FX    = 210;  // ~7 mies. do małych sparków
+  const SERIES_TTL_MS    = 2 * 60 * 60 * 1000; // 2h cache w localStorage
 
   // ---------- DOM ----------
   const $panel = document.querySelector('.panel.watchlist');
@@ -3633,33 +3628,56 @@ window.addEventListener('DOMContentLoaded', () => {
   const $mChg  = document.getElementById('wl-chg');
   const $big   = document.getElementById('wl-big');
 
+  // Head tabs in the watchlist panel (All / Stocks / Currencies)
   const $wlTabs = $panel?.querySelector('.wl-tabs') || null;
 
-  // picker lists (Twoje pełne)
+  // picker lists — pełne, uporządkowane
   const STOCKS_ALL = [
+    // Big Tech / FAANG(+)
     'AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','NFLX','ADBE','CRM','NOW','INTU',
+    // Semi & hardware
     'AVGO','QCOM','TXN','MU','AMD','INTC','SMCI','ASML','TSM','IBM',
+    // Commerce / travel / sharing
     'SHOP','ABNB','BKNG','UBER','LYFT','ETSY',
+    // Cybersecurity / data
     'PANW','CRWD','ZS','OKTA','SNOW','MDB',
+    // Industrials / aero
     'GE','BA','CAT','DE','MMM','HON','LMT','NOC','RTX',
+    // Consumer
     'NKE','SBUX','MCD','CMG','KO','PEP','PG','COST','WMT','TGT','HD','LOW',
+    // Energy / materials
     'XOM','CVX','COP','SLB','BP','SHEL','RIO','BHP',
+    // Healthcare
     'JNJ','PFE','MRK','ABBV','TMO','UNH','LLY','GILD',
+    // Financials
     'JPM','BAC','WFC','GS','MS','C','V','MA','PYPL','AXP','SQ',
+    // Media / telecom
     'DIS','PARA','WBD','T','VZ','CMCSA',
+    // Auto & EV
     'F','GM','RIVN','NIO','LI','TM',
+    // China / other ADRs (duże spółki)
     'BABA','PDD','BIDU','NTES','SONY','SAP'
   ];
+
   const FX_ALL = [
+    // Majors
     'EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD',
+    // Euro crosses
     'EUR/GBP','EUR/JPY','EUR/CHF','EUR/CAD','EUR/AUD','EUR/NZD',
+    // GBP crosses
     'GBP/JPY','GBP/CHF','GBP/CAD','GBP/AUD','GBP/NZD',
+    // JPY crosses
     'AUD/JPY','NZD/JPY','CAD/JPY','CHF/JPY','GBP/JPY','EUR/JPY',
+    // CHF crosses
     'AUD/CHF','NZD/CHF','CAD/CHF',
+    // Commodity crosses
     'AUD/NZD','AUD/CAD','NZD/CAD',
+    // Nordics & others
     'USD/NOK','USD/SEK','USD/DKK','USD/TRY','USD/ZAR','USD/MXN',
+    // Europa Środkowa
     'USD/PLN','EUR/PLN','GBP/PLN','CHF/PLN','JPY/PLN',
     'USD/CZK','EUR/CZK','USD/HUF','EUR/HUF',
+    // Dodatkowe często spotykane
     'USD/CNH','USD/HKD','USD/SGD'
   ];
 
@@ -3668,7 +3686,7 @@ window.addEventListener('DOMContentLoaded', () => {
   let filter = 'stock';
   let watchlist = loadLS();
 
-  // caches
+  // caches (w pamięci procesu)
   const cacheFX     = new Map();   // key: `${pair}|${days}`
   const cacheStocks = new Map();   // key: `${symbol}|${days}`
 
@@ -3681,7 +3699,8 @@ window.addEventListener('DOMContentLoaded', () => {
   function saveLS(){ localStorage.setItem(LS_KEY, JSON.stringify(watchlist)); }
 
   // ---------- UTILS ----------
-  const fmtN = (x, dec=2) => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits: dec});
+  const pct = (a,b)=> (b===0?0:((a-b)/b)*100);
+  const fmt = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
   const emptySeries = () => ({dates:[],closes:[]});
 
   function stooqCode(sym){
@@ -3690,7 +3709,10 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!/^[a-z.]{1,10}$/.test(s)) return s;
     return s + '.us';
   }
-  const stooqFxCode = (base,quote) => `${base}${quote}`.toLowerCase();
+  function stooqFxCode(base, quote){
+    // Stooq używa np. eurusd, usdpln
+    return `${base}${quote}`.toLowerCase();
+  }
   function parsePair(s){
     const t = (s||'').toUpperCase().replace(/\s+/g,'');
     if (t.includes('/')) { const [a,b]=t.split('/'); if (a&&b&&a.length===3&&b.length===3) return {base:a,quote:b}; }
@@ -3773,6 +3795,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return out;
   }
 
+  // kluczowe: rzutuj na Number i filtruj skończone
   function normalizeFX(ratesObj, quote){
     const datesSorted = Object.keys(ratesObj).sort();
     const closes = [];
@@ -3828,12 +3851,14 @@ window.addEventListener('DOMContentLoaded', () => {
     return empty;
   }
 
-  // ---------- LIVE PRICE BRIDGE ----------
+  // ---------- LIVE PRICE (spięcie z resztą aplikacji) ----------
   function priceOfStock(sym, fallback){
+    // preferuj wspólne API jeśli masz (powinno być wystawione w Twoim głównym kodzie)
     if (typeof window.getSpot === 'function') {
       const v = Number(window.getSpot(sym, null));
       if (Number.isFinite(v) && v > 0) return v;
     }
+    // awaryjnie spróbuj bezpośrednio z PRICE_HUB różnymi wariantami
     const HUB = (typeof window !== 'undefined') ? window.PRICE_HUB : null;
     if (HUB) {
       const up = String(sym||'').toUpperCase();
@@ -3853,65 +3878,50 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     return fallback;
   }
+
   function priceOfFx(base, quote, fallback){
     const pair = `${String(base||'').toUpperCase()}/${String(quote||'').toUpperCase()}`;
     const fx = (typeof window.fxRate === 'function') ? Number(window.fxRate(pair)) : NaN;
     return (Number.isFinite(fx) && fx > 0) ? fx : fallback;
   }
 
-  // ---------- LIVE UPDATE ----------
+  // === LIVE UPDATE pomiędzy Watchlist a HUB/fxRate ===
   function updateCardFromLive(card){
     const item = card._wl_item;
     if (!item) return;
 
+    // historyczny fallback z serii (ostatni i poprzedni close)
     let lastHist = card._wl_lastHist;
     const prev   = card._wl_prev;
     if (lastHist == null || prev == null) return;
 
+    // dobierz spot z HUB/fxRate; jeśli brak – zostań na historycznym last
     let last = lastHist;
-    if (item.type === 'stock') last = priceOfStock(item.symbol, last);
-    else                       last = priceOfFx(item.base, item.quote, last);
-
-    // jeżeli nic się nie zmieniło – nie dotykaj DOM
-    const lastShown = card._wl_lastShown;
-    if (typeof lastShown === 'number' && Math.abs(last - lastShown) < EPSILON) return;
-
-    card._wl_lastShown = last;
+    if (item.type === 'stock') {
+      last = priceOfStock(item.symbol, last);
+    } else {
+      last = priceOfFx(item.base, item.quote, last);
+    }
 
     const pEl = card.querySelector('.wl-price');
     const dEl = card.querySelector('.wl-diff');
     if (!pEl || !dEl) return;
 
-    const dec = (item.type==='stock') ? PRICE_DEC_STOCK : PRICE_DEC_FX;
-    pEl.textContent = fmtN(last, dec);
-
+    pEl.textContent = Number(last).toLocaleString(undefined,{maximumFractionDigits:2});
     const ch = last - (prev ?? last);
     const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
-    dEl.textContent = `${ch>=0?'+':''}${fmtN(ch, dec)} (${pc.toFixed(CHANGE_DEC)}%)`;
+    dEl.textContent = `${ch>=0?'+':''}${Number(ch).toLocaleString(undefined,{maximumFractionDigits:2})} (${pc.toFixed(2)}%)`;
     dEl.className   = 'wl-diff ' + (ch>=0 ? 'pos' : 'neg');
-
-    // flash „LIVE”
-    pEl.classList.remove('is-live'); // restart animacji
-    void pEl.offsetWidth;            // reflow hack
-    pEl.classList.add('is-live');
   }
 
+  // ticker – odświeżaj wszystkie karty co 2 sekundy (gdy HUB/fxRate „dojadą”, Watchlist się sam wyrówna)
   let WL_TICK = null;
-  function tickAll(){
-    // nie odświeżaj, gdy panel watchlist jest niewidoczny
-    if (document.hidden) return;
-    if ($panel && typeof $panel.getBoundingClientRect === 'function') {
-      const rect = $panel.getBoundingClientRect();
-      const onScreen = rect.bottom > 0 && rect.top < window.innerHeight;
-      if (!onScreen) return;
-    }
-    document.querySelectorAll('.wl-card').forEach(updateCardFromLive);
-  }
   function startWatchlistTicker(){
     if (WL_TICK) return;
-    WL_TICK = setInterval(tickAll, WL_REFRESH_MS);
+    WL_TICK = setInterval(() => {
+      document.querySelectorAll('.wl-card').forEach(updateCardFromLive);
+    }, 2000);
   }
-  document.addEventListener('visibilitychange', () => {/* nic nie robimy, tickAll to respektuje */});
 
   // ---------- RYSOWANIE ----------
   function drawSpark(c, values){
@@ -3942,6 +3952,7 @@ window.addEventListener('DOMContentLoaded', () => {
     values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
     ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
+
   function drawBig(c, values){
     const cssW = c.clientWidth || 720, cssH = 280;
     c.width = cssW * DPR; c.height = cssH * DPR;
@@ -3975,7 +3986,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
 
-  // ---------- RESAMPLING ----------
+  // ---------- RESAMPLING (D/W/M) ----------
   function resample(dates, values, mode){
     if (!dates?.length || !values?.length) return {dates:[],values:[]};
     if (mode==='D') return {dates:[...dates], values:[...values]};
@@ -4044,14 +4055,17 @@ window.addEventListener('DOMContentLoaded', () => {
     const vals = (hist?.closes || []).slice(-120);
 
     if (vals.length >= 2){
+      // zapisz dane potrzebne do liczenia % (z historii), a cenę bieżącą pobierzemy z HUB/fx
       el._wl_item     = item;
-      el._wl_lastHist = vals.at(-1);
-      el._wl_prev     = vals.at(-2);
+      el._wl_lastHist = vals.at(-1); // ostatni close – fallback na wypadek braku spotu
+      el._wl_prev     = vals.at(-2); // poprzedni close – punkt odniesienia dla %
 
+      // rysowanie sparka z historii (bez zmian)
       el._wl_values = vals;
       if (io) io.observe(el);
       else requestAnimationFrame(() => drawSpark(spark, vals));
 
+      // od razu policz na bieżąco i włącz cykliczne odświeżanie
       updateCardFromLive(el);
       startWatchlistTicker();
     } else {
@@ -4059,10 +4073,11 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     el.addEventListener('click', ()=> openModal(item));
-    removeBtn.addEventListener('click', (e)=>{
+    removeBtn.addEventListener('click', (e)=>{ 
       e.stopPropagation();
+      // usuń TYLKO klikniętą pozycję
       watchlist.splice(idx, 1);
-      saveLS();
+      saveLS(); 
       render();
     });
   }
@@ -4082,6 +4097,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const ttl = item.type==='fx' ? `${item.base}/${item.quote}` : item.symbol.toUpperCase();
     $title.textContent = ttl;
 
+    // usuń YTD/5Y jeśli są w HTML
     $modal.querySelectorAll('.wl-range button[data-range="YTD"], .wl-range button[data-range="5Y"]').forEach(b=>b.remove());
 
     const loader = item.type==='fx'
@@ -4121,14 +4137,18 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!vals || vals.length < 2) vals = closes.slice(-2);
         if (vals && vals.length>=2){
           let last = vals.at(-1), prev = vals.at(-2);
-          if (item.type === 'stock') last = priceOfStock(item.symbol, last);
-          else                       last = priceOfFx(item.base, item.quote, last);
 
-          const dec = (item.type==='stock') ? PRICE_DEC_STOCK : PRICE_DEC_FX;
-          $mPrice.textContent = fmtN(last, dec);
+          // dla akcji pokaż live z HUB-a, dla FX kurs z fxRate – spójnie z pozostałymi panelami
+          if (item.type === 'stock') {
+            last = priceOfStock(item.symbol, last);
+          } else {
+            last = priceOfFx(item.base, item.quote, last);
+          }
+
+          $mPrice.textContent = fmt(last);
           const ch = last - (prev ?? last);
           const pc = (prev && prev !== 0) ? (ch / prev) * 100 : 0;
-          $mChg.textContent = `${ch>=0?'+':''}${fmtN(ch, dec)} (${pc.toFixed(CHANGE_DEC)}%)`;
+          $mChg.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
           $mChg.style.color = ch>=0?'var(--ok)':'#b91c1c';
           drawBig($big, vals);
         } else {
@@ -4156,7 +4176,7 @@ window.addEventListener('DOMContentLoaded', () => {
     filter = next;
     fillPicker(); render();
     if ($wlTabs){
-      $wlTabs.querySelectorAll('button').forEach(b=>
+      $wlTabs.querySelectorAll('button').forEach(b=> 
         b.classList.toggle('is-active', b.dataset.filter===filter || (filter==='stock' && b.dataset.filter==='stocks'))
       );
     }
@@ -4197,7 +4217,7 @@ window.addEventListener('DOMContentLoaded', () => {
     saveLS(); render();
   });
 
-  // ---------- Resize debounce ----------
+  // ---------- Resize debounce: przerysuj tylko widoczne ----------
   let _rTO=null;
   window.addEventListener('resize', () => {
     clearTimeout(_rTO);
