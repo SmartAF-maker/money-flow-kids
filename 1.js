@@ -3606,7 +3606,7 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-/// ===== WATCHLIST (stocks + FX) — intraday 1D/5D z mocnymi fallbackami, auto-refresh modal, smooth canvas =====
+/// ===== WATCHLIST (stocks + FX) — intraday (1D/5D), auto-refresh modal, live header, EN labels, robust ranges =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
 
@@ -3680,10 +3680,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const pad2 = n => String(n).padStart(2,'0');
   const fmt = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
   const emptySeries = () => ({dates:[],closes:[]});
-  const normRangeLabel = (x) => {
-    const s = String(x||'').trim().toUpperCase();
-    return (s==='1D'||s==='5D'||s==='1M'||s==='6M'||s==='1Y') ? s : '1D';
-  };
 
   const stooqCode   = (sym) => { const s=(sym||'').toLowerCase(); if(/\./.test(s))return s; if(!/^[a-z.]{1,10}$/.test(s))return s; return s+'.us'; };
   const stooqFxCode = (b,q) => `${b}${q}`.toLowerCase();
@@ -3693,6 +3689,10 @@ window.addEventListener('DOMContentLoaded', () => {
     if (/^[A-Z]{6}$/.test(t)) return {base:t.slice(0,3), quote:t.slice(3,6)};
     return null;
   }
+  const normRangeLabel = (x) => {
+    const s = String(x||'').trim().toUpperCase();
+    return (s==='1D'||s==='5D'||s==='1M'||s==='6M'||s==='1Y') ? s : '1D';
+  };
 
   async function fetchJSON(url, {timeout=6000} = {}){
     const ctrl = new AbortController();
@@ -3854,8 +3854,7 @@ window.addEventListener('DOMContentLoaded', () => {
           let lastT=-1;
           for (const p of pairs){ if (p[0]!==lastT){ dedup.push(p); lastT=p[0]; } }
 
-          // mniej punktów → szybciej
-          const maxPts = (range==='1d'||range==='5d') ? 360 : 180;
+          const maxPts = (range==='1d'||range==='5d') ? 450 : 240;
           const stride = Math.max(1, Math.ceil(dedup.length / maxPts));
           const dates = [], closes = [];
           for (let i=0;i<dedup.length;i+=stride){ dates.push(dedup[i][0]); closes.push(dedup[i][1]); }
@@ -3895,7 +3894,7 @@ window.addEventListener('DOMContentLoaded', () => {
         let v2 = HUB.get(up + '.US');
         if (v2 && typeof v2 === 'object') v2 = v2.price ?? v2.last ?? v2.value ?? null;
         v2 = Number(v2);
-        if (Number.isFinite(v2) && v2 > 0) return v2; // poprawka
+        if (Number.isFinite(v2) && v2 > 0) return v2;
       }
     }
     return fallback;
@@ -4022,19 +4021,12 @@ window.addEventListener('DOMContentLoaded', () => {
     return out;
   }
 
-  // ---------- BIG CHART (smooth) ----------
+  // ---------- BIG CHART ----------
   function drawBig(c, datesMs, values, rangeLabel){
     const cssW = c.clientWidth || 720, cssH = 280;
-    c.width = Math.max(320, cssW) * DPR; 
-    c.height = Math.max(180, cssH) * DPR;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0,0,c.width,c.height);
+    c.width = cssW * DPR; c.height = cssH * DPR;
+    const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
     if (!values || values.length<2) return;
-
-    // smooth
-    ctx.lineJoin = 'round';
-    ctx.lineCap  = 'round';
-    ctx.imageSmoothingEnabled = true;
 
     const left=56*DPR, right=16*DPR, top=16*DPR, bottom=44*DPR;
     const {lo:min, hi:max} = _domain(values);
@@ -4059,8 +4051,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     for (const t of ticks){
       const xx = left + t.i*stepX;
-      ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, top+h);
-      ctx.strokeStyle='rgba(35,48,77,0.45)'; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, top+h); ctx.strokeStyle='rgba(35,48,77,0.45)'; ctx.stroke();
       ctx.fillStyle='#9ca3af'; ctx.fillText(t.lbl, xx, c.height - bottom + 10*DPR);
     }
 
@@ -4070,15 +4061,13 @@ window.addEventListener('DOMContentLoaded', () => {
     values.forEach((v,i)=> ctx.lineTo(left + i*stepX, y(v)));
     ctx.lineTo(left + w, c.height - bottom); ctx.lineTo(left, c.height - bottom); ctx.closePath();
     const grad = ctx.createLinearGradient(0, top, 0, c.height - bottom);
-    grad.addColorStop(0,  up ? "rgba(0,200,255,0.22)" : "rgba(153,27,27,0.28)");
-    grad.addColorStop(1,  up ? "rgba(0,200,255,0.06)" : "rgba(244,114,182,0.08)");
+    if (up) { grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
+    else    { grad.addColorStop(0,"rgba(153,27,27,0.45)");  grad.addColorStop(1,"rgba(244,114,182,0.12)"); }
     ctx.fillStyle = grad; ctx.fill();
 
     ctx.beginPath(); ctx.moveTo(left, y(values[0]));
     values.forEach((v,i)=> ctx.lineTo(left + i*stepX, y(v)));
-    ctx.lineWidth=2.5*DPR;
-    ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c";
-    ctx.stroke();
+    ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
 
   // ---------- RESAMPLING ----------
@@ -4190,54 +4179,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const ttl = item.type==='fx' ? `${item.base}/${item.quote}` : item.symbol.toUpperCase();
     $title.textContent = ttl;
 
-    // usuń YTD/5Y jeśli są
+    // usuń YTD/5Y jeżeli istnieją
     $modal.querySelectorAll('.wl-range button[data-range="YTD"], .wl-range button[data-range="5Y"]').forEach(b=>b.remove());
 
     const ranges = $modal.querySelectorAll('.wl-range button');
     const isFx   = (item.type === 'fx');
     const modalSeriesCache = new Map(); // label -> {dates(ms), values}
-
-    // --- SANITIZER + min 2 punkty ---
-    function cleanSeries(datesArr, valuesArr, toMs=false){
-      const outD=[], outV=[];
-      const n = Math.min(datesArr?.length||0, valuesArr?.length||0);
-      for (let i=0;i<n;i++){
-        let d = datesArr[i]; if (toMs) d = +new Date(d);
-        const v = Number(valuesArr[i]);
-        if (!Number.isFinite(d) || !Number.isFinite(v)) continue;
-        outD.push(d); outV.push(v);
-      }
-      const idx = outD.map((d,i)=>[d,i]).sort((a,b)=>a[0]-b[0]);
-      const finalD=[], finalV=[];
-      let lastT = NaN;
-      for (const [_,i] of idx){
-        const t = outD[i]; const v = outV[i];
-        if (t===lastT) { finalV[finalV.length-1] = v; continue; }
-        finalD.push(t); finalV.push(v); lastT=t;
-      }
-      return { dates: finalD, values: finalV };
-    }
-    function ensureMinTwo(dates, values){
-      let D=[...dates], V=[...values];
-      if (V.length>=2) return {dates:D, values:V};
-      if (V.length===1){
-        const t = D[0]; const v = V[0];
-        return { dates: [t-60_000, t], values: [v, v] };
-      }
-      return { dates: [], values: [] };
-    }
-
-    const dayKey = (ms) => {
-      const d = new Date(ms);
-      return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
-    };
-    function lastSessionSlice(datesMs, values){
-      if (!datesMs?.length) return {dates:[], values:[]};
-      const lastK = dayKey(datesMs.at(-1));
-      let i = datesMs.length-1;
-      while (i>0 && dayKey(datesMs[i-1]) === lastK) i--;
-      return { dates: datesMs.slice(i), values: values.slice(i) };
-    }
 
     async function fetchRange(label){
       const L = normRangeLabel(label);
@@ -4246,49 +4193,20 @@ window.addEventListener('DOMContentLoaded', () => {
       const span = spanFor(L);
       const ySym = isFx ? yahooFxSymbol(item.base, item.quote) : ttl;
 
-      // 1) Yahoo – właściwy zakres
-      let y = await yahooChart(ySym, span.range, span.intervals);
-
-      // Fallback 1D: 5d-intraday -> ostatnia sesja
-      if ((!y || y.dates.length < 2) && L==='1D') {
-        const y5 = await yahooChart(ySym, '5d', ['1m','2m','5m','15m','30m','60m']);
-        if (y5 && y5.dates.length >= 2) {
-          const s5 = cleanSeries(y5.dates, y5.closes, false);
-          const cut = lastSessionSlice(s5.dates, s5.values);
-          if (cut.dates.length >= 2) y = { dates: cut.dates, closes: cut.values };
-        }
+      // 1) Yahoo (intraday/daily) — „do teraz”
+      const y = await yahooChart(ySym, span.range, span.intervals);
+      if (y && y.dates?.length >= 2){
+        const out = {dates: y.dates, values: y.closes};
+        modalSeriesCache.set(L, out);
+        return out;
       }
 
-      // Fallback 5D: 1mo/1d -> 5 ostatnich dni
-      if ((!y || y.dates.length < 2) && L==='5D') {
-        const y1m = await yahooChart(ySym, '1mo', ['1d']);
-        if (y1m && y1m.dates.length >= 2) {
-          const s = cleanSeries(y1m.dates, y1m.closes, false);
-          const want=5, DD=[], VV=[], seen=new Set();
-          for (let i=s.dates.length-1;i>=0 && DD.length<want;i--){
-            const k = dayKey(s.dates[i]);
-            if (!seen.has(k)) { DD.push(s.dates[i]); VV.push(s.values[i]); seen.add(k); }
-          }
-          DD.reverse(); VV.reverse();
-          if (DD.length>=2) y = { dates: DD, closes: VV };
-        }
-      }
-
-      if (y && y.dates.length >= 2){
-        const c = cleanSeries(y.dates, y.closes, false);
-        const ok = ensureMinTwo(c.dates, c.values);
-        modalSeriesCache.set(L, ok);
-        return ok;
-      }
-
-      // 2) Ostateczny fallback: dzienne
+      // 2) Fallback z dziennych: potnij sensownie
       const daily = isFx ? await fxHistory(item.base,item.quote, 365*5)
                          : await stockHistory(item.symbol, 365*5);
-      let sliced = sliceByRangeDaily(daily.dates, daily.closes, L);
-      let c = cleanSeries(sliced.dates, sliced.values, true);
-      c = ensureMinTwo(c.dates, c.values);
-      modalSeriesCache.set(L, c);
-      return c;
+      const sliced = sliceByRangeDaily(daily.dates, daily.closes, L);
+      modalSeriesCache.set(L, sliced);
+      return sliced;
     }
 
     function sliceByRangeDaily(dates, closes, L){
@@ -4312,29 +4230,8 @@ window.addEventListener('DOMContentLoaded', () => {
         return {dates: outD.map(toMs), values: outV};
       }
       if (L==='1M'){ const n=Math.min(31, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
-      if (L==='6M'){ 
-        const cut=Math.max(0,len-183);
-        const d2=dates.slice(cut), v2=closes.slice(cut);
-        const r=resample(d2,v2,'W'); 
-        let dd=r.dates.map(d=>+new Date(d)), vv=r.values;
-        if (vv.length<2 && d2.length>=2){
-          // gwarancja 2 pkt: pierwszy i ostatni z okna
-          const c = (arrD,arrV)=>{ const D=arrD.map(toMs), V=[...arrV]; return {dates:[D[0], D.at(-1)], values:[V[0], V.at(-1)]}; };
-          const g = c(d2,v2); dd=g.dates; vv=g.values;
-        }
-        return {dates:dd, values:vv};
-      }
-      if (L==='1Y'){ 
-        const cut=Math.max(0,len-365);
-        const d2=dates.slice(cut), v2=closes.slice(cut);
-        const r=resample(d2,v2,'W'); 
-        let dd=r.dates.map(d=>+new Date(d)), vv=r.values;
-        if (vv.length<2 && d2.length>=2){
-          const c = (arrD,arrV)=>{ const D=arrD.map(toMs), V=[...arrV]; return {dates:[D[0], D.at(-1)], values:[V[0], V.at(-1)]}; };
-          const g = c(d2,v2); dd=g.dates; vv=g.values;
-        }
-        return {dates:dd, values:vv};
-      }
+      if (L==='6M'){ const cut=Math.max(0,len-183); const d2=dates.slice(cut), v2=closes.slice(cut); const r=resample(d2,v2,'W'); return {dates:r.dates.map(toMs), values:r.values}; }
+      if (L==='1Y'){ const cut=Math.max(0,len-365); const d2=dates.slice(cut), v2=closes.slice(cut); const r=resample(d2,v2,'W'); return {dates:r.dates.map(toMs), values:r.values}; }
       return {dates:dates.map(toMs), values:[...closes]};
     }
 
@@ -4358,7 +4255,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       drawBig($big, datesMs, values, label);
 
-      // zapamiętaj końcówkę serii dla żywego headera
+      // zapamiętaj końcówkę serii dla "żywego" headera
       $big._seriesLast = values.at(-1);
       $big._seriesPrev = values.at(-2) ?? values.at(-1);
     }
@@ -4375,7 +4272,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     function startModalAuto(){
       stopModalAuto();
-      MODAL_TICK = setInterval(refreshCurrentRange, refreshDelay(MODAL_CUR_LABEL || '1D'));
+      const delay = refreshDelay(MODAL_CUR_LABEL || '1D');
+      MODAL_TICK = setInterval(refreshCurrentRange, delay);
     }
     function stopModalAuto(){
       if (MODAL_TICK){ clearInterval(MODAL_TICK); MODAL_TICK = null; }
@@ -4411,7 +4309,7 @@ window.addEventListener('DOMContentLoaded', () => {
       startModalAuto();
     }
 
-    const def = $modal.querySelector('.wl-range button[data-range="1D"]') || ranges[0];
+    const def = $modal.querySelector('.wl-range button[data-range]') || ranges[0];
     setRange(def);
     startModalHead();
 
@@ -4434,7 +4332,7 @@ window.addEventListener('DOMContentLoaded', () => {
     $modal?.querySelector('.wl-close')?.addEventListener('click', closeModal, { once:true });
     $modal?.querySelector('.wl-modal__backdrop')?.addEventListener('click', closeModal, { once:true });
 
-    // obsługa kliknięć zakresów
+    // przypnij obsługę kliknięć zakresów (po otwarciu modala)
     Array.from(ranges).forEach(btn => btn.onclick = () => setRange(btn));
   }
 
@@ -4504,6 +4402,7 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
+
 
 
 
