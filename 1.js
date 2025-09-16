@@ -3649,8 +3649,28 @@ window.addEventListener('DOMContentLoaded', () => {
   const pad2  = n => String(n).padStart(2,'0');
   const WDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MONTHS= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const fmt   = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
 
+  // ====== UI currency / formatting (NEW) ======
+  function uiQuote() {
+    const q = (typeof window.fxQuote === 'function') ? window.fxQuote() : 'PLN';
+    return String(q || 'PLN').toUpperCase();
+  }
+  let CURRENT_QUOTE = uiQuote();
+
+  function uiLocaleFor(q) { return q === 'PLN' ? 'pl-PL' : 'en-US'; }
+
+  function fmtMoney(v) {
+    const q = CURRENT_QUOTE;
+    try {
+      return new Intl.NumberFormat(uiLocaleFor(q), { style:'currency', currency:q, maximumFractionDigits:2 })
+        .format(Number(v||0));
+    } catch {
+      return Number(v||0).toLocaleString(uiLocaleFor(q), { maximumFractionDigits:2 }) + ' ' + q;
+    }
+  }
+  const fmtPlain = (x) => Number(x ?? 0).toLocaleString(uiLocaleFor(CURRENT_QUOTE),{maximumFractionDigits:2});
+
+  // ====== helpers: seeded RNG for sandbox ======
   function seedRng(s){
     let h = 2166136261>>>0;
     for (let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -3661,7 +3681,12 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   }
   const basePriceStock = sym => { const r=seedRng('STK:'+String(sym).toUpperCase()); return 40+Math.floor(r()*360); };
-  const basePriceFx    = (a,b)=>{ const p=`${a}/${b}`.toUpperCase(); const presets={'EUR/USD':1.10,'USD/EUR':0.91,'USD/PLN':4.0,'EUR/PLN':4.35,'GBP/USD':1.26,'USD/JPY':150,'EUR/JPY':165,'CHF/PLN':4.6,'AUD/USD':0.66,'NZD/USD':0.60}; if(presets[p]!=null) return presets[p]; const r=seedRng('FX:'+p); if(/JPY$/.test(p)) return 120+Math.floor(r()*80); if(/PLN$/.test(p)) return 3.5+r()*1.2; return 0.8+r()*0.6; };
+  const basePriceFx    = (a,b)=>{ const p=`${a}/${b}`.toUpperCase();
+    const presets={'EUR/USD':1.10,'USD/EUR':0.91,'USD/PLN':4.0,'EUR/PLN':4.35,'GBP/USD':1.26,'USD/JPY':150,'EUR/JPY':165,'CHF/PLN':4.6,'AUD/USD':0.66,'NZD/USD':0.60};
+    if(presets[p]!=null) return presets[p];
+    const r=seedRng('FX:'+p); if(/JPY$/.test(p)) return 120+Math.floor(r()*80);
+    if(/PLN$/.test(p)) return 3.5+r()*1.2; return 0.8+r()*0.6;
+  };
   function genSeries({points, stepMs, start, drift, vol}){
     const dates=new Array(points), values=new Array(points);
     const r=seedRng(JSON.stringify({points,stepMs,start,drift,vol}));
@@ -3673,7 +3698,17 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     return {dates, values};
   }
-  const span = L => { L=String(L||'1D').toUpperCase(); if(L==='1D') return {points:78, step:5*60*1000}; if(L==='5D') return {points:78*5, step:5*60*1000}; if(L==='1M') return {points:22, step:24*60*60*1000}; if(L==='6M') return {points:26, step:7*24*60*60*1000}; if(L==='1Y'||L==='YTD') return {points:52, step:7*24*60*1000}; return {points:78, step:5*60*1000}; };
+
+  // >>> 1D = 24h (288 * 5min), 5D = 7 dni (zawsze obejmie 5 sesji mimo weekendu)
+  const span = L => {
+    L = String(L||'1D').toUpperCase();
+    if (L==='1D') return { points: 288,        step: 5*60*1000 };
+    if (L==='5D') return { points: 288*7,      step: 5*60*1000 };
+    if (L==='1M') return { points: 22,         step: 24*60*60*1000 };
+    if (L==='6M') return { points: 26,         step: 7*24*60*60*1000 };
+    if (L==='1Y'||L==='YTD') return { points: 52, step: 7*24*60*1000 };
+    return { points: 288, step: 5*60*1000 };
+  };
 
   async function yahooChart(symbol, range){
     const s = span(range==='5d'?'5D':range==='1mo'?'1M':range==='6mo'?'6M':(range==='1y'?'1Y':(range==='ytd'?'YTD':'1D')));
@@ -3695,35 +3730,62 @@ window.addEventListener('DOMContentLoaded', () => {
     return { dates:g.dates.map(toISO), closes:g.values };
   }
 
-  // ---------- unified spot ----------
+  // ---------- unified spot + currency conversion (NEW) ----------
   const normalizeSymbol = s => String(s||'').toUpperCase().replace(/\.US$/,'');
-  function hubSpotStock(sym, fallback){
-    const S = normalizeSymbol(sym);
-    if (typeof window.getSpot === 'function'){ const v=Number(window.getSpot(S, NaN)); if (Number.isFinite(v)&&v>0) return v; }
+
+  // access helpers
+  function hubRawGet(k){
     const HUB = window.PRICE_HUB;
-    if (HUB){
-      let v = (typeof HUB.use==='function') ? HUB.use(S,null) : (typeof HUB.get==='function') ? HUB.get(S) : HUB[S];
-      if (v && typeof v==='object') v = v.price ?? v.last ?? v.value ?? null;
-      v = Number(v); if (Number.isFinite(v)&&v>0) return v;
-      let v2 = (typeof HUB.get==='function') ? HUB.get(S+'.US') : HUB[S+'.US'];
-      if (v2 && typeof v2==='object') v2 = v2.price ?? v2.last ?? v2.value ?? null;
-      v2 = Number(v2); if (Number.isFinite(v2)&&v2>0) return v2;
-    }
-    return Number.isFinite(fallback) ? fallback : basePriceStock(S);
+    if (!HUB) return undefined;
+    if (typeof HUB.use==='function') return HUB.use(k, HUB[k]);
+    if (typeof HUB.get==='function') return HUB.get(k);
+    return HUB[k];
   }
-  function hubSpotFx(base, quote, fallback){
-    const pair = `${String(base).toUpperCase()}/${String(quote).toUpperCase()}`;
-    if (typeof window.fxRate === 'function'){ const v=Number(window.fxRate(pair)); if (Number.isFinite(v)&&v>0) return v; }
-    const HUB = window.PRICE_HUB;
-    if (HUB){
-      const k1 = pair.replace('/','');
-      const k2 = k1 + '=X';
-      let v = (typeof HUB.use==='function') ? HUB.use(k1,null) : (typeof HUB.get==='function') ? HUB.get(k1) : HUB[k1];
-      if (!Number.isFinite(v)) v = (typeof HUB.use==='function') ? HUB.use(k2,null) : (typeof HUB.get==='function') ? HUB.get(k2) : HUB[k2];
+  function hubGetAny(keys){
+    for (const k of keys){
+      let v = hubRawGet(k);
+      if (v && typeof v==='object') v = v.price ?? v.last ?? v.value ?? null;
       v = Number(v);
       if (Number.isFinite(v) && v>0) return v;
     }
+    return NaN;
+  }
+  function stockAliases(sym){
+    const S = normalizeSymbol(sym);
+    const q = CURRENT_QUOTE;
+    return [
+      `${S}:${q}`, `${S}/${q}`, `${S}-${q}`, `${S}_${q}`, `${S}.${q}`,
+      S, `${S}.US`
+    ];
+  }
+  function fxAliases(base, quote){
+    const b=String(base).toUpperCase(), q=String(quote).toUpperCase(), k=b+q;
+    return [ `${b}/${q}`, `${k}`, `${k}=X`, `${b}-${q}`, `${b}_${q}` ];
+  }
+
+  function hubSpotFx(base, quote, fallback){
+    const v = hubGetAny(fxAliases(base,quote));
+    if (Number.isFinite(v) && v > 0) return v;
     return Number.isFinite(fallback) ? fallback : basePriceFx(base, quote);
+  }
+
+  function hubSpotStock(sym, fallback){
+    // 1) Spróbuj dostać cenę już w walucie UI
+    const pref = hubGetAny(stockAliases(sym).slice(0,5));
+    if (Number.isFinite(pref) && pref > 0) return pref;
+
+    // 2) Weź neutralny i przelicz do UI
+    const any = hubGetAny(stockAliases(sym).slice(5));
+    if (Number.isFinite(any) && any > 0){
+      const q = CURRENT_QUOTE;
+      if (q && q !== 'USD'){ // zakładamy bazę USD — podmień jeśli u Ciebie inna
+        const fx = hubSpotFx('USD', q, NaN);
+        if (Number.isFinite(fx) && fx>0) return any * fx;
+      }
+      return any;
+    }
+    // 3) sandbox
+    return Number.isFinite(fallback) ? fallback : basePriceStock(sym);
   }
 
   // ---------- picker ----------
@@ -3770,22 +3832,21 @@ window.addEventListener('DOMContentLoaded', () => {
       return out;
     }
 
-    // 5D – Mon..Fri (ostatnie 5 dni roboczych)
-    if (L==='5D'){
-      const lastTs = datesMs.at(-1);
-      const d = new Date(lastTs); d.setHours(0,0,0,0);
-      const days=[];
-      while(days.length<5){
-        const wd = d.getDay();
-        if (wd!==0 && wd!==6) days.push(new Date(d.getTime()));
-        d.setDate(d.getDate()-1);
+    // 5D — ostatnie 5 dni roboczych (Mon..Fri) z samej serii
+    if (L === '5D') {
+      const dayTicks = [];
+      let lastKey = null;
+      for (let i = 0; i < datesMs.length; i++) {
+        const d  = new Date(datesMs[i]);
+        const wd = d.getDay();                 // 0=Sun ... 6=Sat
+        if (wd === 0 || wd === 6) continue;    // weekend out
+        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (key !== lastKey) {
+          dayTicks.push({ i, lbl: WDAYS[wd] });
+          lastKey = key;
+        }
       }
-      days.reverse();
-      for(const day of days){
-        const idx=lowerBound(datesMs, day.getTime());
-        out.push({ i: idx, lbl: WDAYS[day.getDay()] });
-      }
-      return out;
+      return dayTicks.slice(-5);
     }
 
     // helpers miesięcy
@@ -3834,7 +3895,6 @@ window.addEventListener('DOMContentLoaded', () => {
       for(const t of out){ if(!seen.has(t.i)){ uniq.push(t); seen.add(t.i); } }
       return uniq;
     }
-
     return out;
   }
 
@@ -3850,11 +3910,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
     if (!values||values.length<2) return;
     const {lo:min, hi:max}=_domain(values); const pad=c.height*0.18; const step=(c.width)/(values.length-1); const yy=v=>c.height-((v-min)/(max-min||1))*(c.height-pad*2)-pad;
-    ctx.beginPath(); ctx.moveTo(0,yy(values[0])); values.forEach((v,i)=>ctx.lineTo(i*step,yy(v))); ctx.lineTo(c.width,c.height); ctx.lineTo(0,c.height); ctx.closePath();
+    ctx.beginPath(); ctx.moveTo(0,yy(values[0])); values.forEach((v,i)=>ctx.lineTo(i*step,yy(v)));
+    ctx.lineTo(c.width,c.height); ctx.lineTo(0,c.height); ctx.closePath();
     const up=values.at(-1)>=values[0]; const grad=ctx.createLinearGradient(0,0,0,c.height);
     if (up){ grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
     else   { grad.addColorStop(0,"rgba(153,27,27,0.45)");  grad.addColorStop(1,"rgba(244,114,182,0.12)"); }
-    ctx.fillStyle=grad; ctx.fill(); ctx.beginPath(); ctx.moveTo(0,yy(values[0])); values.forEach((v,i)=>ctx.lineTo(i*step,yy(v)));
+    ctx.fillStyle=grad; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,yy(values[0])); values.forEach((v,i)=>ctx.lineTo(i*step,yy(v)));
     ctx.lineWidth=2*DPR; ctx.strokeStyle=up?"#00ff6a":"#b91c1c"; ctx.stroke();
   }
 
@@ -3920,15 +3982,17 @@ window.addEventListener('DOMContentLoaded', () => {
     return [k, k+'=X'];
   }
 
+  // uses fmtMoney and updates prev (NEW)
   function applyLiveToCard(el, cur, prev){
     const p = el.querySelector('.wl-price');
     const d = el.querySelector('.wl-diff');
     if (!p || !d) return;
-    p.textContent = fmt(cur);
+    p.textContent = fmtMoney(cur);
     const ch = cur - (prev ?? cur);
     const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
-    d.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+    d.textContent = `${ch>=0?'+':''}${fmtPlain(ch)} (${pc.toFixed(2)}%)`;
     d.className   = 'wl-diff ' + (ch>=0 ? 'pos' : 'neg');
+    el._wl_prev   = cur;
   }
 
   async function mountCard(item, idx){
@@ -3970,7 +4034,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const unsub = (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function')
         ? window.PRICE_HUB.subscribe((key,val) => {
             const keys = hubKeyFor(item);
-            const hit = Array.isArray(keys) ? keys.some(k => String(key).toUpperCase()===String(k).toUpperCase()) : (String(key).toUpperCase()===String(keys).toUpperCase());
+            const hit = Array.isArray(keys) ? keys.some(k => String(key).toUpperCase()===String(k).toUpperCase())
+                                            : (String(key).toUpperCase()===String(keys).toUpperCase());
             if (!hit) return;
             const prevLive = el._wl_prev ?? cur;
             applyLiveToCard(el, Number(val), prevLive);
@@ -4039,8 +4104,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const ch = lastLive - (prevSeries ?? lastLive);
       const pc = (prevSeries && prevSeries!==0) ? (ch/prevSeries)*100 : 0;
-      $mPrice.textContent = fmt(lastLive);
-      $mChg.textContent   = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+      $mPrice.textContent = fmtMoney(lastLive); // <— currency format (NEW)
+      $mChg.textContent   = `${ch>=0?'+':''}${fmtPlain(ch)} (${pc.toFixed(2)}%)`;
       $mChg.style.color   = ch>=0 ? 'var(--ok)' : '#b91c1c';
 
       drawBig($big, datesMs, values, label);
@@ -4051,15 +4116,16 @@ window.addEventListener('DOMContentLoaded', () => {
       if (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function'){
         const keys = hubKeyFor(item);
         MODAL_SUB = window.PRICE_HUB.subscribe((key,val)=>{
-          const hit = Array.isArray(keys) ? keys.some(k => String(k).toUpperCase()===String(key).toUpperCase()) : (String(keys).toUpperCase()===String(key).toUpperCase());
+          const hit = Array.isArray(keys) ? keys.some(k => String(k).toUpperCase()===String(key).toUpperCase())
+                                          : (String(keys).toUpperCase()===String(key).toUpperCase());
           if (!hit) return;
           const prev = $big?._seriesPrev ?? Number(val);
           const cur  = Number(val);
           if (!Number.isFinite(cur)) return;
           const ch   = cur - (prev ?? cur);
           const pc   = (prev && prev!==0) ? (ch/prev)*100 : 0;
-          $mPrice.textContent = fmt(cur);
-          $mChg.textContent   = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+          $mPrice.textContent = fmtMoney(cur); // <— currency format (NEW)
+          $mChg.textContent   = `${ch>=0?'+':''}${fmtPlain(ch)} (${pc.toFixed(2)}%)`;
           $mChg.style.color   = ch>=0 ? 'var(--ok)' : '#b91c1c';
         });
       }
@@ -4124,6 +4190,27 @@ window.addEventListener('DOMContentLoaded', () => {
     saveLS(); render();
   });
 
+  // ---------- currency change listeners (NEW) ----------
+  function onQuoteChanged(){
+    const next = uiQuote();
+    if (next === CURRENT_QUOTE) return;
+    CURRENT_QUOTE = next;
+    fillPicker();
+    render();
+    if ($modal && $modal.getAttribute('aria-hidden') === 'false') {
+      const active = $modal.querySelector('.wl-range button.is-active') ||
+                     $modal.querySelector('.wl-range button[data-range]');
+      if (active) active.click();
+    }
+  }
+  window.addEventListener('fx:quote-changed', onQuoteChanged);
+  window.addEventListener('lang:changed', onQuoteChanged);
+  try{
+    const mo = new MutationObserver(onQuoteChanged);
+    mo.observe(document.documentElement, { attributes:true, attributeFilter:['lang','data-locale','data-currency'] });
+  }catch{}
+  setInterval(() => { if (uiQuote() !== CURRENT_QUOTE) onQuoteChanged(); }, 1500);
+
   // ---------- RESIZE redraw ----------
   let _rTO=null;
   window.addEventListener('resize', () => {
@@ -4142,8 +4229,6 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
-
-
 
 
 /* =========================================================================
