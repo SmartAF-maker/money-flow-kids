@@ -3606,15 +3606,10 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-/// ===== WATCHLIST (stocks + FX) — intraday (1D/5D), auto-refresh modal, live header, EN labels, robust ranges =====
+/// ===== WATCHLIST (stocks + FX) — 100% SANDBOX (no network) =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
-
-  // ---------- PERF ----------
-  const DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-  const DAYS_SPARK_STOCK = 420;
-  const DAYS_SPARK_FX    = 210;
-  const SERIES_TTL_MS    = 2 * 60 * 60 * 1000;
+  const MFK_FORCE_SANDBOX = true; // zostaw true dopóki pracujesz na „offline”
 
   // ---------- DOM ----------
   const $panel = document.querySelector('.panel.watchlist');
@@ -3630,317 +3625,148 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const $wlTabs = $panel?.querySelector('.wl-tabs') || null;
 
-  // ---------- PICKER LISTS ----------
+  // ---------- LISTY ----------
   const STOCKS_ALL = [
-    'AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','NFLX','ADBE','CRM','NOW','INTU',
-    'AVGO','QCOM','TXN','MU','AMD','INTC','SMCI','ASML','TSM','IBM',
-    'SHOP','ABNB','BKNG','UBER','LYFT','ETSY',
-    'PANW','CRWD','ZS','OKTA','SNOW','MDB',
-    'GE','BA','CAT','DE','MMM','HON','LMT','NOC','RTX',
-    'NKE','SBUX','MCD','CMG','KO','PEP','PG','COST','WMT','TGT','HD','LOW',
-    'XOM','CVX','COP','SLB','BP','SHEL','RIO','BHP',
-    'JNJ','PFE','MRK','ABBV','TMO','UNH','LLY','GILD',
-    'JPM','BAC','WFC','GS','MS','C','V','MA','PYPL','AXP','SQ',
-    'DIS','PARA','WBD','T','VZ','CMCSA',
-    'F','GM','RIVN','NIO','LI','TM',
-    'BABA','PDD','BIDU','NTES','SONY','SAP'
-  ];
-  const FX_ALL = [
-    'EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD',
-    'EUR/GBP','EUR/JPY','EUR/CHF','EUR/CAD','EUR/AUD','EUR/NZD',
-    'GBP/JPY','GBP/CHF','GBP/CAD','GBP/AUD','GBP/NZD',
-    'AUD/JPY','NZD/JPY','CAD/JPY','CHF/JPY',
-    'AUD/CHF','NZD/CHF','CAD/CHF',
-    'AUD/NZD','AUD/CAD','NZD/CAD',
-    'USD/NOK','USD/SEK','USD/DKK','USD/TRY','USD/ZAR','USD/MXN',
-    'USD/PLN','EUR/PLN','GBP/PLN','CHF/PLN','JPY/PLN',
-    'USD/CZK','EUR/CZK','USD/HUF','EUR/HUF',
-    'USD/CNH','USD/HKD','USD/SGD'
+    'AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','NFLX',
+    'QCOM','TXN','AMD','INTC','IBM','GE','BA','CAT','DE','NKE','KO','PEP',
+    'WMT','COST','HD','LOW','MCD','SBUX','DIS','V','MA','PYPL','JPM','GS'
   ];
 
   // ---------- STATE ----------
-  let mode   = 'stock';
-  let filter = 'stock';
+  let mode   = 'stock';  // 'stock' | 'fx'
+  let filter = 'stock';  // 'all' | 'stock' | 'fx'
   let watchlist = loadLS();
-
-  const cacheFX     = new Map();   // key: `${pair}|${days}`
-  const cacheStocks = new Map();   // key: `${symbol}|${days}`
 
   function loadLS(){
     try{
       return JSON.parse(localStorage.getItem(LS_KEY)) ??
-        [{type:'stock',symbol:'GE'},{type:'stock',symbol:'AAPL'},{type:'fx',base:'EUR',quote:'USD'}];
+        [{type:'stock',symbol:'AAPL'},{type:'stock',symbol:'NFLX'},{type:'fx',base:'EUR',quote:'USD'}];
     }catch(_){ return []; }
   }
   function saveLS(){ localStorage.setItem(LS_KEY, JSON.stringify(watchlist)); }
 
-  // ---------- UTILS ----------
-  const WDAYS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const pad2 = n => String(n).padStart(2,'0');
-  const fmt = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
-  const emptySeries = () => ({dates:[],closes:[]});
+  // ---------- SANDBOX: RNG + generatory serii ----------
+  const DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+  const pad2 = (n)=> String(n).padStart(2,'0');
+  const WDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmt = (x)=> Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
 
-  const stooqCode   = (sym) => { const s=(sym||'').toLowerCase(); if(/\./.test(s))return s; if(!/^[a-z.]{1,10}$/.test(s))return s; return s+'.us'; };
-  const stooqFxCode = (b,q) => `${b}${q}`.toLowerCase();
-  function parsePair(s){
-    const t = (s||'').toUpperCase().replace(/\s+/g,'');
-    if (t.includes('/')) { const [a,b]=t.split('/'); if (a&&b&&a.length===3&&b.length===3) return {base:a,quote:b}; }
-    if (/^[A-Z]{6}$/.test(t)) return {base:t.slice(0,3), quote:t.slice(3,6)};
-    return null;
-  }
-  const normRangeLabel = (x) => {
-    const s = String(x||'').trim().toUpperCase();
-    return (s==='1D'||s==='5D'||s==='1M'||s==='6M'||s==='1Y') ? s : '1D';
-  };
-
-  async function fetchJSON(url, {timeout=6000} = {}){
-    const ctrl = new AbortController();
-    const to = setTimeout(()=>ctrl.abort(), timeout);
-    try{
-      const r = await fetch(url, {signal: ctrl.signal});
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      const ct = r.headers.get('content-type')||'';
-      return ct.includes('application/json') ? r.json() : JSON.parse(await r.text());
-    } finally { clearTimeout(to); }
-  }
-
-  // ---------- TTL cache ----------
-  function getSeriesCache(key){
-    try{
-      const raw = localStorage.getItem('mfk_series_cache_v1:' + key);
-      if (!raw) return null;
-      const { t, v } = JSON.parse(raw);
-      if (Date.now() - t > SERIES_TTL_MS) return null;
-      return v;
-    }catch(_){ return null; }
-  }
-  function setSeriesCache(key, value){
-    try{
-      localStorage.setItem('mfk_series_cache_v1:' + key, JSON.stringify({ t: Date.now(), v: value }));
-    }catch(_){}
-  }
-
-  // ---------- FX daily ----------
-  async function fxHistory(base, quote, days=365*5){
-    const pairKey = `${base}/${quote}`;
-    const memKey  = `${pairKey}|${days}`;
-    if (cacheFX.has(memKey)) return cacheFX.get(memKey);
-
-    const lsKey = `FX:${pairKey}:${days}`;
-    const fromLS = getSeriesCache(lsKey);
-    if (fromLS) { cacheFX.set(memKey, fromLS); return fromLS; }
-
-    const end=new Date(); const start=new Date(end); start.setDate(start.getDate()-days);
-    const s=start.toISOString().slice(0,10), e=end.toISOString().slice(0,10);
-
-    const try1 = async () => {
-      const j = await fetchJSON(`https://api.exchangerate.host/timeseries?start_date=${s}&end_date=${e}&base=${base}&symbols=${quote}`);
-      return j?.rates ? normalizeFX(j.rates, quote) : emptySeries();
+  function seedRng(seedStr){
+    let h = 2166136261 >>> 0;
+    for (let i=0;i<seedStr.length;i++){ h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return function(){
+      h += 0x6D2B79F5; let t = Math.imul(h ^ (h>>>15), 1 | h);
+      t ^= t + Math.imul(t ^ (t>>>7), 61 | t);
+      return ((t ^ (t>>>14)) >>> 0) / 4294967296;
     };
-    const try2 = async () => {
-      const j = await fetchJSON(`https://r.jina.ai/http://api.exchangerate.host/timeseries?start_date=${s}&end_date=${e}&base=${base}&symbols=${quote}`);
-      return j?.rates ? normalizeFX(j.rates, quote) : emptySeries();
+  }
+  function basePriceStock(sym){
+    sym = String(sym||'AAPL').toUpperCase();
+    const r = seedRng('STK:'+sym);
+    return 40 + Math.floor(r()*360);
+  }
+  function basePriceFx(base, quote){
+    const p = `${String(base).toUpperCase()}/${String(quote).toUpperCase()}`;
+    const presets = {
+      'EUR/USD': 1.10, 'USD/EUR': 0.91, 'USD/PLN': 4.00, 'EUR/PLN': 4.35, 'GBP/USD': 1.26,
+      'USD/JPY': 150,  'EUR/JPY': 165,  'CHF/PLN': 4.60, 'AUD/USD': 0.66, 'NZD/USD': 0.60
     };
-    const try3 = async () => {
-      const j = await fetchJSON(`https://r.jina.ai/http://api.frankfurter.app/${s}..${e}?from=${base}&to=${quote}`);
-      return j?.rates ? normalizeFX(j.rates, quote) : emptySeries();
-    };
-    const try4 = async () => {
-      const code = stooqFxCode(base, quote);
-      const txt  = await (await fetch(`https://r.jina.ai/http://stooq.com/q/d/l/?s=${encodeURIComponent(code)}&i=d`)).text();
-      const lines = txt.trim().split('\n');
-      if (lines.length <= 1) return emptySeries();
-      const rows  = lines.slice(1).map(l=>l.split(','));
-      const dates = rows.map(r=>r[0]);
-      const closes= rows.map(r=> Number(r[4])).filter(Number.isFinite);
-      if (closes.length < 2) return emptySeries();
-      return { dates: dates.slice(-closes.length), closes };
-    };
-
-    let out = emptySeries();
-    try{ out = await try1(); }catch(_){}
-    if (!out.closes.length){ try{ out = await try2(); }catch(_){} }
-    if (!out.closes.length){ try{ out = await try3(); }catch(_){} }
-    if (!out.closes.length){ try{ out = await try4(); }catch(_){} }
-
-    cacheFX.set(memKey, out);
-    setSeriesCache(lsKey, out);
-    return out;
+    if (presets[p] != null) return presets[p];
+    const r = seedRng('FX:'+p);
+    if (/JPY$/.test(p)) return 120 + Math.floor(r()*80);
+    if (/PLN$/.test(p)) return 3.5 + r()*1.2;
+    return 0.8 + r()*0.6;
   }
-  function normalizeFX(ratesObj, quote){
-    const datesSorted = Object.keys(ratesObj).sort();
-    const closes = []; const dates  = [];
-    for (const d of datesSorted){
-      const v = Number(ratesObj[d]?.[quote]);
-      if (Number.isFinite(v)) { dates.push(d); closes.push(v); }
+  function genSeries({points, stepMs, start, drift, vol}){
+    const dates=new Array(points), values=new Array(points);
+    const r = seedRng(JSON.stringify({points,stepMs,start,drift,vol}));
+    let x = start, t0 = Date.now() - points*stepMs;
+    for (let i=0;i<points;i++){
+      const shock = (r()*2-1) * vol * x;
+      const trend = drift * x;
+      x = Math.max(0.01, x + shock + trend);
+      dates[i]  = t0 + i*stepMs;
+      values[i] = +x.toFixed(4);
     }
-    return { dates, closes };
+    return {dates, values};
+  }
+  function span(label){
+    const L = String(label||'1D').toUpperCase();
+    if (L==='1D') return { points: 78,    step: 5*60*1000 };
+    if (L==='5D') return { points: 78*5,  step: 5*60*1000 };
+    if (L==='1M') return { points: 22,    step: 24*60*60*1000 };
+    if (L==='6M') return { points: 26,    step: 7*24*60*60*1000 };
+    if (L==='1Y') return { points: 52,    step: 7*24*60*60*1000 };
+    return { points: 78, step: 5*60*1000 };
   }
 
-  // ---------- Stocks daily ----------
-  async function stockHistory(symbol, days=365*5){
-    const key = symbol.toUpperCase();
-    const memKey = `${key}|${days}`;
-    if (cacheStocks.has(memKey)) return cacheStocks.get(memKey);
-
-    const lsKey = `STK:${key}:${days}`;
-    const fromLS = getSeriesCache(lsKey);
-    if (fromLS) { cacheStocks.set(memKey, fromLS); return fromLS; }
-
-    try{
-      const code = stooqCode(symbol);
-      const txt  = await (await fetch(`https://r.jina.ai/http://stooq.com/q/d/l/?s=${encodeURIComponent(code)}&i=d`)).text();
-      const rows = txt.trim().split('\n').slice(1).map(l=>l.split(','));
-      const dates = rows.map(r=>r[0]);
-      const closes= rows.map(r=> Number(r[4])).filter(n=>!Number.isNaN(n));
-      if (closes.length > 10) {
-        const cut = Math.max(0, dates.length - days);
-        const out = { dates: dates.slice(cut), closes: closes.slice(cut) };
-        cacheStocks.set(memKey, out);
-        setSeriesCache(lsKey, out);
-        return out;
-      }
-    }catch(_){}
-
-    try{
-      const jy  = await fetchJSON(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5y&interval=1d`);
-      const res = jy?.chart?.result?.[0];
-      const ts  = res?.timestamp || [];
-      const cs  = res?.indicators?.quote?.[0]?.close || [];
-      const dates = ts.map(t=> new Date(t*1000).toISOString().slice(0,10));
-      const values = cs.filter(v=> v!=null);
-      const out = { dates: dates.slice(-values.length), closes: values };
-      cacheStocks.set(memKey, out);
-      setSeriesCache(lsKey, out);
-      return out;
-    }catch(_){}
-
-    const empty = emptySeries();
-    cacheStocks.set(memKey, empty);
-    setSeriesCache(lsKey, empty);
-    return empty;
+  // pseudo-„Yahoo” (intraday/daily) – ale generowane lokalnie
+  async function yahooChart(symbol, range, intervals){
+    if (!MFK_FORCE_SANDBOX) { /* tu mógłby być fetch – w sandboxie pomijamy */ }
+    const s = span(range==='5d'?'5D':range==='1mo'?'1M':range==='6mo'?'6M':range==='1y'?'1Y':'1D');
+    const isFx = /=X$/.test(String(symbol));
+    const start = isFx
+      ? (()=>{ const m=String(symbol).match(/^([A-Z]{3})([A-Z]{3})=X$/)||[]; return basePriceFx(m[1]||'EUR', m[2]||'USD'); })()
+      : basePriceStock(symbol);
+    const drift = isFx ? 0.0001 : 0.0006;
+    const vol   = isFx ? 0.0025 : 0.009;
+    const g = genSeries({ points:s.points, stepMs:s.step, start, drift, vol });
+    return { dates: g.dates, closes: g.values };
   }
 
-  // ---------- Yahoo intraday ----------
-  const yahooFxSymbol = (base, quote) => `${String(base).toUpperCase()}${String(quote).toUpperCase()}=X`;
-  function makeYahooUrls(sym, range, interval){
-    const path = `/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=${interval}&includePrePost=true&events=div%2Csplit`;
-    const raw1 = `https://query1.finance.yahoo.com${path}`;
-    const raw2 = `https://query2.finance.yahoo.com${path}`;
-    return [raw1, raw2, `https://r.jina.ai/${raw1.replace('https://','')}`, `https://r.jina.ai/${raw2.replace('https://','')}`];
+  // dzienne dla sparków
+  async function stockHistory(symbol, days=420){
+    const pts = Math.max(30, Math.min(420, Math.floor(days)));
+    const g = genSeries({
+      points: pts, stepMs: 24*60*60*1000,
+      start: basePriceStock(symbol), drift: 0.0005, vol: 0.008
+    });
+    const toISO = ms => new Date(ms).toISOString().slice(0,10);
+    return { dates: g.dates.map(toISO), closes: g.values };
   }
-  async function yahooChart(sym, range, intervals){
-    for (const itv of intervals){
-      const urls = makeYahooUrls(sym, range, itv);
-      for (const u of urls){
-        try{
-          const j = await fetchJSON(u, {timeout: 3000});
-          const r = j?.chart?.result?.[0];
-          const ts = r?.timestamp || [];
-          const q  = r?.indicators?.quote?.[0] || {};
-          const c  = q.close || [];
-          const n  = Math.min(ts.length, c.length);
-          if (n < 2) continue;
+  async function fxHistory(base, quote, days=210){
+    const pts = Math.max(30, Math.min(420, Math.floor(days)));
+    const g = genSeries({
+      points: pts, stepMs: 24*60*60*1000,
+      start: basePriceFx(base,quote), drift: 0.00012, vol: 0.0028
+    });
+    const toISO = ms => new Date(ms).toISOString().slice(0,10);
+    return { dates: g.dates.map(toISO), closes: g.values };
+  }
 
-          const pairs = [];
-          for (let i=0;i<n;i++){
-            const v = Number(c[i]);
-            if (Number.isFinite(v)) pairs.push([ts[i]*1000, v]); // epoch-ms
-          }
-          if (pairs.length < 2) continue;
-          pairs.sort((a,b)=>a[0]-b[0]);
-          const dedup = [];
-          let lastT=-1;
-          for (const p of pairs){ if (p[0]!==lastT){ dedup.push(p); lastT=p[0]; } }
+  // „live” dla kart = ostatnia znana wartość
+  function priceOfStock(sym, fallback){ return Number.isFinite(fallback) ? fallback : basePriceStock(sym); }
+  function priceOfFx(base,quote,fallback){ const p=basePriceFx(base,quote); return Number.isFinite(fallback)?fallback:p; }
 
-          const maxPts = (range==='1d'||range==='5d') ? 450 : 240;
-          const stride = Math.max(1, Math.ceil(dedup.length / maxPts));
-          const dates = [], closes = [];
-          for (let i=0;i<dedup.length;i+=stride){ dates.push(dedup[i][0]); closes.push(dedup[i][1]); }
-          if (dates.length >= 2) return { dates, closes };
-        }catch(_){}
-      }
+  // ---------- Picker FX (offline-safe) ----------
+  function safeISO(){
+    return (Array.isArray(window.ISO) && window.ISO.length)
+      ? window.ISO
+      : ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD','SEK','NOK','CZK','HUF'];
+  }
+  function safeQuote(){
+    const q = (typeof window.fxQuote==='function') ? window.fxQuote() : 'USD';
+    return (q||'USD').toUpperCase();
+  }
+  function fillPicker(){
+    if (!$pick) return;
+    if (mode==='fx'){
+      const ISO = safeISO();
+      const quote = safeQuote();
+      const arr = ISO.filter(c => c!==quote).map(b => `${b}/${quote}`);
+      $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
+    } else {
+      $pick.innerHTML = STOCKS_ALL.map(v => `<option value="${v}">${v}</option>`).join('');
     }
-    return null;
-  }
-  function spanFor(label){
-    const L = normRangeLabel(label);
-    if (L==='1D') return { range:'1d', intervals: ['1m','2m','5m','15m'] };
-    if (L==='5D') return { range:'5d', intervals: ['5m','15m','30m','60m'] };
-    if (L==='1M') return { range:'1mo', intervals: ['1d'] };
-    if (L==='6M') return { range:'6mo', intervals: ['1d'] };
-    if (L==='1Y') return { range:'1y',  intervals: ['1d'] };
-    return { range:'1d', intervals:['1m','2m','5m','15m'] };
   }
 
-  // ---------- LIVE PRICE ----------
-  function priceOfStock(sym, fallback){
-    if (typeof window.getSpot === 'function') {
-      const v = Number(window.getSpot(sym, null));
-      if (Number.isFinite(v) && v > 0) return v;
-    }
-    const HUB = (typeof window !== 'undefined') ? window.PRICE_HUB : null;
-    if (HUB) {
-      const up = String(sym||'').toUpperCase();
-      let v = null;
-      if (typeof HUB.use === 'function') v = HUB.use(up, null);
-      else if (typeof HUB.get === 'function') v = HUB.get(up);
-      else if (up in HUB) v = HUB[up];
-      if (v && typeof v === 'object') v = v.price ?? v.last ?? v.value ?? null;
-      v = Number(v);
-      if (Number.isFinite(v) && v > 0) return v;
-      if (typeof HUB.get === 'function') {
-        let v2 = HUB.get(up + '.US');
-        if (v2 && typeof v2 === 'object') v2 = v2.price ?? v2.last ?? v2.value ?? null;
-        v2 = Number(v2);
-        if (Number.isFinite(v2) && v2 > 0) return v2;
-      }
-    }
-    return fallback;
-  }
-  function priceOfFx(base, quote, fallback){
-    const pair = `${String(base||'').toUpperCase()}/${String(quote||'').toUpperCase()}`;
-    const fx = (typeof window.fxRate === 'function') ? Number(window.fxRate(pair)) : NaN;
-    return (Number.isFinite(fx) && fx > 0) ? fx : fallback;
-  }
-
-  // === LIVE UPDATE na kartach ===
-  function updateCardFromLive(card){
-    const item = card._wl_item; if (!item) return;
-    const lastHist = card._wl_lastHist; const prev = card._wl_prev;
-    if (lastHist == null || prev == null) return;
-
-    let last = lastHist;
-    if (item.type === 'stock') last = priceOfStock(item.symbol, last);
-    else                       last = priceOfFx(item.base, item.quote, last);
-
-    const pEl = card.querySelector('.wl-price');
-    const dEl = card.querySelector('.wl-diff');
-    if (!pEl || !dEl) return;
-
-    pEl.textContent = Number(last).toLocaleString(undefined,{maximumFractionDigits:2});
-    const ch = last - (prev ?? last);
-    const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
-    dEl.textContent = `${ch>=0?'+':''}${Number(ch).toLocaleString(undefined,{maximumFractionDigits:2})} (${pc.toFixed(2)}%)`;
-    dEl.className   = 'wl-diff ' + (ch>=0 ? 'pos' : 'neg');
-  }
-  let WL_TICK = null;
-  function startWatchlistTicker(){
-    if (WL_TICK) return;
-    WL_TICK = setInterval(() => {
-      document.querySelectorAll('.wl-card').forEach(updateCardFromLive);
-    }, 2000);
-  }
-
-  // ---------- helpers ----------
+  // ---------- RYSOWANIE ----------
   function _domain(values){
     let lo = Math.min(...values), hi = Math.max(...values);
     if (lo === hi) { const pad = Math.max(1, Math.abs(hi) * 0.005); lo -= pad; hi += pad; }
     return {lo, hi};
   }
-
-  // ---------- RYSOWANIE SPARK ----------
   function drawSpark(c, values){
     const cssW = c.clientWidth || c.offsetWidth || 220;
     const cssH = c.clientHeight || 38;
@@ -3949,7 +3775,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const ctx = c.getContext('2d');
     ctx.clearRect(0,0,c.width,c.height);
     if (!values || values.length < 2) return;
-
     const {lo:min, hi:max} = _domain(values);
     const pad = c.height*0.18;
     const step = (c.width)/(values.length-1);
@@ -3970,58 +3795,44 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
 
-  // ---------- X-ticks ----------
-  function lowerBound(arr, x){
-    let lo=0, hi=arr.length-1, ans=0;
-    while(lo<=hi){ const mid=(lo+hi)>>1; if(arr[mid]<x){ lo=mid+1; ans=lo; } else { ans=mid; hi=mid-1; } }
-    return Math.max(0, Math.min(ans, arr.length-1));
-  }
-  function computeXTicks(datesMs, mode){
-    const out = [];
-    if (!datesMs.length) return out;
+  function computeXTicks(datesMs, rangeLabel){
+    const out = []; if (!datesMs.length) return out;
+    const lowerBound=(arr,x)=>{let lo=0,hi=arr.length-1,ans=0;while(lo<=hi){const m=(lo+hi)>>1;if(arr[m]<x){lo=m+1;ans=lo;}else{ans=m;hi=m-1;}}return Math.max(0,Math.min(ans,arr.length-1));};
 
-    if (mode === '1D'){
+    if (rangeLabel==='1D'){
       const first = datesMs[0], last = datesMs.at(-1);
-      const d = new Date(first);
-      d.setMinutes(0,0,0);
+      const d = new Date(first); d.setMinutes(0,0,0);
       const ticks = [];
       while (d.getTime() <= last){ ticks.push(d.getTime()); d.setHours(d.getHours()+1); }
       const step = Math.max(1, Math.ceil(ticks.length / 7));
       for (let i=0;i<ticks.length;i+=step){
         const t = ticks[i], idx = lowerBound(datesMs, t);
         const hh = pad2(new Date(t).getHours()), mm = pad2(new Date(t).getMinutes());
-        out.push({ i: idx, t, lbl: `${hh}:${mm}` });
+        out.push({ i: idx, lbl: `${hh}:${mm}` });
       }
       return out;
     }
 
-    if (mode === '5D'){
-      let lastKey = '';
+    if (rangeLabel==='5D'){
+      let lastKey='';
       for (let i=0;i<datesMs.length;i++){
-        const d = new Date(datesMs[i]);
-        const key = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-        if (key !== lastKey){
-          out.push({ i, t: datesMs[i], lbl: WDAYS[d.getDay()] });
-          lastKey = key;
-        }
+        const d=new Date(datesMs[i]);
+        const key=`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+        if (key!==lastKey){ out.push({i, lbl: WDAYS[d.getDay()]}); lastKey=key; }
       }
       return out.slice(-7);
     }
 
-    // 1M / 6M / 1Y
-    let lastMY = '';
+    // 1M/6M/1Y — po miesiącach
+    let lastMY='';
     for (let i=0;i<datesMs.length;i++){
-      const d = new Date(datesMs[i]);
-      const my = `${d.getFullYear()}-${d.getMonth()}`;
-      if (my !== lastMY){
-        out.push({ i, t: datesMs[i], lbl: `${MONTHS[d.getMonth()]}` });
-        lastMY = my;
-      }
+      const d=new Date(datesMs[i]);
+      const my=`${d.getFullYear()}-${d.getMonth()}`;
+      if (my!==lastMY){ out.push({i, lbl: MONTHS[d.getMonth()]}); lastMY=my; }
     }
     return out;
   }
 
-  // ---------- BIG CHART ----------
   function drawBig(c, datesMs, values, rangeLabel){
     const cssW = c.clientWidth || 720, cssH = 280;
     c.width = cssW * DPR; c.height = cssH * DPR;
@@ -4070,29 +3881,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
 
-  // ---------- RESAMPLING ----------
-  function resample(dates, values, mode){
-    if (!dates?.length || !values?.length) return {dates:[],values:[]};
-    if (mode==='D') return {dates:[...dates], values:[...values]};
-    const out=[], outD=[], map=new Map();
-    for(let i=0;i<dates.length;i++){
-      const d=new Date(dates[i]); let key=null;
-      if (mode==='W'){
-        const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-        const day=dt.getUTCDay()||7; dt.setUTCDate(dt.getUTCDate()+4-day);
-        const y=dt.getUTCFullYear(); const ys=new Date(Date.UTC(y,0,1));
-        const w=Math.ceil((((dt-ys)/86400000)+1)/7);
-        key=`${y}-W${String(w).padStart(2,'0')}`;
-      } else if (mode==='M'){
-        key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      }
-      if (key) map.set(key, {date: dates[i], val: values[i]});
-    }
-    Array.from(map.values()).sort((a,b)=> a.date.localeCompare(b.date)).forEach(o=>{ outD.push(o.date); out.push(o.val); });
-    return {dates: outD, values: out};
-  }
-
-  // ---------- LAZY DRAW ----------
+  // ---------- KARTY ----------
   const io = ('IntersectionObserver' in window)
     ? new IntersectionObserver((entries) => {
         for (const e of entries) {
@@ -4107,15 +3896,12 @@ window.addEventListener('DOMContentLoaded', () => {
       }, { root: null, threshold: 0.1 })
     : null;
 
-  // ---------- KARTY ----------
   async function mountCard(item, idx){
     const el   = document.createElement('article'); el.className='wl-card'; el.setAttribute('role','listitem');
     const left = document.createElement('div');     left.className='wl-left';
     const right= document.createElement('div');     right.className='wl-right';
     const spark= document.createElement('canvas');  spark.className='wl-spark';
-
     const removeBtn = document.createElement('button'); removeBtn.className='wl-remove'; removeBtn.setAttribute('aria-label','Remove'); removeBtn.textContent='×';
-
     const t = document.createElement('div'); t.className='wl-ticker';
     const n = document.createElement('div'); n.className='wl-name';
     const p = document.createElement('div'); p.className='wl-price';
@@ -4129,35 +3915,36 @@ window.addEventListener('DOMContentLoaded', () => {
     let hist;
     if (item.type==='fx'){
       t.textContent=`${item.base}/${item.quote}`; n.textContent='FX';
-      hist=await fxHistory(item.base,item.quote, DAYS_SPARK_FX);
+      hist=await fxHistory(item.base,item.quote, 210);
     } else {
       t.textContent=item.symbol.toUpperCase(); n.textContent='Stock';
-      hist=await stockHistory(item.symbol, DAYS_SPARK_STOCK);
+      hist=await stockHistory(item.symbol, 420);
     }
-
     const vals = (hist?.closes || []).slice(-120);
 
     if (vals.length >= 2){
       el._wl_item     = item;
       el._wl_lastHist = vals.at(-1);
       el._wl_prev     = vals.at(-2);
-
-      el._wl_values = vals;
+      el._wl_values   = vals;
       if (io) io.observe(el); else requestAnimationFrame(() => drawSpark(spark, vals));
 
-      updateCardFromLive(el);
-      startWatchlistTicker();
+      // live label (sandbox: bierzemy „ostatni”)
+      const last = vals.at(-1), prev = vals.at(-2) ?? last;
+      const cur  = (item.type==='fx')
+        ? priceOfFx(item.base,item.quote,last)
+        : priceOfStock(item.symbol,last);
+      p.textContent = fmt(cur);
+      const ch = cur - prev;
+      const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
+      d.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+      d.className   = 'wl-diff ' + (ch>=0 ? 'pos' : 'neg');
     } else {
       p.textContent='—'; d.textContent='—';
     }
 
     el.addEventListener('click', ()=> openModal(item));
-    removeBtn.addEventListener('click', (e)=>{ 
-      e.stopPropagation();
-      watchlist.splice(idx, 1);
-      saveLS(); 
-      render();
-    });
+    removeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); watchlist.splice(idx, 1); saveLS(); render(); });
   }
 
   function render(){
@@ -4168,10 +3955,25 @@ window.addEventListener('DOMContentLoaded', () => {
       .forEach((item, idx) => mountCard(item, idx));
   }
 
-  // ---------- MODAL (per-range; fast intraday) ----------
-  let MODAL_TICK = null;
-  let MODAL_HEAD_TICK = null;
+  // ---------- MODAL (1D/5D/1M/6M/1Y) ----------
   let MODAL_CUR_LABEL = null;
+
+  function normRangeLabel(x){
+    const s=String(x||'').toUpperCase().trim();
+    return (s==='1D'||s==='5D'||s==='1M'||s==='6M'||s==='1Y') ? s : '1D';
+  }
+
+  function computeRangeParams(lbl){
+    const L = normRangeLabel(lbl);
+    if (L==='1D') return { range:'1d', intervals:['5m'] };
+    if (L==='5D') return { range:'5d', intervals:['5m'] };
+    if (L==='1M') return { range:'1mo',intervals:['1d'] };
+    if (L==='6M') return { range:'6mo',intervals:['1d'] };
+    if (L==='1Y') return { range:'1y', intervals:['1d'] };
+    return { range:'1d', intervals:['5m'] };
+  }
+
+  function yahooFxSymbol(base, quote){ return `${String(base).toUpperCase()}${String(quote).toUpperCase()}=X`; }
 
   function openModal(item){
     if (!$modal) return;
@@ -4179,62 +3981,21 @@ window.addEventListener('DOMContentLoaded', () => {
     const ttl = item.type==='fx' ? `${item.base}/${item.quote}` : item.symbol.toUpperCase();
     $title.textContent = ttl;
 
-    // usuń YTD/5Y jeżeli istnieją
-    $modal.querySelectorAll('.wl-range button[data-range="YTD"], .wl-range button[data-range="5Y"]').forEach(b=>b.remove());
-
     const ranges = $modal.querySelectorAll('.wl-range button');
     const isFx   = (item.type === 'fx');
-    const modalSeriesCache = new Map(); // label -> {dates(ms), values}
+    const modalSeries = new Map(); // label -> {dates, values}
 
     async function fetchRange(label){
       const L = normRangeLabel(label);
-      if (modalSeriesCache.has(L)) return modalSeriesCache.get(L);
-
-      const span = spanFor(L);
+      if (modalSeries.has(L)) return modalSeries.get(L);
+      const { range, intervals } = computeRangeParams(L);
       const ySym = isFx ? yahooFxSymbol(item.base, item.quote) : ttl;
 
-      // 1) Yahoo (intraday/daily) — „do teraz”
-      const y = await yahooChart(ySym, span.range, span.intervals);
-      if (y && y.dates?.length >= 2){
-        const out = {dates: y.dates, values: y.closes};
-        modalSeriesCache.set(L, out);
-        return out;
-      }
-
-      // 2) Fallback z dziennych: potnij sensownie
-      const daily = isFx ? await fxHistory(item.base,item.quote, 365*5)
-                         : await stockHistory(item.symbol, 365*5);
-      const sliced = sliceByRangeDaily(daily.dates, daily.closes, L);
-      modalSeriesCache.set(L, sliced);
-      return sliced;
-    }
-
-    function sliceByRangeDaily(dates, closes, L){
-      const len = dates.length;
-      if (!len) return {dates:[], values:[]};
-      const toMs = d => +new Date(d);
-
-      // MINIMUM 2 PUNKTY dla 1D (fix „Brak danych”)
-      if (L==='1D'){ const n=Math.min(2, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
-
-      if (L==='5D'){
-        const want = 5;
-        const outD=[], outV=[];
-        let lastKey='';
-        for (let i=len-1;i>=0 && outD.length<want;i--){
-          const d = new Date(dates[i]);
-          const key = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-          if (key !== lastKey && Number.isFinite(closes[i])) {
-            outD.push(dates[i]); outV.push(closes[i]); lastKey=key;
-          }
-        }
-        outD.reverse(); outV.reverse();
-        return {dates: outD.map(toMs), values: outV};
-      }
-      if (L==='1M'){ const n=Math.min(31, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
-      if (L==='6M'){ const cut=Math.max(0,len-183); const d2=dates.slice(cut), v2=closes.slice(cut); const r=resample(d2,v2,'W'); return {dates:r.dates.map(toMs), values:r.values}; }
-      if (L==='1Y'){ const cut=Math.max(0,len-365); const d2=dates.slice(cut), v2=closes.slice(cut); const r=resample(d2,v2,'W'); return {dates:r.dates.map(toMs), values:r.values}; }
-      return {dates:dates.map(toMs), values:[...closes]};
+      // SANDBOX „yahoo”
+      const y = await yahooChart(ySym, range, intervals);
+      const out = { dates: y.dates, values: y.closes };
+      modalSeries.set(L, out);
+      return out;
     }
 
     function paint(datesMs, values, label){
@@ -4256,49 +4017,8 @@ window.addEventListener('DOMContentLoaded', () => {
       $mChg.style.color = ch>=0 ? 'var(--ok)' : '#b91c1c';
 
       drawBig($big, datesMs, values, label);
-
-      // zapamiętaj końcówkę serii dla "żywego" headera
       $big._seriesLast = values.at(-1);
       $big._seriesPrev = values.at(-2) ?? values.at(-1);
-    }
-
-    // auto-refresh modala
-    function refreshDelay(label){
-      const L = normRangeLabel(label);
-      return (L === '1D' || L === '5D') ? 30_000 : 300_000; // 30s / 5min
-    }
-    async function refreshCurrentRange(){
-      if (!MODAL_CUR_LABEL) return;
-      const {dates, values} = await fetchRange(MODAL_CUR_LABEL);
-      paint(dates, values, MODAL_CUR_LABEL);
-    }
-    function startModalAuto(){
-      stopModalAuto();
-      const delay = refreshDelay(MODAL_CUR_LABEL || '1D');
-      MODAL_TICK = setInterval(refreshCurrentRange, delay);
-    }
-    function stopModalAuto(){
-      if (MODAL_TICK){ clearInterval(MODAL_TICK); MODAL_TICK = null; }
-    }
-
-    // live header tick (bez malowania canvas)
-    function startModalHead(){
-      stopModalHead();
-      MODAL_HEAD_TICK = setInterval(() => {
-        const cur = $big?._seriesLast;
-        if (cur == null) return;
-        let last = cur, prev = $big?._seriesPrev ?? cur;
-        last = isFx ? priceOfFx(item.base, item.quote, last) : priceOfStock(item.symbol, last);
-        if (!Number.isFinite(last)) return;
-        $mPrice.textContent = fmt(last);
-        const ch = last - prev;
-        const pc = (prev && prev!==0) ? (ch/prev)*100 : 0;
-        $mChg.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
-        $mChg.style.color = ch>=0 ? 'var(--ok)' : '#b91c1c';
-      }, 2000);
-    }
-    function stopModalHead(){
-      if (MODAL_HEAD_TICK){ clearInterval(MODAL_HEAD_TICK); MODAL_HEAD_TICK = null; }
     }
 
     async function setRange(btn){
@@ -4308,50 +4028,28 @@ window.addEventListener('DOMContentLoaded', () => {
       MODAL_CUR_LABEL = label;
       const {dates, values} = await fetchRange(label);
       paint(dates, values, label);
-      startModalAuto();
     }
 
     const def = $modal.querySelector('.wl-range button[data-range]') || ranges[0];
     setRange(def);
-    startModalHead();
 
-    // pauza, gdy karta ukryta
-    const onVis = () => {
-      if ($modal.getAttribute('aria-hidden') === 'false') {
-        if (document.hidden) { stopModalAuto(); stopModalHead(); }
-        else { startModalAuto(); startModalHead(); }
-      }
-    };
-    document.addEventListener('visibilitychange', onVis, { passive:true });
-
-    // sprzątanie przy zamknięciu
-    const closeModal = () => {
-      $modal.setAttribute('aria-hidden','true');
-      stopModalAuto();
-      stopModalHead();
-      document.removeEventListener('visibilitychange', onVis, { passive:true });
-    };
+    const closeModal = () => { $modal.setAttribute('aria-hidden','true'); };
     $modal?.querySelector('.wl-close')?.addEventListener('click', closeModal, { once:true });
     $modal?.querySelector('.wl-modal__backdrop')?.addEventListener('click', closeModal, { once:true });
 
-    // przypnij obsługę kliknięć zakresów (po otwarciu modala)
     Array.from(ranges).forEach(btn => btn.onclick = () => setRange(btn));
   }
 
-  // ---------- PICKER ----------
-  function fillPicker(){
-    if (!$pick) return;
-    const arr = mode==='fx' ? FX_ALL : STOCKS_ALL;
-    $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
-  }
+  // ---------- TABS / TRYB ----------
   function applyMode(next){
     mode = next;
     filter = next;
     fillPicker(); render();
     if ($wlTabs){
-      $wlTabs.querySelectorAll('button').forEach(b=> 
-        b.classList.toggle('is-active', b.dataset.filter===filter || (filter==='stock' && b.dataset.filter==='stocks'))
-      );
+      $wlTabs.querySelectorAll('button').forEach(b => {
+        const on = b.dataset.filter===filter || (filter==='stock' && b.dataset.filter==='stocks');
+        b.classList.toggle('is-active', on);
+      });
     }
   }
   document.querySelectorAll('[data-tab]').forEach(btn=>{
@@ -4363,8 +4061,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   if ($wlTabs){
     $wlTabs.addEventListener('click', (e)=>{
-      const b = e.target.closest('button[data-filter]');
-      if (!b) return;
+      const b = e.target.closest('button[data-filter]'); if (!b) return;
       const f = b.dataset.filter;
       if (f==='all'){ filter='all'; fillPicker(); render(); }
       if (f==='stocks'){ applyMode('stock'); }
@@ -4375,18 +4072,18 @@ window.addEventListener('DOMContentLoaded', () => {
   // ---------- ADD ----------
   $form?.addEventListener('submit', e=>{
     e.preventDefault();
-    const val = $pick?.value;
-    if (!val) return;
+    const val = $pick?.value; if (!val) return;
     if (mode==='fx'){
-      const p = parsePair(val); if (!p) return;
-      watchlist.unshift({type:'fx', base:p.base, quote:p.quote});
+      const [base, quote] = val.split('/');
+      if (!base || !quote) return;
+      watchlist.unshift({type:'fx', base, quote});
     } else {
       watchlist.unshift({type:'stock', symbol: val.toUpperCase()});
     }
     saveLS(); render();
   });
 
-  // ---------- RESIZE ----------
+  // ---------- RESIZE redraw ----------
   let _rTO=null;
   window.addEventListener('resize', () => {
     clearTimeout(_rTO);
@@ -4404,9 +4101,6 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
-
-
-
 
 
 /* =========================================================================
