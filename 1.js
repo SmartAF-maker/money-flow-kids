@@ -4088,7 +4088,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       if (key) map.set(key, {date: dates[i], val: values[i]});
     }
-    [...map.values()].sort((a,b)=> a.date.localeCompare(b.date)).forEach(o=>{ outD.push(o.date); out.push(o.val); });
+    Array.from(map.values()).sort((a,b)=> a.date.localeCompare(b.date)).forEach(o=>{ outD.push(o.date); out.push(o.val); });
     return {dates: outD, values: out};
   }
 
@@ -4214,7 +4214,9 @@ window.addEventListener('DOMContentLoaded', () => {
       if (!len) return {dates:[], values:[]};
       const toMs = d => +new Date(d);
 
-      if (L==='1D'){ const n=Math.min(1, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
+      // MINIMUM 2 PUNKTY dla 1D (fix „Brak danych”)
+      if (L==='1D'){ const n=Math.min(2, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
+
       if (L==='5D'){
         const want = 5;
         const outD=[], outV=[];
@@ -4402,6 +4404,7 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
+
 
 
 
