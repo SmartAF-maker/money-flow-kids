@@ -4098,6 +4098,7 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 
 
+
 /* =========================================================================
  * Money Flow Kids — AI Agent v6.3 (compact header + laptop size + robust FAB)
  * ========================================================================= */

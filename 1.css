@@ -3696,10 +3696,21 @@ width: 110px;
 .ai-faq-list{ display:grid; gap:6px; max-height:160px; overflow:auto; }
 .ai-faq-i{ background:#0f172a; border:1px solid #1f2937; padding:6px 8px; border-radius:8px; cursor:pointer; }
 .ai-faq-i:hover{ background:#111f34; }
-
-/* === Titles: Net Worth & Available Cash na zielono (jak kwoty) === */
-/* Działa nowocześnie i bez zmian w HTML – wykorzystuje :has() */
-.card:has(#netWorthVal) .title,
-.card:has(#availableCashVal) .title {
-  color: var(--ok) !important; /* #22c55e */
+/* === Kolory nagłówków w dolnych kartach === */
+.card:nth-of-type(1) strong {
+  color: var(--ok) !important;   /* Net Worth = zielony */
 }
+
+.card:nth-of-type(2) strong {
+  color: #facc15 !important;     /* Available Cash = jasno żółty */
+}
+/* Zielony nagłówek dla Net Worth */
+.card:nth-of-type(1) > *:first-child {
+  color: var(--ok) !important;
+}
+
+/* Żółty nagłówek dla Available Cash */
+.card:nth-of-type(2) > *:first-child {
+  color:  #dee792!important;
+}
+
