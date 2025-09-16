@@ -3696,21 +3696,14 @@ width: 110px;
 .ai-faq-list{ display:grid; gap:6px; max-height:160px; overflow:auto; }
 .ai-faq-i{ background:#0f172a; border:1px solid #1f2937; padding:6px 8px; border-radius:8px; cursor:pointer; }
 .ai-faq-i:hover{ background:#111f34; }
-/* === Kolory nagłówków w dolnych kartach === */
-.card:nth-of-type(1) strong {
-  color: var(--ok) !important;   /* Net Worth = zielony */
+
+/* --- ONLY headers in summary cards --- */
+/* Karta zawierająca #netWorth -> pierwszy nagłówek na zielono */
+.card:has(#netWorth) > :is(h1,h2,h3,h4,strong,.title):first-child {
+  color: var(--ok) !important; /* #22c55e */
 }
 
-.card:nth-of-type(2) strong {
-  color: #facc15 !important;     /* Available Cash = jasno żółty */
+/* Karta zawierająca #availableCash -> pierwszy nagłówek na jasno żółto */
+.card:has(#availableCash) > :is(h1,h2,h3,h4,strong,.title):first-child {
+  color:  #dee792 !important;
 }
-/* Zielony nagłówek dla Net Worth */
-.card:nth-of-type(1) > *:first-child {
-  color: var(--ok) !important;
-}
-
-/* Żółty nagłówek dla Available Cash */
-.card:nth-of-type(2) > *:first-child {
-  color:  #dee792!important;
-}
-

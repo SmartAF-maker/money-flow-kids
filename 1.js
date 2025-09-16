@@ -3606,7 +3606,7 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-/// ===== WATCHLIST (stocks + FX) — prices unified with PRICE_HUB + sandbox charts =====
+/// ===== WATCHLIST (stocks + FX) — unified w/ PRICE_HUB + dynamic X-axis =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
 
@@ -3632,8 +3632,8 @@ window.addEventListener('DOMContentLoaded', () => {
   ];
 
   // ---------- STATE ----------
-  let mode   = 'stock';  // 'stock' | 'fx'
-  let filter = 'stock';  // 'all' | 'stock' | 'fx'
+  let mode   = 'stock';
+  let filter = 'stock';
   let watchlist = loadLS();
 
   function loadLS(){
@@ -3651,10 +3651,28 @@ window.addEventListener('DOMContentLoaded', () => {
   const MONTHS= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const fmt   = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
 
-  const seedRng = s => { let h=2166136261>>>0; for (let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);} return ()=>{h+=0x6D2B79F5;let t=Math.imul(h^(h>>>15),1|h);t^=t+Math.imul(t^(t>>>7),61|t);return((t^(t>>>14))>>>0)/4294967296;}; };
+  function seedRng(s){
+    let h = 2166136261>>>0;
+    for (let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return function(){
+      h += 0x6D2B79F5; let t = Math.imul(h^(h>>>15), 1|h);
+      t ^= t + Math.imul(t^(t>>>7), 61|t);
+      return ((t^(t>>>14))>>>0)/4294967296;
+    };
+  }
   const basePriceStock = sym => { const r=seedRng('STK:'+String(sym).toUpperCase()); return 40+Math.floor(r()*360); };
   const basePriceFx    = (a,b)=>{ const p=`${a}/${b}`.toUpperCase(); const presets={'EUR/USD':1.10,'USD/EUR':0.91,'USD/PLN':4.0,'EUR/PLN':4.35,'GBP/USD':1.26,'USD/JPY':150,'EUR/JPY':165,'CHF/PLN':4.6,'AUD/USD':0.66,'NZD/USD':0.60}; if(presets[p]!=null) return presets[p]; const r=seedRng('FX:'+p); if(/JPY$/.test(p)) return 120+Math.floor(r()*80); if(/PLN$/.test(p)) return 3.5+r()*1.2; return 0.8+r()*0.6; };
-  function genSeries({points, stepMs, start, drift, vol}){ const dates=new Array(points), values=new Array(points); const r=seedRng(JSON.stringify({points,stepMs,start,drift,vol})); let x=start, t0=Date.now()-points*stepMs; for(let i=0;i<points;i++){ const shock=(r()*2-1)*vol*x; const trend=drift*x; x=Math.max(0.01, x+shock+trend); dates[i]=t0+i*stepMs; values[i]=+x.toFixed(4);} return {dates, values}; }
+  function genSeries({points, stepMs, start, drift, vol}){
+    const dates=new Array(points), values=new Array(points);
+    const r=seedRng(JSON.stringify({points,stepMs,start,drift,vol}));
+    let x=start, t0=Date.now()-points*stepMs;
+    for(let i=0;i<points;i++){
+      const shock=(r()*2-1)*vol*x; const trend=drift*x;
+      x=Math.max(0.01, x+shock+trend);
+      dates[i]=t0+i*stepMs; values[i]=+x.toFixed(4);
+    }
+    return {dates, values};
+  }
   const span = L => { L=String(L||'1D').toUpperCase(); if(L==='1D') return {points:78, step:5*60*1000}; if(L==='5D') return {points:78*5, step:5*60*1000}; if(L==='1M') return {points:22, step:24*60*60*1000}; if(L==='6M') return {points:26, step:7*24*60*60*1000}; if(L==='1Y'||L==='YTD') return {points:52, step:7*24*60*1000}; return {points:78, step:5*60*1000}; };
 
   async function yahooChart(symbol, range){
@@ -3677,7 +3695,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return { dates:g.dates.map(toISO), closes:g.values };
   }
 
-  // ---------- unified spot (HUB + fallback) ----------
+  // ---------- unified spot ----------
   const normalizeSymbol = s => String(s||'').toUpperCase().replace(/\.US$/,'');
   function hubSpotStock(sym, fallback){
     const S = normalizeSymbol(sym);
@@ -3708,7 +3726,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return Number.isFinite(fallback) ? fallback : basePriceFx(base, quote);
   }
 
-  // ---------- picker FX ----------
+  // ---------- picker ----------
   function safeISO(){ return (Array.isArray(window.ISO)&&window.ISO.length) ? window.ISO : ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD','SEK','NOK','CZK','HUF']; }
   function safeQuote(){ const q=(typeof window.fxQuote==='function')?window.fxQuote():'USD'; return (q||'USD').toUpperCase(); }
   function fillPicker(){
@@ -3722,8 +3740,110 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ---------- X-ticks (Mon..Fri, dynamic months) ----------
+  function computeXTicks(datesMs, rangeLabel){
+    const out = [];
+    if (!datesMs?.length) return out;
+    const L = String(rangeLabel||'').toUpperCase();
+
+    const lowerBound = (arr,x)=>{
+      let lo=0,hi=arr.length-1,ans=arr.length-1;
+      while(lo<=hi){
+        const m=(lo+hi)>>1;
+        if(arr[m]<x) lo=m+1; else { ans=m; hi=m-1; }
+      }
+      return Math.max(0,Math.min(ans,arr.length-1));
+    };
+
+    // 1D – co godzinę
+    if (L==='1D'){
+      const first = datesMs[0], last = datesMs.at(-1);
+      const d = new Date(first); d.setMinutes(0,0,0);
+      const ticks=[];
+      while(d.getTime()<=last){ ticks.push(d.getTime()); d.setHours(d.getHours()+1); }
+      const step=Math.max(1,Math.ceil(ticks.length/7));
+      for(let i=0;i<ticks.length;i+=step){
+        const t=ticks[i], idx=lowerBound(datesMs,t);
+        const hh=pad2(new Date(t).getHours()), mm=pad2(new Date(t).getMinutes());
+        out.push({ i: idx, lbl: `${hh}:${mm}` });
+      }
+      return out;
+    }
+
+    // 5D – Mon..Fri (ostatnie 5 dni roboczych)
+    if (L==='5D'){
+      const lastTs = datesMs.at(-1);
+      const d = new Date(lastTs); d.setHours(0,0,0,0);
+      const days=[];
+      while(days.length<5){
+        const wd = d.getDay();
+        if (wd!==0 && wd!==6) days.push(new Date(d.getTime()));
+        d.setDate(d.getDate()-1);
+      }
+      days.reverse();
+      for(const day of days){
+        const idx=lowerBound(datesMs, day.getTime());
+        out.push({ i: idx, lbl: WDAYS[day.getDay()] });
+      }
+      return out;
+    }
+
+    // helpers miesięcy
+    const monthStart = (y,m)=>{ const d=new Date(y,m,1); d.setHours(0,0,0,0); return d.getTime(); };
+    function ticksPrevAndCurrentMonth(){
+      const now=new Date();
+      const prev=new Date(now.getFullYear(), now.getMonth()-1, 1);
+      const curr=new Date(now.getFullYear(), now.getMonth(),   1);
+      return [
+        { y:prev.getFullYear(), m:prev.getMonth(), lbl:MONTHS[prev.getMonth()] },
+        { y:curr.getFullYear(), m:curr.getMonth(), lbl:MONTHS[curr.getMonth()] },
+      ];
+    }
+    function ticksLastNMonths(n){
+      const now=new Date(); const arr=[];
+      for(let k=n-1;k>=0;k--){
+        const d=new Date(now.getFullYear(), now.getMonth()-k, 1);
+        arr.push({ y:d.getFullYear(), m:d.getMonth(), lbl:MONTHS[d.getMonth()] });
+      }
+      return arr;
+    }
+    function ticksYTD(){
+      const now=new Date(); const arr=[];
+      for(let m=0;m<=now.getMonth();m++) arr.push({ y:now.getFullYear(), m, lbl:MONTHS[m] });
+      return arr;
+    }
+    function ticks1Y(){
+      const arr=ticksLastNMonths(12);
+      arr[0].lbl = `${arr[0].lbl} ${arr[0].y}`;
+      arr[arr.length-1].lbl = `${arr.at(-1).lbl} ${arr.at(-1).y}`;
+      return arr;
+    }
+
+    let plan=[];
+    if (L==='1M')      plan = ticksPrevAndCurrentMonth();
+    else if (L==='6M') plan = ticksLastNMonths(6);
+    else if (L==='YTD')plan = ticksYTD();
+    else if (L==='1Y') plan = ticks1Y();
+
+    if (plan.length){
+      for(const m of plan){
+        const idx=lowerBound(datesMs, monthStart(m.y,m.m));
+        out.push({ i: idx, lbl: m.lbl });
+      }
+      const seen=new Set(), uniq=[];
+      for(const t of out){ if(!seen.has(t.i)){ uniq.push(t); seen.add(t.i); } }
+      return uniq;
+    }
+
+    return out;
+  }
+
   // ---------- rysowanie ----------
-  function _domain(values){ let lo=Math.min(...values), hi=Math.max(...values); if (lo===hi){ const pad=Math.max(1,Math.abs(hi)*0.005); lo-=pad; hi+=pad; } return {lo,hi}; }
+  function _domain(values){
+    let lo=Math.min(...values), hi=Math.max(...values);
+    if (lo===hi){ const pad=Math.max(1,Math.abs(hi)*0.005); lo-=pad; hi+=pad; }
+    return {lo,hi};
+  }
   function drawSpark(c, values){
     const cssW=c.clientWidth||c.offsetWidth||220, cssH=c.clientHeight||38;
     c.width=Math.max(220,cssW)*DPR; c.height=cssH*DPR;
@@ -3738,116 +3858,45 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.lineWidth=2*DPR; ctx.strokeStyle=up?"#00ff6a":"#b91c1c"; ctx.stroke();
   }
 
-  // ====== ZMIENIONA OŚ X (Mon..Fri, 6M/YTD/1Y zakotwiczone do teraz) ======
-  function computeXTicks(datesMs, rangeLabel){
-    const out = [];
-    if (!datesMs?.length) return out;
-
-    const lowerBound = (arr, x) => {
-      let lo = 0, hi = arr.length - 1, ans = arr.length - 1;
-      while (lo <= hi) {
-        const m = (lo + hi) >> 1;
-        if (arr[m] < x) lo = m + 1;
-        else { ans = m; hi = m - 1; }
-      }
-      return Math.max(0, Math.min(ans, arr.length - 1));
-    };
-
-    const L = String(rangeLabel || '').toUpperCase();
-
-    // 1D – co godzinę
-    if (L === '1D') {
-      const first = datesMs[0], last = datesMs.at(-1);
-      const d = new Date(first); d.setMinutes(0,0,0);
-      const ticks = [];
-      while (d.getTime() <= last) { ticks.push(d.getTime()); d.setHours(d.getHours() + 1); }
-      const step = Math.max(1, Math.ceil(ticks.length / 7));
-      for (let i = 0; i < ticks.length; i += step) {
-        const t = ticks[i], idx = lowerBound(datesMs, t);
-        const hh = pad2(new Date(t).getHours()), mm = pad2(new Date(t).getMinutes());
-        out.push({ i: idx, lbl: `${hh}:${mm}` });
-      }
-      return out;
-    }
-
-    // 5D – dni tygodnia Mon..Fri (z danych)
-    if (L === '5D') {
-      let lastKey = '';
-      const dayStarts = [];
-      for (let i = 0; i < datesMs.length; i++) {
-        const d = new Date(datesMs[i]);
-        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        if (key !== lastKey) { dayStarts.push({ i, d }); lastKey = key; }
-      }
-      const part = dayStarts.slice(-5);
-      for (const { i, d } of part) out.push({ i, lbl: WDAYS[d.getDay()] });
-      return out;
-    }
-
-    // helpers miesięcy
-    function monthStart(y, m){ const d = new Date(y, m, 1); d.setHours(0,0,0,0); return d.getTime(); }
-    function seqMonthsBack(count){
-      const now = new Date(); const arr = [];
-      for (let k = count-1; k >= 0; k--){
-        const d = new Date(now.getFullYear(), now.getMonth()-k, 1);
-        arr.push({ y:d.getFullYear(), m:d.getMonth(), lbl: MONTHS[d.getMonth()] });
-      }
-      return arr;
-    }
-    function seqYTD(){
-      const now = new Date(); const arr = [];
-      for (let m = 0; m <= now.getMonth(); m++){
-        arr.push({ y: now.getFullYear(), m, lbl: MONTHS[m] });
-      }
-      return arr;
-    }
-    function seq1Y(){
-      const now = new Date(); const arr = [];
-      for (let k = 11; k >= 0; k--){
-        const d = new Date(now.getFullYear(), now.getMonth()-k, 1);
-        arr.push({ y:d.getFullYear(), m:d.getMonth(), lbl: MONTHS[d.getMonth()] });
-      }
-      // dodaj rok na skrajach
-      arr[0].lbl = `${arr[0].lbl} ${arr[0].y}`;
-      arr[arr.length-1].lbl = `${arr.at(-1).lbl} ${arr.at(-1).y}`;
-      return arr;
-    }
-
-    let monthsPlan = [];
-    if (L === '1M') monthsPlan = seqMonthsBack(5);     // curr-4 .. curr
-    else if (L === '6M') monthsPlan = seqMonthsBack(6);// curr-5 .. curr
-    else if (L === 'YTD') monthsPlan = seqYTD();       // Jan .. curr
-    else if (L === '1Y') monthsPlan = seq1Y();         // curr-11 .. curr
-
-    if (monthsPlan.length) {
-      for (const m of monthsPlan) {
-        const t = monthStart(m.y, m.m);
-        const idx = lowerBound(datesMs, t);
-        out.push({ i: idx, lbl: m.lbl });
-      }
-      // usuń duplikaty
-      const seen = new Set(); const uniq = [];
-      for (const tick of out) {
-        if (!seen.has(tick.i)) { uniq.push(tick); seen.add(tick.i); }
-      }
-      return uniq;
-    }
-
-    return out;
-  }
-
   function drawBig(c, datesMs, values, label){
     const cssW=c.clientWidth||720, cssH=280; c.width=cssW*DPR; c.height=cssH*DPR;
     const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); if(!values||values.length<2) return;
     const left=56*DPR, right=16*DPR, top=16*DPR, bottom=44*DPR;
     const {lo:min, hi:max}=_domain(values); const w=c.width-left-right, h=c.height-top-bottom; const stepX=w/(values.length-1); const y=v=>c.height-bottom-((v-min)/(max-min||1))*h;
-    ctx.strokeStyle='rgba(35,48,77,0.9)'; ctx.lineWidth=1*DPR; for(let i=0;i<=4;i++){ const yy=top+i*h/4; ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(left+w,yy); ctx.stroke();}
-    ctx.fillStyle='#9ca3af'; ctx.font=`${12*DPR}px system-ui,sans-serif`; ctx.textBaseline='middle'; const mid=(min+max)/2; ctx.fillText(min.toFixed(2),8*DPR,y(min)); ctx.fillText(mid.toFixed(2),8*DPR,y(mid)); ctx.fillText(max.toFixed(2),8*DPR,y(max));
-    const ticks=computeXTicks(datesMs,label); ctx.textAlign='center'; ctx.textBaseline='top';
-    for(const t of ticks){ const xx=left+t.i*stepX; ctx.beginPath(); ctx.moveTo(xx,top); ctx.lineTo(xx,top+h); ctx.strokeStyle='rgba(35,48,77,0.45)'; ctx.stroke(); ctx.fillStyle='#9ca3af'; ctx.fillText(t.lbl, xx, c.height-bottom+10*DPR); }
-    const up=values.at(-1)>=values[0]; ctx.beginPath(); ctx.moveTo(left,y(values[0])); values.forEach((v,i)=>ctx.lineTo(left+i*stepX,y(v))); ctx.lineTo(left+w,c.height-bottom); ctx.lineTo(left,c.height-bottom); ctx.closePath();
-    const grad=ctx.createLinearGradient(0,top,0,c.height-bottom); if(up){grad.addColorStop(0,"rgba(0,200,255,0.35)");grad.addColorStop(1,"rgba(0,200,255,0.08)");} else {grad.addColorStop(0,"rgba(153,27,27,0.45)");grad.addColorStop(1,"rgba(244,114,182,0.12)");}
-    ctx.fillStyle=grad; ctx.fill(); ctx.beginPath(); ctx.moveTo(left,y(values[0])); values.forEach((v,i)=>ctx.lineTo(left+i*stepX,y(v))); ctx.lineWidth=2*DPR; ctx.strokeStyle=up?"#00ff6a":"#b91c1c"; ctx.stroke();
+
+    // grid Y
+    ctx.strokeStyle='rgba(35,48,77,0.9)'; ctx.lineWidth=1*DPR;
+    for(let i=0;i<=4;i++){ const yy=top+i*h/4; ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(left+w,yy); ctx.stroke(); }
+
+    // Y labels
+    ctx.fillStyle='#9ca3af'; ctx.font=`${12*DPR}px system-ui,sans-serif`; ctx.textBaseline='middle';
+    const mid=(min+max)/2;
+    ctx.fillText(min.toFixed(2),8*DPR,y(min));
+    ctx.fillText(mid.toFixed(2),8*DPR,y(mid));
+    ctx.fillText(max.toFixed(2),8*DPR,y(max));
+
+    // X ticks
+    const ticks=computeXTicks(datesMs,label);
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    for(const t of ticks){
+      const xx=left+t.i*stepX;
+      ctx.beginPath(); ctx.moveTo(xx,top); ctx.lineTo(xx,top+h); ctx.strokeStyle='rgba(35,48,77,0.45)'; ctx.stroke();
+      ctx.fillStyle='#9ca3af'; ctx.fillText(t.lbl, xx, c.height-bottom+10*DPR);
+    }
+
+    // area + line
+    const up=values.at(-1)>=values[0];
+    ctx.beginPath(); ctx.moveTo(left, y(values[0]));
+    values.forEach((v,i)=> ctx.lineTo(left+i*stepX, y(v)));
+    ctx.lineTo(left+w, c.height-bottom); ctx.lineTo(left, c.height-bottom); ctx.closePath();
+    const grad=ctx.createLinearGradient(0,top,0,c.height-bottom);
+    if(up){grad.addColorStop(0,"rgba(0,200,255,0.35)");grad.addColorStop(1,"rgba(0,200,255,0.08)");}
+    else {grad.addColorStop(0,"rgba(153,27,27,0.45)");grad.addColorStop(1,"rgba(244,114,182,0.12)");}
+    ctx.fillStyle=grad; ctx.fill();
+
+    ctx.beginPath(); ctx.moveTo(left,y(values[0]));
+    values.forEach((v,i)=> ctx.lineTo(left+i*stepX,y(v)));
+    ctx.lineWidth=2*DPR; ctx.strokeStyle=up?"#00ff6a":"#b91c1c"; ctx.stroke();
   }
 
   // ---------- karty ----------
@@ -3868,7 +3917,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function hubKeyFor(item){
     if (item.type==='stock') return normalizeSymbol(item.symbol);
     const k = `${item.base}${item.quote}`.toUpperCase();
-    return [k, k+'=X']; // dwie możliwe konwencje
+    return [k, k+'=X'];
   }
 
   function applyLiveToCard(el, cur, prev){
@@ -3914,12 +3963,10 @@ window.addEventListener('DOMContentLoaded', () => {
       el._wl_values   = vals;
       if (io) io.observe(el); else requestAnimationFrame(() => drawSpark(spark, vals));
 
-      // pierwszy render z HUB-a
       const last = vals.at(-1), prev = vals.at(-2) ?? last;
       const cur  = (item.type==='fx') ? hubSpotFx(item.base,item.quote,last) : hubSpotStock(item.symbol,last);
       applyLiveToCard(el, cur, prev);
 
-      // subskrypcja HUB-a (live)
       const unsub = (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function')
         ? window.PRICE_HUB.subscribe((key,val) => {
             const keys = hubKeyFor(item);
@@ -3963,14 +4010,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const ranges = $modal.querySelectorAll('.wl-range button');
     const isFx   = (item.type === 'fx');
-    const modalSeries = new Map(); // label -> {dates, values}
+    const modalSeries = new Map();
 
     async function fetchRange(label){
       const L = normRangeLabel(label);
       if (modalSeries.has(L)) return modalSeries.get(L);
       const { range } = computeRangeParams(L);
       const ySym = isFx ? yahooFxSymbol(item.base, item.quote) : ttl;
-      const y = await yahooChart(ySym, range);    // sandbox series
+      const y = await yahooChart(ySym, range);
       const out = { dates: y.dates, values: y.closes };
       modalSeries.set(L, out);
       return out;
@@ -4000,7 +4047,6 @@ window.addEventListener('DOMContentLoaded', () => {
       $big._seriesLast = lastSeries;
       $big._seriesPrev = prevSeries;
 
-      // LIVE nagłówek – subskrybuj HUB
       stopModalLive();
       if (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function'){
         const keys = hubKeyFor(item);
@@ -4096,6 +4142,7 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
+
 
 
 
