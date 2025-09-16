@@ -3697,3 +3697,9 @@ width: 110px;
 .ai-faq-i{ background:#0f172a; border:1px solid #1f2937; padding:6px 8px; border-radius:8px; cursor:pointer; }
 .ai-faq-i:hover{ background:#111f34; }
 
+/* === Titles: Net Worth & Available Cash na zielono (jak kwoty) === */
+/* Działa nowocześnie i bez zmian w HTML – wykorzystuje :has() */
+.card:has(#netWorthVal) .title,
+.card:has(#availableCashVal) .title {
+  color: var(--ok) !important; /* #22c55e */
+}

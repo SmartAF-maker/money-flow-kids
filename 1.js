@@ -3606,10 +3606,9 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-/// ===== WATCHLIST (stocks + FX) — 100% SANDBOX (no network) =====
+/// ===== WATCHLIST (stocks + FX) — prices unified with PRICE_HUB + sandbox charts =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
-  const MFK_FORCE_SANDBOX = true; // zostaw true dopóki pracujesz na „offline”
 
   // ---------- DOM ----------
   const $panel = document.querySelector('.panel.watchlist');
@@ -3645,115 +3644,77 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function saveLS(){ localStorage.setItem(LS_KEY, JSON.stringify(watchlist)); }
 
-  // ---------- SANDBOX: RNG + generatory serii ----------
-  const DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-  const pad2 = (n)=> String(n).padStart(2,'0');
+  // ---------- sandbox series ----------
+  const DPR   = Math.min(2, Math.max(1, window.devicePixelRatio||1));
+  const pad2  = n => String(n).padStart(2,'0');
   const WDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MONTHS= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const fmt = (x)=> Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
+  const fmt   = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
 
-  function seedRng(seedStr){
-    let h = 2166136261 >>> 0;
-    for (let i=0;i<seedStr.length;i++){ h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return function(){
-      h += 0x6D2B79F5; let t = Math.imul(h ^ (h>>>15), 1 | h);
-      t ^= t + Math.imul(t ^ (t>>>7), 61 | t);
-      return ((t ^ (t>>>14)) >>> 0) / 4294967296;
-    };
-  }
-  function basePriceStock(sym){
-    sym = String(sym||'AAPL').toUpperCase();
-    const r = seedRng('STK:'+sym);
-    return 40 + Math.floor(r()*360);
-  }
-  function basePriceFx(base, quote){
-    const p = `${String(base).toUpperCase()}/${String(quote).toUpperCase()}`;
-    const presets = {
-      'EUR/USD': 1.10, 'USD/EUR': 0.91, 'USD/PLN': 4.00, 'EUR/PLN': 4.35, 'GBP/USD': 1.26,
-      'USD/JPY': 150,  'EUR/JPY': 165,  'CHF/PLN': 4.60, 'AUD/USD': 0.66, 'NZD/USD': 0.60
-    };
-    if (presets[p] != null) return presets[p];
-    const r = seedRng('FX:'+p);
-    if (/JPY$/.test(p)) return 120 + Math.floor(r()*80);
-    if (/PLN$/.test(p)) return 3.5 + r()*1.2;
-    return 0.8 + r()*0.6;
-  }
-  function genSeries({points, stepMs, start, drift, vol}){
-    const dates=new Array(points), values=new Array(points);
-    const r = seedRng(JSON.stringify({points,stepMs,start,drift,vol}));
-    let x = start, t0 = Date.now() - points*stepMs;
-    for (let i=0;i<points;i++){
-      const shock = (r()*2-1) * vol * x;
-      const trend = drift * x;
-      x = Math.max(0.01, x + shock + trend);
-      dates[i]  = t0 + i*stepMs;
-      values[i] = +x.toFixed(4);
-    }
-    return {dates, values};
-  }
-  function span(label){
-    const L = String(label||'1D').toUpperCase();
-    if (L==='1D') return { points: 78,    step: 5*60*1000 };
-    if (L==='5D') return { points: 78*5,  step: 5*60*1000 };
-    if (L==='1M') return { points: 22,    step: 24*60*60*1000 };
-    if (L==='6M') return { points: 26,    step: 7*24*60*60*1000 };
-    if (L==='1Y') return { points: 52,    step: 7*24*60*60*1000 };
-    return { points: 78, step: 5*60*1000 };
-  }
+  const seedRng = s => { let h=2166136261>>>0; for (let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);} return ()=>{h+=0x6D2B79F5;let t=Math.imul(h^(h>>>15),1|h);t^=t+Math.imul(t^(t>>>7),61|t);return((t^(t>>>14))>>>0)/4294967296;}; };
+  const basePriceStock = sym => { const r=seedRng('STK:'+String(sym).toUpperCase()); return 40+Math.floor(r()*360); };
+  const basePriceFx    = (a,b)=>{ const p=`${a}/${b}`.toUpperCase(); const presets={'EUR/USD':1.10,'USD/EUR':0.91,'USD/PLN':4.0,'EUR/PLN':4.35,'GBP/USD':1.26,'USD/JPY':150,'EUR/JPY':165,'CHF/PLN':4.6,'AUD/USD':0.66,'NZD/USD':0.60}; if(presets[p]!=null) return presets[p]; const r=seedRng('FX:'+p); if(/JPY$/.test(p)) return 120+Math.floor(r()*80); if(/PLN$/.test(p)) return 3.5+r()*1.2; return 0.8+r()*0.6; };
+  function genSeries({points, stepMs, start, drift, vol}){ const dates=new Array(points), values=new Array(points); const r=seedRng(JSON.stringify({points,stepMs,start,drift,vol})); let x=start, t0=Date.now()-points*stepMs; for(let i=0;i<points;i++){ const shock=(r()*2-1)*vol*x; const trend=drift*x; x=Math.max(0.01, x+shock+trend); dates[i]=t0+i*stepMs; values[i]=+x.toFixed(4);} return {dates, values}; }
+  const span = L => { L=String(L||'1D').toUpperCase(); if(L==='1D') return {points:78, step:5*60*1000}; if(L==='5D') return {points:78*5, step:5*60*1000}; if(L==='1M') return {points:22, step:24*60*60*1000}; if(L==='6M') return {points:26, step:7*24*60*60*1000}; if(L==='1Y'||L==='YTD') return {points:52, step:7*24*60*1000}; return {points:78, step:5*60*1000}; };
 
-  // pseudo-„Yahoo” (intraday/daily) – ale generowane lokalnie
-  async function yahooChart(symbol, range, intervals){
-    if (!MFK_FORCE_SANDBOX) { /* tu mógłby być fetch – w sandboxie pomijamy */ }
-    const s = span(range==='5d'?'5D':range==='1mo'?'1M':range==='6mo'?'6M':range==='1y'?'1Y':'1D');
+  async function yahooChart(symbol, range){
+    const s = span(range==='5d'?'5D':range==='1mo'?'1M':range==='6mo'?'6M':(range==='1y'?'1Y':(range==='ytd'?'YTD':'1D')));
     const isFx = /=X$/.test(String(symbol));
-    const start = isFx
-      ? (()=>{ const m=String(symbol).match(/^([A-Z]{3})([A-Z]{3})=X$/)||[]; return basePriceFx(m[1]||'EUR', m[2]||'USD'); })()
-      : basePriceStock(symbol);
+    const start = isFx ? (()=>{ const m=String(symbol).match(/^([A-Z]{3})([A-Z]{3})=X$/)||[]; return basePriceFx(m[1]||'EUR', m[2]||'USD'); })() : basePriceStock(symbol);
     const drift = isFx ? 0.0001 : 0.0006;
     const vol   = isFx ? 0.0025 : 0.009;
     const g = genSeries({ points:s.points, stepMs:s.step, start, drift, vol });
-    return { dates: g.dates, closes: g.values };
+    return { dates:g.dates, closes:g.values };
   }
-
-  // dzienne dla sparków
   async function stockHistory(symbol, days=420){
-    const pts = Math.max(30, Math.min(420, Math.floor(days)));
-    const g = genSeries({
-      points: pts, stepMs: 24*60*60*1000,
-      start: basePriceStock(symbol), drift: 0.0005, vol: 0.008
-    });
+    const g = genSeries({ points:Math.max(30,Math.min(420,Math.floor(days))), stepMs:24*60*60*1000, start:basePriceStock(symbol), drift:0.0005, vol:0.008 });
     const toISO = ms => new Date(ms).toISOString().slice(0,10);
-    return { dates: g.dates.map(toISO), closes: g.values };
+    return { dates:g.dates.map(toISO), closes:g.values };
   }
   async function fxHistory(base, quote, days=210){
-    const pts = Math.max(30, Math.min(420, Math.floor(days)));
-    const g = genSeries({
-      points: pts, stepMs: 24*60*60*1000,
-      start: basePriceFx(base,quote), drift: 0.00012, vol: 0.0028
-    });
+    const g = genSeries({ points:Math.max(30,Math.min(420,Math.floor(days))), stepMs:24*60*60*1000, start:basePriceFx(base,quote), drift:0.00012, vol:0.0028 });
     const toISO = ms => new Date(ms).toISOString().slice(0,10);
-    return { dates: g.dates.map(toISO), closes: g.values };
+    return { dates:g.dates.map(toISO), closes:g.values };
   }
 
-  // „live” dla kart = ostatnia znana wartość
-  function priceOfStock(sym, fallback){ return Number.isFinite(fallback) ? fallback : basePriceStock(sym); }
-  function priceOfFx(base,quote,fallback){ const p=basePriceFx(base,quote); return Number.isFinite(fallback)?fallback:p; }
+  // ---------- unified spot (HUB + fallback) ----------
+  const normalizeSymbol = s => String(s||'').toUpperCase().replace(/\.US$/,'');
+  function hubSpotStock(sym, fallback){
+    const S = normalizeSymbol(sym);
+    if (typeof window.getSpot === 'function'){ const v=Number(window.getSpot(S, NaN)); if (Number.isFinite(v)&&v>0) return v; }
+    const HUB = window.PRICE_HUB;
+    if (HUB){
+      let v = (typeof HUB.use==='function') ? HUB.use(S,null) : (typeof HUB.get==='function') ? HUB.get(S) : HUB[S];
+      if (v && typeof v==='object') v = v.price ?? v.last ?? v.value ?? null;
+      v = Number(v); if (Number.isFinite(v)&&v>0) return v;
+      let v2 = (typeof HUB.get==='function') ? HUB.get(S+'.US') : HUB[S+'.US'];
+      if (v2 && typeof v2==='object') v2 = v2.price ?? v2.last ?? v2.value ?? null;
+      v2 = Number(v2); if (Number.isFinite(v2)&&v2>0) return v2;
+    }
+    return Number.isFinite(fallback) ? fallback : basePriceStock(S);
+  }
+  function hubSpotFx(base, quote, fallback){
+    const pair = `${String(base).toUpperCase()}/${String(quote).toUpperCase()}`;
+    if (typeof window.fxRate === 'function'){ const v=Number(window.fxRate(pair)); if (Number.isFinite(v)&&v>0) return v; }
+    const HUB = window.PRICE_HUB;
+    if (HUB){
+      const k1 = pair.replace('/','');
+      const k2 = k1 + '=X';
+      let v = (typeof HUB.use==='function') ? HUB.use(k1,null) : (typeof HUB.get==='function') ? HUB.get(k1) : HUB[k1];
+      if (!Number.isFinite(v)) v = (typeof HUB.use==='function') ? HUB.use(k2,null) : (typeof HUB.get==='function') ? HUB.get(k2) : HUB[k2];
+      v = Number(v);
+      if (Number.isFinite(v) && v>0) return v;
+    }
+    return Number.isFinite(fallback) ? fallback : basePriceFx(base, quote);
+  }
 
-  // ---------- Picker FX (offline-safe) ----------
-  function safeISO(){
-    return (Array.isArray(window.ISO) && window.ISO.length)
-      ? window.ISO
-      : ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD','SEK','NOK','CZK','HUF'];
-  }
-  function safeQuote(){
-    const q = (typeof window.fxQuote==='function') ? window.fxQuote() : 'USD';
-    return (q||'USD').toUpperCase();
-  }
+  // ---------- picker FX ----------
+  function safeISO(){ return (Array.isArray(window.ISO)&&window.ISO.length) ? window.ISO : ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD','SEK','NOK','CZK','HUF']; }
+  function safeQuote(){ const q=(typeof window.fxQuote==='function')?window.fxQuote():'USD'; return (q||'USD').toUpperCase(); }
   function fillPicker(){
     if (!$pick) return;
     if (mode==='fx'){
-      const ISO = safeISO();
-      const quote = safeQuote();
+      const ISO = safeISO(); const quote = safeQuote();
       const arr = ISO.filter(c => c!==quote).map(b => `${b}/${quote}`);
       $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
     } else {
@@ -3761,51 +3722,47 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ---------- RYSOWANIE ----------
-  function _domain(values){
-    let lo = Math.min(...values), hi = Math.max(...values);
-    if (lo === hi) { const pad = Math.max(1, Math.abs(hi) * 0.005); lo -= pad; hi += pad; }
-    return {lo, hi};
-  }
+  // ---------- rysowanie ----------
+  function _domain(values){ let lo=Math.min(...values), hi=Math.max(...values); if (lo===hi){ const pad=Math.max(1,Math.abs(hi)*0.005); lo-=pad; hi+=pad; } return {lo,hi}; }
   function drawSpark(c, values){
-    const cssW = c.clientWidth || c.offsetWidth || 220;
-    const cssH = c.clientHeight || 38;
-    c.width  = Math.max(220, cssW) * DPR;
-    c.height = cssH * DPR;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0,0,c.width,c.height);
-    if (!values || values.length < 2) return;
-    const {lo:min, hi:max} = _domain(values);
-    const pad = c.height*0.18;
-    const step = (c.width)/(values.length-1);
-    const yy = v => c.height - ((v-min)/(max-min||1))*(c.height-pad*2) - pad;
-
-    ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
-    values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
-    ctx.lineTo(c.width, c.height); ctx.lineTo(0, c.height); ctx.closePath();
-
-    const up = values.at(-1)>=values[0];
-    const grad = ctx.createLinearGradient(0,0,0,c.height);
-    if (up) { grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
-    else    { grad.addColorStop(0,"rgba(153,27,27,0.45)");  grad.addColorStop(1,"rgba(244,114,182,0.12)"); }
-    ctx.fillStyle = grad; ctx.fill();
-
-    ctx.beginPath(); ctx.moveTo(0,yy(values[0]));
-    values.forEach((v,i)=> ctx.lineTo(i*step, yy(v)));
-    ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
+    const cssW=c.clientWidth||c.offsetWidth||220, cssH=c.clientHeight||38;
+    c.width=Math.max(220,cssW)*DPR; c.height=cssH*DPR;
+    const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+    if (!values||values.length<2) return;
+    const {lo:min, hi:max}=_domain(values); const pad=c.height*0.18; const step=(c.width)/(values.length-1); const yy=v=>c.height-((v-min)/(max-min||1))*(c.height-pad*2)-pad;
+    ctx.beginPath(); ctx.moveTo(0,yy(values[0])); values.forEach((v,i)=>ctx.lineTo(i*step,yy(v))); ctx.lineTo(c.width,c.height); ctx.lineTo(0,c.height); ctx.closePath();
+    const up=values.at(-1)>=values[0]; const grad=ctx.createLinearGradient(0,0,0,c.height);
+    if (up){ grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
+    else   { grad.addColorStop(0,"rgba(153,27,27,0.45)");  grad.addColorStop(1,"rgba(244,114,182,0.12)"); }
+    ctx.fillStyle=grad; ctx.fill(); ctx.beginPath(); ctx.moveTo(0,yy(values[0])); values.forEach((v,i)=>ctx.lineTo(i*step,yy(v)));
+    ctx.lineWidth=2*DPR; ctx.strokeStyle=up?"#00ff6a":"#b91c1c"; ctx.stroke();
   }
 
+  // ====== ZMIENIONA OŚ X (Mon..Fri, 6M/YTD/1Y zakotwiczone do teraz) ======
   function computeXTicks(datesMs, rangeLabel){
-    const out = []; if (!datesMs.length) return out;
-    const lowerBound=(arr,x)=>{let lo=0,hi=arr.length-1,ans=0;while(lo<=hi){const m=(lo+hi)>>1;if(arr[m]<x){lo=m+1;ans=lo;}else{ans=m;hi=m-1;}}return Math.max(0,Math.min(ans,arr.length-1));};
+    const out = [];
+    if (!datesMs?.length) return out;
 
-    if (rangeLabel==='1D'){
+    const lowerBound = (arr, x) => {
+      let lo = 0, hi = arr.length - 1, ans = arr.length - 1;
+      while (lo <= hi) {
+        const m = (lo + hi) >> 1;
+        if (arr[m] < x) lo = m + 1;
+        else { ans = m; hi = m - 1; }
+      }
+      return Math.max(0, Math.min(ans, arr.length - 1));
+    };
+
+    const L = String(rangeLabel || '').toUpperCase();
+
+    // 1D – co godzinę
+    if (L === '1D') {
       const first = datesMs[0], last = datesMs.at(-1);
       const d = new Date(first); d.setMinutes(0,0,0);
       const ticks = [];
-      while (d.getTime() <= last){ ticks.push(d.getTime()); d.setHours(d.getHours()+1); }
+      while (d.getTime() <= last) { ticks.push(d.getTime()); d.setHours(d.getHours() + 1); }
       const step = Math.max(1, Math.ceil(ticks.length / 7));
-      for (let i=0;i<ticks.length;i+=step){
+      for (let i = 0; i < ticks.length; i += step) {
         const t = ticks[i], idx = lowerBound(datesMs, t);
         const hh = pad2(new Date(t).getHours()), mm = pad2(new Date(t).getMinutes());
         out.push({ i: idx, lbl: `${hh}:${mm}` });
@@ -3813,75 +3770,87 @@ window.addEventListener('DOMContentLoaded', () => {
       return out;
     }
 
-    if (rangeLabel==='5D'){
-      let lastKey='';
-      for (let i=0;i<datesMs.length;i++){
-        const d=new Date(datesMs[i]);
-        const key=`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-        if (key!==lastKey){ out.push({i, lbl: WDAYS[d.getDay()]}); lastKey=key; }
+    // 5D – dni tygodnia Mon..Fri (z danych)
+    if (L === '5D') {
+      let lastKey = '';
+      const dayStarts = [];
+      for (let i = 0; i < datesMs.length; i++) {
+        const d = new Date(datesMs[i]);
+        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (key !== lastKey) { dayStarts.push({ i, d }); lastKey = key; }
       }
-      return out.slice(-7);
+      const part = dayStarts.slice(-5);
+      for (const { i, d } of part) out.push({ i, lbl: WDAYS[d.getDay()] });
+      return out;
     }
 
-    // 1M/6M/1Y — po miesiącach
-    let lastMY='';
-    for (let i=0;i<datesMs.length;i++){
-      const d=new Date(datesMs[i]);
-      const my=`${d.getFullYear()}-${d.getMonth()}`;
-      if (my!==lastMY){ out.push({i, lbl: MONTHS[d.getMonth()]}); lastMY=my; }
+    // helpers miesięcy
+    function monthStart(y, m){ const d = new Date(y, m, 1); d.setHours(0,0,0,0); return d.getTime(); }
+    function seqMonthsBack(count){
+      const now = new Date(); const arr = [];
+      for (let k = count-1; k >= 0; k--){
+        const d = new Date(now.getFullYear(), now.getMonth()-k, 1);
+        arr.push({ y:d.getFullYear(), m:d.getMonth(), lbl: MONTHS[d.getMonth()] });
+      }
+      return arr;
     }
+    function seqYTD(){
+      const now = new Date(); const arr = [];
+      for (let m = 0; m <= now.getMonth(); m++){
+        arr.push({ y: now.getFullYear(), m, lbl: MONTHS[m] });
+      }
+      return arr;
+    }
+    function seq1Y(){
+      const now = new Date(); const arr = [];
+      for (let k = 11; k >= 0; k--){
+        const d = new Date(now.getFullYear(), now.getMonth()-k, 1);
+        arr.push({ y:d.getFullYear(), m:d.getMonth(), lbl: MONTHS[d.getMonth()] });
+      }
+      // dodaj rok na skrajach
+      arr[0].lbl = `${arr[0].lbl} ${arr[0].y}`;
+      arr[arr.length-1].lbl = `${arr.at(-1).lbl} ${arr.at(-1).y}`;
+      return arr;
+    }
+
+    let monthsPlan = [];
+    if (L === '1M') monthsPlan = seqMonthsBack(5);     // curr-4 .. curr
+    else if (L === '6M') monthsPlan = seqMonthsBack(6);// curr-5 .. curr
+    else if (L === 'YTD') monthsPlan = seqYTD();       // Jan .. curr
+    else if (L === '1Y') monthsPlan = seq1Y();         // curr-11 .. curr
+
+    if (monthsPlan.length) {
+      for (const m of monthsPlan) {
+        const t = monthStart(m.y, m.m);
+        const idx = lowerBound(datesMs, t);
+        out.push({ i: idx, lbl: m.lbl });
+      }
+      // usuń duplikaty
+      const seen = new Set(); const uniq = [];
+      for (const tick of out) {
+        if (!seen.has(tick.i)) { uniq.push(tick); seen.add(tick.i); }
+      }
+      return uniq;
+    }
+
     return out;
   }
 
-  function drawBig(c, datesMs, values, rangeLabel){
-    const cssW = c.clientWidth || 720, cssH = 280;
-    c.width = cssW * DPR; c.height = cssH * DPR;
-    const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
-    if (!values || values.length<2) return;
-
+  function drawBig(c, datesMs, values, label){
+    const cssW=c.clientWidth||720, cssH=280; c.width=cssW*DPR; c.height=cssH*DPR;
+    const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); if(!values||values.length<2) return;
     const left=56*DPR, right=16*DPR, top=16*DPR, bottom=44*DPR;
-    const {lo:min, hi:max} = _domain(values);
-    const w = c.width - left - right, h = c.height - top - bottom;
-    const stepX = w/(values.length-1);
-    const y = v => c.height - bottom - ((v-min)/(max-min||1))*h;
-
-    // Grid Y
-    ctx.strokeStyle='rgba(35,48,77,0.9)'; ctx.lineWidth=1*DPR;
-    for(let i=0;i<=4;i++){ const yy = top + i*h/4; ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(left+w,yy); ctx.stroke(); }
-
-    // Y labels
-    ctx.fillStyle='#9ca3af'; ctx.font = `${12*DPR}px system-ui,sans-serif`;
-    ctx.textBaseline = 'middle';
-    const mid = (min+max)/2;
-    ctx.fillText(min.toFixed(2), 8*DPR, y(min));
-    ctx.fillText(mid.toFixed(2), 8*DPR, y(mid));
-    ctx.fillText(max.toFixed(2), 8*DPR, y(max));
-
-    // X ticks
-    const ticks = computeXTicks(datesMs, rangeLabel);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    for (const t of ticks){
-      const xx = left + t.i*stepX;
-      ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, top+h); ctx.strokeStyle='rgba(35,48,77,0.45)'; ctx.stroke();
-      ctx.fillStyle='#9ca3af'; ctx.fillText(t.lbl, xx, c.height - bottom + 10*DPR);
-    }
-
-    // area + line
-    const up = values.at(-1) >= values[0];
-    ctx.beginPath(); ctx.moveTo(left, y(values[0]));
-    values.forEach((v,i)=> ctx.lineTo(left + i*stepX, y(v)));
-    ctx.lineTo(left + w, c.height - bottom); ctx.lineTo(left, c.height - bottom); ctx.closePath();
-    const grad = ctx.createLinearGradient(0, top, 0, c.height - bottom);
-    if (up) { grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
-    else    { grad.addColorStop(0,"rgba(153,27,27,0.45)");  grad.addColorStop(1,"rgba(244,114,182,0.12)"); }
-    ctx.fillStyle = grad; ctx.fill();
-
-    ctx.beginPath(); ctx.moveTo(left, y(values[0]));
-    values.forEach((v,i)=> ctx.lineTo(left + i*stepX, y(v)));
-    ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
+    const {lo:min, hi:max}=_domain(values); const w=c.width-left-right, h=c.height-top-bottom; const stepX=w/(values.length-1); const y=v=>c.height-bottom-((v-min)/(max-min||1))*h;
+    ctx.strokeStyle='rgba(35,48,77,0.9)'; ctx.lineWidth=1*DPR; for(let i=0;i<=4;i++){ const yy=top+i*h/4; ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(left+w,yy); ctx.stroke();}
+    ctx.fillStyle='#9ca3af'; ctx.font=`${12*DPR}px system-ui,sans-serif`; ctx.textBaseline='middle'; const mid=(min+max)/2; ctx.fillText(min.toFixed(2),8*DPR,y(min)); ctx.fillText(mid.toFixed(2),8*DPR,y(mid)); ctx.fillText(max.toFixed(2),8*DPR,y(max));
+    const ticks=computeXTicks(datesMs,label); ctx.textAlign='center'; ctx.textBaseline='top';
+    for(const t of ticks){ const xx=left+t.i*stepX; ctx.beginPath(); ctx.moveTo(xx,top); ctx.lineTo(xx,top+h); ctx.strokeStyle='rgba(35,48,77,0.45)'; ctx.stroke(); ctx.fillStyle='#9ca3af'; ctx.fillText(t.lbl, xx, c.height-bottom+10*DPR); }
+    const up=values.at(-1)>=values[0]; ctx.beginPath(); ctx.moveTo(left,y(values[0])); values.forEach((v,i)=>ctx.lineTo(left+i*stepX,y(v))); ctx.lineTo(left+w,c.height-bottom); ctx.lineTo(left,c.height-bottom); ctx.closePath();
+    const grad=ctx.createLinearGradient(0,top,0,c.height-bottom); if(up){grad.addColorStop(0,"rgba(0,200,255,0.35)");grad.addColorStop(1,"rgba(0,200,255,0.08)");} else {grad.addColorStop(0,"rgba(153,27,27,0.45)");grad.addColorStop(1,"rgba(244,114,182,0.12)");}
+    ctx.fillStyle=grad; ctx.fill(); ctx.beginPath(); ctx.moveTo(left,y(values[0])); values.forEach((v,i)=>ctx.lineTo(left+i*stepX,y(v))); ctx.lineWidth=2*DPR; ctx.strokeStyle=up?"#00ff6a":"#b91c1c"; ctx.stroke();
   }
 
-  // ---------- KARTY ----------
+  // ---------- karty ----------
   const io = ('IntersectionObserver' in window)
     ? new IntersectionObserver((entries) => {
         for (const e of entries) {
@@ -3895,6 +3864,23 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }, { root: null, threshold: 0.1 })
     : null;
+
+  function hubKeyFor(item){
+    if (item.type==='stock') return normalizeSymbol(item.symbol);
+    const k = `${item.base}${item.quote}`.toUpperCase();
+    return [k, k+'=X']; // dwie możliwe konwencje
+  }
+
+  function applyLiveToCard(el, cur, prev){
+    const p = el.querySelector('.wl-price');
+    const d = el.querySelector('.wl-diff');
+    if (!p || !d) return;
+    p.textContent = fmt(cur);
+    const ch = cur - (prev ?? cur);
+    const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
+    d.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+    d.className   = 'wl-diff ' + (ch>=0 ? 'pos' : 'neg');
+  }
 
   async function mountCard(item, idx){
     const el   = document.createElement('article'); el.className='wl-card'; el.setAttribute('role','listitem');
@@ -3921,7 +3907,6 @@ window.addEventListener('DOMContentLoaded', () => {
       hist=await stockHistory(item.symbol, 420);
     }
     const vals = (hist?.closes || []).slice(-120);
-
     if (vals.length >= 2){
       el._wl_item     = item;
       el._wl_lastHist = vals.at(-1);
@@ -3929,22 +3914,28 @@ window.addEventListener('DOMContentLoaded', () => {
       el._wl_values   = vals;
       if (io) io.observe(el); else requestAnimationFrame(() => drawSpark(spark, vals));
 
-      // live label (sandbox: bierzemy „ostatni”)
+      // pierwszy render z HUB-a
       const last = vals.at(-1), prev = vals.at(-2) ?? last;
-      const cur  = (item.type==='fx')
-        ? priceOfFx(item.base,item.quote,last)
-        : priceOfStock(item.symbol,last);
-      p.textContent = fmt(cur);
-      const ch = cur - prev;
-      const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
-      d.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
-      d.className   = 'wl-diff ' + (ch>=0 ? 'pos' : 'neg');
+      const cur  = (item.type==='fx') ? hubSpotFx(item.base,item.quote,last) : hubSpotStock(item.symbol,last);
+      applyLiveToCard(el, cur, prev);
+
+      // subskrypcja HUB-a (live)
+      const unsub = (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function')
+        ? window.PRICE_HUB.subscribe((key,val) => {
+            const keys = hubKeyFor(item);
+            const hit = Array.isArray(keys) ? keys.some(k => String(key).toUpperCase()===String(k).toUpperCase()) : (String(key).toUpperCase()===String(keys).toUpperCase());
+            if (!hit) return;
+            const prevLive = el._wl_prev ?? cur;
+            applyLiveToCard(el, Number(val), prevLive);
+          })
+        : null;
+      el._wl_unsub = unsub;
     } else {
       p.textContent='—'; d.textContent='—';
     }
 
     el.addEventListener('click', ()=> openModal(item));
-    removeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); watchlist.splice(idx, 1); saveLS(); render(); });
+    removeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); if (el._wl_unsub) try{el._wl_unsub();}catch{}; watchlist.splice(idx, 1); saveLS(); render(); });
   }
 
   function render(){
@@ -3955,25 +3946,14 @@ window.addEventListener('DOMContentLoaded', () => {
       .forEach((item, idx) => mountCard(item, idx));
   }
 
-  // ---------- MODAL (1D/5D/1M/6M/1Y) ----------
-  let MODAL_CUR_LABEL = null;
+  // ---------- MODAL ----------
+  let MODAL_SUB = null;
 
-  function normRangeLabel(x){
-    const s=String(x||'').toUpperCase().trim();
-    return (s==='1D'||s==='5D'||s==='1M'||s==='6M'||s==='1Y') ? s : '1D';
-  }
+  const normRangeLabel = s => (['1D','5D','1M','6M','YTD','1Y'].includes(String(s||'').toUpperCase()) ? String(s).toUpperCase() : '1D');
+  const computeRangeParams = L => ({ range: ({'1D':'1d','5D':'5d','1M':'1mo','6M':'6mo','YTD':'ytd','1Y':'1y'})[normRangeLabel(L)] || '1d' });
+  const yahooFxSymbol = (b,q) => `${String(b).toUpperCase()}${String(q).toUpperCase()}=X`;
 
-  function computeRangeParams(lbl){
-    const L = normRangeLabel(lbl);
-    if (L==='1D') return { range:'1d', intervals:['5m'] };
-    if (L==='5D') return { range:'5d', intervals:['5m'] };
-    if (L==='1M') return { range:'1mo',intervals:['1d'] };
-    if (L==='6M') return { range:'6mo',intervals:['1d'] };
-    if (L==='1Y') return { range:'1y', intervals:['1d'] };
-    return { range:'1d', intervals:['5m'] };
-  }
-
-  function yahooFxSymbol(base, quote){ return `${String(base).toUpperCase()}${String(quote).toUpperCase()}=X`; }
+  function stopModalLive(){ if (MODAL_SUB){ try{MODAL_SUB();}catch{} MODAL_SUB=null; } }
 
   function openModal(item){
     if (!$modal) return;
@@ -3988,11 +3968,9 @@ window.addEventListener('DOMContentLoaded', () => {
     async function fetchRange(label){
       const L = normRangeLabel(label);
       if (modalSeries.has(L)) return modalSeries.get(L);
-      const { range, intervals } = computeRangeParams(L);
+      const { range } = computeRangeParams(L);
       const ySym = isFx ? yahooFxSymbol(item.base, item.quote) : ttl;
-
-      // SANDBOX „yahoo”
-      const y = await yahooChart(ySym, range, intervals);
+      const y = await yahooChart(ySym, range);    // sandbox series
       const out = { dates: y.dates, values: y.closes };
       modalSeries.set(L, out);
       return out;
@@ -4003,29 +3981,48 @@ window.addEventListener('DOMContentLoaded', () => {
         $mPrice.textContent='—'; $mChg.textContent='Brak danych';
         const ctx=$big.getContext('2d'); ctx.clearRect(0,0,$big.width,$big.height);
         ranges.forEach(b=> b.disabled = true);
+        stopModalLive();
         return;
       }
       ranges.forEach(b=> b.disabled = false);
 
-      let last = values.at(-1), prev = values.at(-2) ?? values.at(-1);
-      last = isFx ? priceOfFx(item.base, item.quote, last) : priceOfStock(item.symbol, last);
+      const lastSeries = values.at(-1);
+      const prevSeries = values.at(-2) ?? lastSeries;
+      const lastLive   = isFx ? hubSpotFx(item.base,item.quote,lastSeries) : hubSpotStock(item.symbol,lastSeries);
 
-      $mPrice.textContent = fmt(last);
-      const ch = last - (prev ?? last);
-      const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
-      $mChg.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
-      $mChg.style.color = ch>=0 ? 'var(--ok)' : '#b91c1c';
+      const ch = lastLive - (prevSeries ?? lastLive);
+      const pc = (prevSeries && prevSeries!==0) ? (ch/prevSeries)*100 : 0;
+      $mPrice.textContent = fmt(lastLive);
+      $mChg.textContent   = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+      $mChg.style.color   = ch>=0 ? 'var(--ok)' : '#b91c1c';
 
       drawBig($big, datesMs, values, label);
-      $big._seriesLast = values.at(-1);
-      $big._seriesPrev = values.at(-2) ?? values.at(-1);
+      $big._seriesLast = lastSeries;
+      $big._seriesPrev = prevSeries;
+
+      // LIVE nagłówek – subskrybuj HUB
+      stopModalLive();
+      if (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function'){
+        const keys = hubKeyFor(item);
+        MODAL_SUB = window.PRICE_HUB.subscribe((key,val)=>{
+          const hit = Array.isArray(keys) ? keys.some(k => String(k).toUpperCase()===String(key).toUpperCase()) : (String(keys).toUpperCase()===String(key).toUpperCase());
+          if (!hit) return;
+          const prev = $big?._seriesPrev ?? Number(val);
+          const cur  = Number(val);
+          if (!Number.isFinite(cur)) return;
+          const ch   = cur - (prev ?? cur);
+          const pc   = (prev && prev!==0) ? (ch/prev)*100 : 0;
+          $mPrice.textContent = fmt(cur);
+          $mChg.textContent   = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+          $mChg.style.color   = ch>=0 ? 'var(--ok)' : '#b91c1c';
+        });
+      }
     }
 
     async function setRange(btn){
       Array.from(ranges).forEach(b=>b.classList.remove('is-active'));
       btn.classList.add('is-active');
       const label = normRangeLabel(btn.dataset.range);
-      MODAL_CUR_LABEL = label;
       const {dates, values} = await fetchRange(label);
       paint(dates, values, label);
     }
@@ -4033,17 +4030,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const def = $modal.querySelector('.wl-range button[data-range]') || ranges[0];
     setRange(def);
 
-    const closeModal = () => { $modal.setAttribute('aria-hidden','true'); };
+    const closeModal = () => { $modal.setAttribute('aria-hidden','true'); stopModalLive(); };
     $modal?.querySelector('.wl-close')?.addEventListener('click', closeModal, { once:true });
     $modal?.querySelector('.wl-modal__backdrop')?.addEventListener('click', closeModal, { once:true });
-
     Array.from(ranges).forEach(btn => btn.onclick = () => setRange(btn));
   }
 
   // ---------- TABS / TRYB ----------
   function applyMode(next){
-    mode = next;
-    filter = next;
+    mode = next; filter = next;
     fillPicker(); render();
     if ($wlTabs){
       $wlTabs.querySelectorAll('button').forEach(b => {
