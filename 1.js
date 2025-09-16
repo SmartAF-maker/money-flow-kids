@@ -1,4 +1,4 @@
-      // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+        // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 /* Dodaj etykiety i mały podpis pod każdą wartością w tabelach (mobile) */
 (function () {
   function labelize(table){
@@ -3606,7 +3606,7 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-/// ===== WATCHLIST (stocks + FX) — FIXED intraday ticks (1D hours, 5D weekdays), EN labels, fast =====
+/// ===== WATCHLIST (stocks + FX) — intraday 1D/5D z mocnymi fallbackami, auto-refresh modal, smooth canvas =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
 
@@ -3649,7 +3649,7 @@ window.addEventListener('DOMContentLoaded', () => {
     'EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD',
     'EUR/GBP','EUR/JPY','EUR/CHF','EUR/CAD','EUR/AUD','EUR/NZD',
     'GBP/JPY','GBP/CHF','GBP/CAD','GBP/AUD','GBP/NZD',
-    'AUD/JPY','NZD/JPY','CAD/JPY','CHF/JPY','GBP/JPY','EUR/JPY',
+    'AUD/JPY','NZD/JPY','CAD/JPY','CHF/JPY',
     'AUD/CHF','NZD/CHF','CAD/CHF',
     'AUD/NZD','AUD/CAD','NZD/CAD',
     'USD/NOK','USD/SEK','USD/DKK','USD/TRY','USD/ZAR','USD/MXN',
@@ -3674,12 +3674,16 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function saveLS(){ localStorage.setItem(LS_KEY, JSON.stringify(watchlist)); }
 
-  // ---------- UTILS (EN labels, no locale) ----------
+  // ---------- UTILS ----------
   const WDAYS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const pad2 = n => String(n).padStart(2,'0');
   const fmt = x => Number(x ?? 0).toLocaleString(undefined,{maximumFractionDigits:2});
   const emptySeries = () => ({dates:[],closes:[]});
+  const normRangeLabel = (x) => {
+    const s = String(x||'').trim().toUpperCase();
+    return (s==='1D'||s==='5D'||s==='1M'||s==='6M'||s==='1Y') ? s : '1D';
+  };
 
   const stooqCode   = (sym) => { const s=(sym||'').toLowerCase(); if(/\./.test(s))return s; if(!/^[a-z.]{1,10}$/.test(s))return s; return s+'.us'; };
   const stooqFxCode = (b,q) => `${b}${q}`.toLowerCase();
@@ -3818,24 +3822,20 @@ window.addEventListener('DOMContentLoaded', () => {
     return empty;
   }
 
-  // ---------- Yahoo intraday (epoch-ms, FAST) ----------
+  // ---------- Yahoo intraday ----------
   const yahooFxSymbol = (base, quote) => `${String(base).toUpperCase()}${String(quote).toUpperCase()}=X`;
   function makeYahooUrls(sym, range, interval){
     const path = `/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=${interval}&includePrePost=true&events=div%2Csplit`;
     const raw1 = `https://query1.finance.yahoo.com${path}`;
     const raw2 = `https://query2.finance.yahoo.com${path}`;
-    // krótko i szybko (reszta to fallbacki)
-    return [raw1, raw2,
-      `https://r.jina.ai/${raw1.replace('https://','')}`,
-      `https://r.jina.ai/${raw2.replace('https://','')}`
-    ];
+    return [raw1, raw2, `https://r.jina.ai/${raw1.replace('https://','')}`, `https://r.jina.ai/${raw2.replace('https://','')}`];
   }
   async function yahooChart(sym, range, intervals){
     for (const itv of intervals){
       const urls = makeYahooUrls(sym, range, itv);
       for (const u of urls){
         try{
-          const j = await fetchJSON(u, {timeout: 3000}); // szybki timeout
+          const j = await fetchJSON(u, {timeout: 3000});
           const r = j?.chart?.result?.[0];
           const ts = r?.timestamp || [];
           const q  = r?.indicators?.quote?.[0] || {};
@@ -3843,7 +3843,6 @@ window.addEventListener('DOMContentLoaded', () => {
           const n  = Math.min(ts.length, c.length);
           if (n < 2) continue;
 
-          // parowanie + sort + dedup
           const pairs = [];
           for (let i=0;i<n;i++){
             const v = Number(c[i]);
@@ -3855,24 +3854,25 @@ window.addEventListener('DOMContentLoaded', () => {
           let lastT=-1;
           for (const p of pairs){ if (p[0]!==lastT){ dedup.push(p); lastT=p[0]; } }
 
-          // umiarkowana decymacja (wyraźne zęby)
-          const maxPts = (range==='1d'||range==='5d') ? 450 : 240;
+          // mniej punktów → szybciej
+          const maxPts = (range==='1d'||range==='5d') ? 360 : 180;
           const stride = Math.max(1, Math.ceil(dedup.length / maxPts));
           const dates = [], closes = [];
           for (let i=0;i<dedup.length;i+=stride){ dates.push(dedup[i][0]); closes.push(dedup[i][1]); }
           if (dates.length >= 2) return { dates, closes };
-        }catch(_){ /* kolejny url */ }
+        }catch(_){}
       }
     }
     return null;
   }
   function spanFor(label){
-    if (label==='1D') return { range:'1d', intervals: ['1m','2m','5m','15m'] };
-    if (label==='5D') return { range:'5d', intervals: ['5m','15m','30m','60m'] };
-    if (label==='1M') return { range:'1mo', intervals: ['1d'] };
-    if (label==='6M') return { range:'6mo', intervals: ['1d'] };
-    if (label==='1Y') return { range:'1y',  intervals: ['1d'] };
-    return { range:'1mo', intervals:['1d'] };
+    const L = normRangeLabel(label);
+    if (L==='1D') return { range:'1d', intervals: ['1m','2m','5m','15m'] };
+    if (L==='5D') return { range:'5d', intervals: ['5m','15m','30m','60m'] };
+    if (L==='1M') return { range:'1mo', intervals: ['1d'] };
+    if (L==='6M') return { range:'6mo', intervals: ['1d'] };
+    if (L==='1Y') return { range:'1y',  intervals: ['1d'] };
+    return { range:'1d', intervals:['1m','2m','5m','15m'] };
   }
 
   // ---------- LIVE PRICE ----------
@@ -3895,7 +3895,7 @@ window.addEventListener('DOMContentLoaded', () => {
         let v2 = HUB.get(up + '.US');
         if (v2 && typeof v2 === 'object') v2 = v2.price ?? v2.last ?? v2.value ?? null;
         v2 = Number(v2);
-        if (Number.isFinite(v2) && v2 > 0) return v2;
+        if (Number.isFinite(v2) && v2 > 0) return v2; // poprawka
       }
     }
     return fallback;
@@ -3934,7 +3934,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 2000);
   }
 
-  // ---------- Y-domain helper ----------
+  // ---------- helpers ----------
   function _domain(values){
     let lo = Math.min(...values), hi = Math.max(...values);
     if (lo === hi) { const pad = Math.max(1, Math.abs(hi) * 0.005); lo -= pad; hi += pad; }
@@ -3971,7 +3971,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
   }
 
-  // ---------- TICKS (1D hours on the hour, 5D weekdays, M months) ----------
+  // ---------- X-ticks ----------
   function lowerBound(arr, x){
     let lo=0, hi=arr.length-1, ans=0;
     while(lo<=hi){ const mid=(lo+hi)>>1; if(arr[mid]<x){ lo=mid+1; ans=lo; } else { ans=mid; hi=mid-1; } }
@@ -3982,13 +3982,11 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!datesMs.length) return out;
 
     if (mode === '1D'){
-      // pełne godziny
       const first = datesMs[0], last = datesMs.at(-1);
       const d = new Date(first);
-      d.setMinutes(0,0,0); // do pełnej godziny
+      d.setMinutes(0,0,0);
       const ticks = [];
       while (d.getTime() <= last){ ticks.push(d.getTime()); d.setHours(d.getHours()+1); }
-      // redukuj do max 7 podpisów
       const step = Math.max(1, Math.ceil(ticks.length / 7));
       for (let i=0;i<ticks.length;i+=step){
         const t = ticks[i], idx = lowerBound(datesMs, t);
@@ -3999,7 +3997,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     if (mode === '5D'){
-      // pierwszy punkt każdej doby (kronologicznie)
       let lastKey = '';
       for (let i=0;i<datesMs.length;i++){
         const d = new Date(datesMs[i]);
@@ -4009,29 +4006,35 @@ window.addEventListener('DOMContentLoaded', () => {
           lastKey = key;
         }
       }
-      return out.slice(-7); // max ostatnich 7 podpisów
+      return out.slice(-7);
     }
 
-    // 1M / 6M / 1Y — zmiany miesiąca
+    // 1M / 6M / 1Y
     let lastMY = '';
     for (let i=0;i<datesMs.length;i++){
       const d = new Date(datesMs[i]);
       const my = `${d.getFullYear()}-${d.getMonth()}`;
       if (my !== lastMY){
-        const lbl = (mode==='1Y') ? `${MONTHS[d.getMonth()]}` : `${MONTHS[d.getMonth()]}`;
-        out.push({ i, t: datesMs[i], lbl });
+        out.push({ i, t: datesMs[i], lbl: `${MONTHS[d.getMonth()]}` });
         lastMY = my;
       }
     }
     return out;
   }
 
-  // ---------- BIG CHART ----------
+  // ---------- BIG CHART (smooth) ----------
   function drawBig(c, datesMs, values, rangeLabel){
     const cssW = c.clientWidth || 720, cssH = 280;
-    c.width = cssW * DPR; c.height = cssH * DPR;
-    const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+    c.width = Math.max(320, cssW) * DPR; 
+    c.height = Math.max(180, cssH) * DPR;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
     if (!values || values.length<2) return;
+
+    // smooth
+    ctx.lineJoin = 'round';
+    ctx.lineCap  = 'round';
+    ctx.imageSmoothingEnabled = true;
 
     const left=56*DPR, right=16*DPR, top=16*DPR, bottom=44*DPR;
     const {lo:min, hi:max} = _domain(values);
@@ -4056,7 +4059,8 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     for (const t of ticks){
       const xx = left + t.i*stepX;
-      ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, top+h); ctx.strokeStyle='rgba(35,48,77,0.45)'; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, top+h);
+      ctx.strokeStyle='rgba(35,48,77,0.45)'; ctx.stroke();
       ctx.fillStyle='#9ca3af'; ctx.fillText(t.lbl, xx, c.height - bottom + 10*DPR);
     }
 
@@ -4066,16 +4070,18 @@ window.addEventListener('DOMContentLoaded', () => {
     values.forEach((v,i)=> ctx.lineTo(left + i*stepX, y(v)));
     ctx.lineTo(left + w, c.height - bottom); ctx.lineTo(left, c.height - bottom); ctx.closePath();
     const grad = ctx.createLinearGradient(0, top, 0, c.height - bottom);
-    if (up) { grad.addColorStop(0,"rgba(0,200,255,0.35)"); grad.addColorStop(1,"rgba(0,200,255,0.08)"); }
-    else    { grad.addColorStop(0,"rgba(153,27,27,0.45)");  grad.addColorStop(1,"rgba(244,114,182,0.12)"); }
+    grad.addColorStop(0,  up ? "rgba(0,200,255,0.22)" : "rgba(153,27,27,0.28)");
+    grad.addColorStop(1,  up ? "rgba(0,200,255,0.06)" : "rgba(244,114,182,0.08)");
     ctx.fillStyle = grad; ctx.fill();
 
     ctx.beginPath(); ctx.moveTo(left, y(values[0]));
     values.forEach((v,i)=> ctx.lineTo(left + i*stepX, y(v)));
-    ctx.lineWidth=2*DPR; ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c"; ctx.stroke();
+    ctx.lineWidth=2.5*DPR;
+    ctx.strokeStyle = up ? "#00ff6a" : "#b91c1c";
+    ctx.stroke();
   }
 
-  // ---------- RESAMPLING (W/M) ----------
+  // ---------- RESAMPLING ----------
   function resample(dates, values, mode){
     if (!dates?.length || !values?.length) return {dates:[],values:[]};
     if (mode==='D') return {dates:[...dates], values:[...values]};
@@ -4174,6 +4180,10 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------- MODAL (per-range; fast intraday) ----------
+  let MODAL_TICK = null;
+  let MODAL_HEAD_TICK = null;
+  let MODAL_CUR_LABEL = null;
+
   function openModal(item){
     if (!$modal) return;
     $modal.setAttribute('aria-hidden','false');
@@ -4187,36 +4197,144 @@ window.addEventListener('DOMContentLoaded', () => {
     const isFx   = (item.type === 'fx');
     const modalSeriesCache = new Map(); // label -> {dates(ms), values}
 
-    async function fetchRange(label){
-      if (modalSeriesCache.has(label)) return modalSeriesCache.get(label);
-
-      const span = spanFor(label);
-      const ySym = isFx ? yahooFxSymbol(item.base, item.quote) : ttl;
-
-      // 1) Yahoo (intraday/daily)
-      const y = await yahooChart(ySym, span.range, span.intervals);
-      if (y && y.dates.length >= 2){
-        modalSeriesCache.set(label, {dates: y.dates, values: y.closes});
-        return {dates: y.dates, values: y.closes};
+    // --- SANITIZER + min 2 punkty ---
+    function cleanSeries(datesArr, valuesArr, toMs=false){
+      const outD=[], outV=[];
+      const n = Math.min(datesArr?.length||0, valuesArr?.length||0);
+      for (let i=0;i<n;i++){
+        let d = datesArr[i]; if (toMs) d = +new Date(d);
+        const v = Number(valuesArr[i]);
+        if (!Number.isFinite(d) || !Number.isFinite(v)) continue;
+        outD.push(d); outV.push(v);
       }
-
-      // 2) fallback: dzienne (wycinek per range)
-      const daily = isFx ? await fxHistory(item.base,item.quote, 365*5) : await stockHistory(item.symbol, 365*5);
-      const sliced = sliceByRange(daily.dates, daily.closes, label);
-      modalSeriesCache.set(label, sliced);
-      return sliced;
+      const idx = outD.map((d,i)=>[d,i]).sort((a,b)=>a[0]-b[0]);
+      const finalD=[], finalV=[];
+      let lastT = NaN;
+      for (const [_,i] of idx){
+        const t = outD[i]; const v = outV[i];
+        if (t===lastT) { finalV[finalV.length-1] = v; continue; }
+        finalD.push(t); finalV.push(v); lastT=t;
+      }
+      return { dates: finalD, values: finalV };
+    }
+    function ensureMinTwo(dates, values){
+      let D=[...dates], V=[...values];
+      if (V.length>=2) return {dates:D, values:V};
+      if (V.length===1){
+        const t = D[0]; const v = V[0];
+        return { dates: [t-60_000, t], values: [v, v] };
+      }
+      return { dates: [], values: [] };
     }
 
-    function sliceByRange(dates, closes, label){
+    const dayKey = (ms) => {
+      const d = new Date(ms);
+      return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
+    };
+    function lastSessionSlice(datesMs, values){
+      if (!datesMs?.length) return {dates:[], values:[]};
+      const lastK = dayKey(datesMs.at(-1));
+      let i = datesMs.length-1;
+      while (i>0 && dayKey(datesMs[i-1]) === lastK) i--;
+      return { dates: datesMs.slice(i), values: values.slice(i) };
+    }
+
+    async function fetchRange(label){
+      const L = normRangeLabel(label);
+      if (modalSeriesCache.has(L)) return modalSeriesCache.get(L);
+
+      const span = spanFor(L);
+      const ySym = isFx ? yahooFxSymbol(item.base, item.quote) : ttl;
+
+      // 1) Yahoo – właściwy zakres
+      let y = await yahooChart(ySym, span.range, span.intervals);
+
+      // Fallback 1D: 5d-intraday -> ostatnia sesja
+      if ((!y || y.dates.length < 2) && L==='1D') {
+        const y5 = await yahooChart(ySym, '5d', ['1m','2m','5m','15m','30m','60m']);
+        if (y5 && y5.dates.length >= 2) {
+          const s5 = cleanSeries(y5.dates, y5.closes, false);
+          const cut = lastSessionSlice(s5.dates, s5.values);
+          if (cut.dates.length >= 2) y = { dates: cut.dates, closes: cut.values };
+        }
+      }
+
+      // Fallback 5D: 1mo/1d -> 5 ostatnich dni
+      if ((!y || y.dates.length < 2) && L==='5D') {
+        const y1m = await yahooChart(ySym, '1mo', ['1d']);
+        if (y1m && y1m.dates.length >= 2) {
+          const s = cleanSeries(y1m.dates, y1m.closes, false);
+          const want=5, DD=[], VV=[], seen=new Set();
+          for (let i=s.dates.length-1;i>=0 && DD.length<want;i--){
+            const k = dayKey(s.dates[i]);
+            if (!seen.has(k)) { DD.push(s.dates[i]); VV.push(s.values[i]); seen.add(k); }
+          }
+          DD.reverse(); VV.reverse();
+          if (DD.length>=2) y = { dates: DD, closes: VV };
+        }
+      }
+
+      if (y && y.dates.length >= 2){
+        const c = cleanSeries(y.dates, y.closes, false);
+        const ok = ensureMinTwo(c.dates, c.values);
+        modalSeriesCache.set(L, ok);
+        return ok;
+      }
+
+      // 2) Ostateczny fallback: dzienne
+      const daily = isFx ? await fxHistory(item.base,item.quote, 365*5)
+                         : await stockHistory(item.symbol, 365*5);
+      let sliced = sliceByRangeDaily(daily.dates, daily.closes, L);
+      let c = cleanSeries(sliced.dates, sliced.values, true);
+      c = ensureMinTwo(c.dates, c.values);
+      modalSeriesCache.set(L, c);
+      return c;
+    }
+
+    function sliceByRangeDaily(dates, closes, L){
       const len = dates.length;
       if (!len) return {dates:[], values:[]};
       const toMs = d => +new Date(d);
 
-      if (label==='1D'){ const n=Math.min(20, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
-      if (label==='5D'){ const n=Math.min(70, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
-      if (label==='1M'){ const n=Math.min(31, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
-      if (label==='6M'){ const cut=Math.max(0,len-183); const d2=dates.slice(cut), v2=closes.slice(cut); const r=resample(d2,v2,'W'); return {dates:r.dates.map(toMs), values:r.values}; }
-      if (label==='1Y'){ const cut=Math.max(0,len-365); const d2=dates.slice(cut), v2=closes.slice(cut); const r=resample(d2,v2,'W'); return {dates:r.dates.map(toMs), values:r.values}; }
+      if (L==='1D'){ const n=Math.min(1, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
+      if (L==='5D'){
+        const want = 5;
+        const outD=[], outV=[];
+        let lastKey='';
+        for (let i=len-1;i>=0 && outD.length<want;i--){
+          const d = new Date(dates[i]);
+          const key = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+          if (key !== lastKey && Number.isFinite(closes[i])) {
+            outD.push(dates[i]); outV.push(closes[i]); lastKey=key;
+          }
+        }
+        outD.reverse(); outV.reverse();
+        return {dates: outD.map(toMs), values: outV};
+      }
+      if (L==='1M'){ const n=Math.min(31, len); return {dates:dates.slice(-n).map(toMs), values:closes.slice(-n)}; }
+      if (L==='6M'){ 
+        const cut=Math.max(0,len-183);
+        const d2=dates.slice(cut), v2=closes.slice(cut);
+        const r=resample(d2,v2,'W'); 
+        let dd=r.dates.map(d=>+new Date(d)), vv=r.values;
+        if (vv.length<2 && d2.length>=2){
+          // gwarancja 2 pkt: pierwszy i ostatni z okna
+          const c = (arrD,arrV)=>{ const D=arrD.map(toMs), V=[...arrV]; return {dates:[D[0], D.at(-1)], values:[V[0], V.at(-1)]}; };
+          const g = c(d2,v2); dd=g.dates; vv=g.values;
+        }
+        return {dates:dd, values:vv};
+      }
+      if (L==='1Y'){ 
+        const cut=Math.max(0,len-365);
+        const d2=dates.slice(cut), v2=closes.slice(cut);
+        const r=resample(d2,v2,'W'); 
+        let dd=r.dates.map(d=>+new Date(d)), vv=r.values;
+        if (vv.length<2 && d2.length>=2){
+          const c = (arrD,arrV)=>{ const D=arrD.map(toMs), V=[...arrV]; return {dates:[D[0], D.at(-1)], values:[V[0], V.at(-1)]}; };
+          const g = c(d2,v2); dd=g.dates; vv=g.values;
+        }
+        return {dates:dd, values:vv};
+      }
       return {dates:dates.map(toMs), values:[...closes]};
     }
 
@@ -4239,23 +4357,86 @@ window.addEventListener('DOMContentLoaded', () => {
       $mChg.style.color = ch>=0 ? 'var(--ok)' : '#b91c1c';
 
       drawBig($big, datesMs, values, label);
+
+      // zapamiętaj końcówkę serii dla żywego headera
+      $big._seriesLast = values.at(-1);
+      $big._seriesPrev = values.at(-2) ?? values.at(-1);
+    }
+
+    // auto-refresh modala
+    function refreshDelay(label){
+      const L = normRangeLabel(label);
+      return (L === '1D' || L === '5D') ? 30_000 : 300_000; // 30s / 5min
+    }
+    async function refreshCurrentRange(){
+      if (!MODAL_CUR_LABEL) return;
+      const {dates, values} = await fetchRange(MODAL_CUR_LABEL);
+      paint(dates, values, MODAL_CUR_LABEL);
+    }
+    function startModalAuto(){
+      stopModalAuto();
+      MODAL_TICK = setInterval(refreshCurrentRange, refreshDelay(MODAL_CUR_LABEL || '1D'));
+    }
+    function stopModalAuto(){
+      if (MODAL_TICK){ clearInterval(MODAL_TICK); MODAL_TICK = null; }
+    }
+
+    // live header tick (bez malowania canvas)
+    function startModalHead(){
+      stopModalHead();
+      MODAL_HEAD_TICK = setInterval(() => {
+        const cur = $big?._seriesLast;
+        if (cur == null) return;
+        let last = cur, prev = $big?._seriesPrev ?? cur;
+        last = isFx ? priceOfFx(item.base, item.quote, last) : priceOfStock(item.symbol, last);
+        if (!Number.isFinite(last)) return;
+        $mPrice.textContent = fmt(last);
+        const ch = last - prev;
+        const pc = (prev && prev!==0) ? (ch/prev)*100 : 0;
+        $mChg.textContent = `${ch>=0?'+':''}${fmt(ch)} (${pc.toFixed(2)}%)`;
+        $mChg.style.color = ch>=0 ? 'var(--ok)' : '#b91c1c';
+      }, 2000);
+    }
+    function stopModalHead(){
+      if (MODAL_HEAD_TICK){ clearInterval(MODAL_HEAD_TICK); MODAL_HEAD_TICK = null; }
     }
 
     async function setRange(btn){
       Array.from(ranges).forEach(b=>b.classList.remove('is-active'));
       btn.classList.add('is-active');
-      const label = btn.dataset.range; // 1D | 5D | 1M | 6M | 1Y
+      const label = normRangeLabel(btn.dataset.range);
+      MODAL_CUR_LABEL = label;
       const {dates, values} = await fetchRange(label);
       paint(dates, values, label);
+      startModalAuto();
     }
 
     const def = $modal.querySelector('.wl-range button[data-range="1D"]') || ranges[0];
     setRange(def);
+    startModalHead();
+
+    // pauza, gdy karta ukryta
+    const onVis = () => {
+      if ($modal.getAttribute('aria-hidden') === 'false') {
+        if (document.hidden) { stopModalAuto(); stopModalHead(); }
+        else { startModalAuto(); startModalHead(); }
+      }
+    };
+    document.addEventListener('visibilitychange', onVis, { passive:true });
+
+    // sprzątanie przy zamknięciu
+    const closeModal = () => {
+      $modal.setAttribute('aria-hidden','true');
+      stopModalAuto();
+      stopModalHead();
+      document.removeEventListener('visibilitychange', onVis, { passive:true });
+    };
+    $modal?.querySelector('.wl-close')?.addEventListener('click', closeModal, { once:true });
+    $modal?.querySelector('.wl-modal__backdrop')?.addEventListener('click', closeModal, { once:true });
+
+    // obsługa kliknięć zakresów
     Array.from(ranges).forEach(btn => btn.onclick = () => setRange(btn));
   }
-
-  $modal?.querySelector('.wl-close')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
-  $modal?.querySelector('.wl-modal__backdrop')?.addEventListener('click', ()=> $modal.setAttribute('aria-hidden','true'));
 
   // ---------- PICKER ----------
   function fillPicker(){
@@ -4323,8 +4504,11 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
+
+
+
 /* =========================================================================
- * Money Flow Kids — AI Agent v6.3 (rich Tour, FAQ only, role-aware)
+ * Money Flow Kids — AI Agent v6.3 (compact header + laptop size + robust FAB)
  * ========================================================================= */
 (() => {
   if (window.__AIAgentV63__) return; window.__AIAgentV63__ = true;
@@ -4357,47 +4541,31 @@ window.addEventListener('DOMContentLoaded', () => {
     return t.includes('parent') ? 'parent' : 'child';
   };
 
-  // --- TTS (czytanie na głos) ---
+  // --- TTS ---
   const speak = (text)=>{ try{ window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(String(text||'')); u.lang=getLang()==='pl'?'pl-PL':'en-US'; speechSynthesis.speak(u);}catch{} };
   const stopSpeak = ()=>{ try{ window.speechSynthesis.cancel(); }catch{} };
 
   // ---------- UI texts ----------
   const UI = {
-    title:{pl:"Agent AI",en:"AI Agent"},
-    subtitle:{pl:"Szybkie podpowiedzi w kontekście",en:"Quick, in-context tips"},
+    title:{pl:"AI Agent",en:"AI Agent"},
+    subtitle:{pl:"Szybkie, kontekstowe podpowiedzi",en:"Quick, in-context tips"},
     explain:{pl:"Wyjaśnij wykres",en:"Explain chart"},
     price:{pl:"Sprawdź kurs",en:"Check price"},
     rebalance:{pl:"Sugestia portfela",en:"Rebalance tip"},
     send:{pl:"Wyślij",en:"Send"},
-    tour:{pl:"Start tutorial",en:"Start tutorial"},
+    tour:{pl:"Tutorial",en:"Tutorial"},
     read:{pl:"Czytaj",en:"Read"},
     stop:{pl:"Stop",en:"Stop"},
-    ph:{pl:"Napisz… (np. co to watchlist, kurs AAPL, kup AAPL 1, pokaż wykres EUR/USD z tygodnia)",
-        en:"Type… (e.g., what is watchlist, price AAPL, buy AAPL 1, show chart EUR/USD for week)"},
+    ph:{pl:"Napisz… (np. co to watchlist, kurs AAPL, kup AAPL 1, wykres EUR/USD tydzień)",
+        en:"Type… (e.g., what is watchlist, price AAPL, buy AAPL 1, chart EUR/USD week)"},
     noPrice:{pl:"Nie znalazłem kursu dla",en:"Couldn't find a price for"},
     examplesTitle:{pl:"Przykładowe pytania (FAQ):",en:"Example questions (FAQ):"}
   };
 
-  // ---------- FAQ / examples (PL/EN) ----------
+  // ---------- FAQ ----------
   const FAQ = {
-    pl: [
-      "co to Available Cash?", "co to Net Worth?", "co to watchlist?",
-      "co to Global Trends?", "co to Stock Market?", "co to Currency Market?",
-      "co to Basket i jak działa?", "co to portfolio akcji?",
-      "ile oszczędności?", "ile Net Worth?",
-      "kurs AAPL", "kurs EUR/USD",
-      "pokaż wykres AAPL z tygodnia", "pokaż wykres EUR/USD z miesiąca",
-      "kup AAPL 1", "rebalans", "zmień język na pl", "tutorial"
-    ],
-    en: [
-      "what is Available Cash?", "what is Net Worth?", "what is watchlist?",
-      "what is Global Trends?", "what is Stock Market?", "what is Currency Market?",
-      "what is Basket and how it works?", "what is stock portfolio?",
-      "how much savings?", "how much net worth?",
-      "price AAPL", "price EUR/USD",
-      "show chart AAPL for week", "show chart EUR/USD for month",
-      "buy AAPL 1", "rebalance", "lang en", "tutorial"
-    ]
+    pl: ["co to Available Cash?","co to Net Worth?","co to watchlist?","co to Global Trends?","co to Stock Market?","co to Currency Market?","co to Basket i jak działa?","co to portfolio akcji?","ile oszczędności?","ile Net Worth?","kurs AAPL","kurs EUR/USD","pokaż wykres AAPL z tygodnia","pokaż wykres EUR/USD z miesiąca","kup AAPL 1","rebalans","zmień język na pl","tutorial"],
+    en: ["what is Available Cash?","what is Net Worth?","what is watchlist?","what is Global Trends?","what is Stock Market?","what is Currency Market?","what is Basket and how it works?","what is stock portfolio?","how much savings?","how much net worth?","price AAPL","price EUR/USD","show chart AAPL for week","show chart EUR/USD for month","buy AAPL 1","rebalance","lang en","tutorial"]
   };
 
   // ---------- knowledge base ----------
@@ -4441,15 +4609,8 @@ window.addEventListener('DOMContentLoaded', () => {
     dataMode:{aliases:["data mode","simulation","live mode","tryb danych"], ids:["#liveModeLabel","#liveStatus",".data-mode"],
       desc:{en:"Data Mode – Simulation uses demo; Live pulls real quotes (backend).", pl:"Tryb danych – Symulacja używa demo; Live pobiera realne kursy (backend)."}}
   };
-  const resolveConcept = (q)=>{
-    const t = q.toLowerCase();
-    for (const [k,v] of Object.entries(KB)) if (v.aliases.some(a=>t.includes(a))) return k;
-    return null;
-  };
-  const readValue = (ids)=> {
-    for(const sel of ids||[]){ const el=$(sel); const txt=el?.textContent?.trim(); if(txt) return txt; }
-    return null;
-  };
+  const resolveConcept = (q)=>{ const t=q.toLowerCase(); for (const [k,v] of Object.entries(KB)) if (v.aliases.some(a=>t.includes(a))) return k; return null; };
+  const readValue = (ids)=> { for(const sel of ids||[]){ const el=$(sel); const txt=el?.textContent?.trim(); if(txt) return txt; } return null; };
 
   // ---------- finance helpers ----------
   async function checkPrice(symbol){
@@ -4488,47 +4649,76 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   // ---------- panel + FAB ----------
-  function removeOldRobots(){ $$('#aiAgentBtn, .ai-agent-btn, #ai-fab').forEach(el=>el.remove()); }
-  function ensureFab(){
-    if($('#ai-fab')) return;
+  function removeOldRobots(){ $$('.ai-agent-btn, #aiAgentBtn').forEach(el=>el.remove()); } // nie usuwamy #ai-fab
+
+  function makeFab(){
     const b=document.createElement('button');
     b.id='ai-fab';
     b.setAttribute('aria-label','AI');
-    b.style.cssText="position:fixed;right:18px;bottom:18px;z-index:9998;width:64px;height:64px;border-radius:999px;border:0;box-shadow:0 10px 28px rgba(2,8,23,.45);cursor:pointer;background:linear-gradient(135deg,#60a5fa,#22c55e);color:#081225;font-weight:900;font-size:20px";
     b.textContent='AI';
-    b.onclick=()=>ensurePanel();
-    document.body.appendChild(b);
+    b.style.cssText="position:fixed;right:18px;bottom:18px;z-index:2147483646;width:56px;height:56px;border-radius:999px;border:0;box-shadow:0 10px 28px rgba(2,8,23,.45);cursor:pointer;background:linear-gradient(135deg,#60a5fa,#22c55e);color:#081225;font-weight:900;font-size:18px;pointer-events:auto;user-select:none";
+    return b;
+  }
+  function ensureFab(){
+    let b=$('#ai-fab'); if(!b){ b=makeFab(); document.body.appendChild(b); }
+    // capture – przechwytuje nawet przez overlay
+    const open = (e)=>{ e.preventDefault(); ensurePanel(); };
+    b.replaceWith(b.cloneNode(true)); b=$('#ai-fab');
+    b.addEventListener('click', open, {capture:true});
+    b.addEventListener('pointerup', open, {capture:true});
   }
 
   function ensurePanel(){
-    if($('#ai-agent')) return;
+    const existing = $('#ai-agent');
+    if (existing){
+      const hidden = existing.style.display==='none';
+      existing.style.display = hidden ? 'block' : 'none';
+      if(!hidden) stopSpeak();
+      return;
+    }
     const lang=getLang();
-    const root=document.createElement('div'); root.id='ai-agent'; root.style.cssText="position:fixed;right:18px;bottom:18px;z-index:9999;font-family:inherit;color:#e5e7eb";
+    const root=document.createElement('div'); root.id='ai-agent';
+    root.style.cssText="position:fixed;right:18px;bottom:18px;z-index:2147483647;font-family:inherit;color:#e5e7eb";
+
     root.innerHTML=`
-      <div style="width:360px;max-width:92vw;background:rgba(8,12,22,.94);border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55)">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;">
-          <div><div id="ai-t" style="font-weight:800">${UI.title[lang]}</div><div id="ai-st" style="font-size:12px;opacity:.8">${UI.subtitle[lang]}</div></div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button id="ai-read" class="abtn" style="background:#0b1324;border:1px solid #334155">${getLang()==='pl'?'Czytaj':'Read'}</button>
-            <button id="ai-stop" class="abtn" style="background:#0b1324;border:1px solid #334155">${getLang()==='pl'?'Stop':'Stop'}</button>
-            <button id="ai-tour" class="abtn" style="background:#0b1324;border:1px solid #334155">${UI.tour[lang]}</button>
-            <button id="ai-x" class="abtn" style="background:#111827;border:1px solid #334155">×</button>
+      <div style="width:320px;max-width:92vw;max-height:min(76vh,640px);background:rgba(8,12,22,.94);border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;gap:8px">
+          <div style="min-width:0">
+            <div id="ai-t" style="font-weight:800;line-height:1">${UI.title[lang]}</div>
+            <div id="ai-st" style="font-size:11px;opacity:.8;line-height:1.2">${UI.subtitle[lang]}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;white-space:nowrap">
+            <button id="ai-read" class="abtn abtn--xs">${UI.read[lang]}</button>
+            <button id="ai-stop" class="abtn abtn--xs">${UI.stop[lang]}</button>
+            <button id="ai-tour" class="abtn abtn--xs">${UI.tour[lang]}</button>
+            <button id="ai-x" class="abtn abtn--icon" aria-label="Close">×</button>
           </div>
         </div>
-        <div id="ai-cta" style="display:flex;gap:8px;flex-wrap:wrap;padding:0 12px 8px 12px">
+
+        <div id="ai-cta" style="display:flex;gap:8px;flex-wrap:wrap;padding:0 10px 8px 10px">
           <button id="ai-explain" class="abtn">${UI.explain[lang]}</button>
           <button id="ai-price"   class="abtn">${UI.price[lang]}</button>
           <button id="ai-rebal"   class="abtn">${UI.rebalance[lang]}</button>
         </div>
-        <div style="padding:0 12px 12px 12px;display:flex;gap:8px;">
-          <input id="ai-input" placeholder="${UI.ph[lang]}" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1324;color:#e5e7eb" />
-          <button id="ai-send" class="abtn">${UI.send[lang]}</button>
+
+        <div style="padding:0 10px 10px 10px;display:flex;gap:8px">
+          <input id="ai-input" placeholder="${UI.ph[lang]}" style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid #334155;background:#0b1324;color:#e5e7eb;font-size:13px" />
+          <button id="ai-send" class="abtn abtn--sm">${UI.send[lang]}</button>
         </div>
-        <div id="ai-log" style="margin:0 12px 12px 12px;border:1px dashed rgba(255,255,255,.12);border-radius:10px;padding:10px;font-size:14px;min-height:56px;white-space:pre-wrap"></div>
+
+        <div id="ai-log" style="margin:0 10px 10px 10px;border:1px dashed rgba(255,255,255,.12);border-radius:10px;padding:10px;font-size:13px;min-height:56px;max-height:40vh;overflow:auto;white-space:pre-wrap"></div>
       </div>`;
-    root.querySelectorAll('.abtn').forEach(b=>b.style.cssText += ';color:#e5e7eb;border-radius:10px;padding:8px 10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center');
+
+    // style przycisków
+    root.querySelectorAll('.abtn').forEach(b=>{
+      b.style.cssText += ';color:#e5e7eb;border-radius:10px;padding:8px 10px;border:1px solid #334155;background:#0b1324;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1;height:32px';
+    });
+    root.querySelectorAll('.abtn--xs').forEach(b=>{ b.style.padding='6px 8px'; b.style.fontSize='12px'; b.style.height='28px'; });
+    const xBtn = root.querySelector('#ai-x'); xBtn.style.background='#111827'; xBtn.style.width='28px'; xBtn.style.height='28px'; xBtn.style.padding='0'; xBtn.style.fontSize='18px';
 
     document.body.appendChild(root);
+
+    // actions
     $('#ai-x').onclick   = ()=> root.remove();
     $('#ai-explain').onclick = ()=> log(explainSeries(window.__LAST_SERIES__));
     $('#ai-price').onclick   = ()=> runCmd((getLang()==='pl'?'kurs':'price')+' AAPL');
@@ -4539,7 +4729,8 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#ai-stop').onclick    = ()=> stopSpeak();
     $('#ai-tour').onclick    = ()=> startTour();
 
-    log(helpText()); // start
+    log(helpText());
+    window.mfkOpenAIAgent = ensurePanel; // awaryjnie z konsoli
   }
 
   function refreshPanelLang(){
@@ -4557,123 +4748,88 @@ window.addEventListener('DOMContentLoaded', () => {
     if($('#ai-log')?.dataset?.help==='1') log(helpText());
   }
 
-  // --- HELP/FAQ: tylko przykłady (bez listy komend) ---
-  function buildHelp(){
-    const lang=getLang();
-    const exs  = (FAQ[lang]||[]).map(x=>'• '+x).join('\n');
-    return `${UI.examplesTitle[lang]}\n\n${exs}`;
-  }
+  // --- HELP/FAQ ---
+  function buildHelp(){ const lang=getLang(); const exs=(FAQ[lang]||[]).map(x=>'• '+x).join('\n'); return `${UI.examplesTitle[lang]}\n\n${exs}`; }
   function log(t){ const el=$('#ai-log'); if(el){ el.dataset.help = (t===buildHelp()?'1':''); el.textContent=String(t||''); } }
   const helpText = ()=> buildHelp();
 
-  // ---------- TOUR (rozbudowany, dopasowany do roli) ----------
+  // ---------- TOUR ----------
   function findByText(text){
     const q = text.toLowerCase();
     const nodes = $$('button, a, span, div');
     return nodes.find(el => el.textContent?.trim().toLowerCase().includes(q)) || null;
   }
   function firstExisting(arr){ for(const s of arr){ const el=$(s); if(el) return el; } return null; }
-  function anchorFor(step){
-    // spróbuj po selektorach; jeśli nie – po tekście
-    let el = step.sels ? firstExisting(step.sels) : null;
-    if (!el && step.textMatch) el = findByText(step.textMatch);
-    return el || $('#ai-fab');
-  }
-  function highlight(el){
-    if(!el) return;
-    el._ai_css_backup = el.style.outline;
-    el.style.outline = '2px solid #60a5fa';
-    setTimeout(()=>{ el.style.outline = el._ai_css_backup || ''; }, 1200);
-  }
+  function anchorFor(step){ let el = step.sels ? firstExisting(step.sels) : null; if (!el && step.textMatch) el = findByText(step.textMatch); return el || $('#ai-fab'); }
+  function highlight(el){ if(!el) return; el._ai_css_backup = el.style.outline; el.style.outline = '2px solid #60a5fa'; setTimeout(()=>{ el.style.outline = el._ai_css_backup || ''; }, 1200); }
   function placeBubble(bubble, ref){
     ref.scrollIntoView({behavior:'instant', block:'center', inline:'center'});
     const r = ref.getBoundingClientRect();
-    const B = {w:360,h:bubble.offsetHeight||140};
+    const B = {w:320,h:bubble.offsetHeight||140};
     let left = r.left + window.scrollX;
     let top  = r.top + window.scrollY + r.height + 10;
-    if (top + B.h > window.scrollY + window.innerHeight) top = r.top + window.scrollY - B.h - 10; // powyżej, jeśli brakuje miejsca
-    if (left + 380 > window.scrollX + window.innerWidth) left = window.scrollX + window.innerWidth - 380; // w granicach ekranu
+    if (top + B.h > window.scrollY + window.innerHeight) top = r.top + window.scrollY - B.h - 10;
+    if (left + (B.w+20) > window.scrollX + window.innerWidth) left = window.scrollX + window.innerWidth - (B.w+20);
     bubble.style.left = Math.max(10,left) + 'px';
     bubble.style.top  = Math.max(10,top)  + 'px';
   }
   function startTour(){
-    const L = getLang();
-    const S = (pl,en)=> (L==='pl'?pl:en);
-    const role = getRole();
-
+    const L=getLang(), S=(pl,en)=> (L==='pl'?pl:en), role=getRole();
     const stepsAll = [
-      // TOPBAR buttons
       ...(role==='parent' ? [{textMatch:'+ add child',  pl:'Dodajesz nowe konto dziecka.', en:'Add a new child account.'}] : []),
-      { textMatch:'stocks',         pl:'Wejście do rynku akcji.',                en:'Enter the Stocks market.' },
-      { textMatch:'currencies (fx)',pl:'Rynek walut (FX).',                      en:'Currencies (FX) market.' },
-      { textMatch:'profits',        pl:'Zestawienie zysków/strat.',              en:'Profits panel – realized P/L.' },
+      { textMatch:'stocks', pl:'Wejście do rynku akcji.', en:'Enter the Stocks market.' },
+      { textMatch:'currencies (fx)', pl:'Rynek walut (FX).', en:'Currencies (FX) market.' },
+      { textMatch:'profits', pl:'Zestawienie zysków/strat.', en:'Profits panel – realized P/L.' },
       ...(role==='parent' ? [{ textMatch:'parent', pl:'Panel rodzica i ustawienia.', en:'Parent panel & settings.' }] : []),
-      { textMatch:'tutorial',       pl:'Uruchom przewodnik po aplikacji.',       en:'Launch the in-app tutorial.' },
-
-      // MINI JARS (nagłówek)
+      { textMatch:'tutorial', pl:'Uruchom przewodnik po aplikacji.', en:'Launch the in-app tutorial.' },
       { textMatch:'available cash', pl:'Pieniądze dostępne od razu.', en:'Money ready to use now.' },
-      { textMatch:'savings',        pl:'Suma środków w słoiku Oszczędności.', en:'Savings jar amount.' },
-      { textMatch:'earnings',       pl:'Suma środków w słoiku Zarobków.', en:'Earnings jar amount.' },
-      { textMatch:'gifts',          pl:'Suma środków w słoiku Prezentów.', en:'Gifts jar amount.' },
-      { textMatch:'investments',    pl:'Gotówka przeznaczona na inwestycje.', en:'Cash dedicated for investments.' },
-
-      // INVESTMENT KPIs
-      { textMatch:'inv. value fx',      pl:'Wartość pozycji walutowych (FX).', en:'Market value of FX positions.' },
-      { textMatch:'inv. value stocks',  pl:'Wartość pozycji akcyjnych.',       en:'Market value of stock positions.' },
-      { textMatch:'inv. value total',   pl:'Łączna wartość FX + akcji.',       en:'Combined value of FX + Stocks.' },
-      { textMatch:'total earned',       pl:'Skumulowane zrealizowane zyski.',  en:'Accumulated realized profits.' },
-      { textMatch:'total loss',         pl:'Skumulowane zrealizowane straty.', en:'Accumulated realized losses.' },
-
-      // JARS (duże)
-      { sels:['#saveAmt'],   pl:'Słoik Oszczędności – odkładanie na cele. +Add dodaje środki.', en:'Savings jar – long-term saving. Use +Add.' },
-      { sels:['#spendAmt'],  pl:'Słoik Zarobków – pieniądze, które zarobiłaś/eś.',               en:'Earnings jar – money you earned.' },
-      { sels:['#giveAmt'],   pl:'Słoik Prezentów – środki z prezentów.',                         en:'Gifts jar – money from gifts.' },
-      { sels:['#investAmt'], pl:'Słoik Inwestycje – gotówka na zakup aktywów.',                  en:'Investments jar – cash to buy assets.' },
-
-      // KPI cards
-      { sels:['#netWorth'],                       pl:'Wartość netto – słoiki + portfele.',            en:'Net Worth – jars + portfolios.' },
-      { sels:['#availableCash','#miniCash'],      pl:'Available Cash – suma Oszczędności, Zarobków i Prezentów.', en:'Available Cash – Savings + Earnings + Gifts.' },
-
-      // Quick Actions
-      { sels:['#addAllowance'],   pl:'Allowance 10 USD – szybkie kieszonkowe.',                 en:'Allowance 10 USD – quick pocket money.' },
-      { sels:['#moveSpendSave'],  pl:'Move Earnings → Savings – przenieś zarobki do oszczędności.', en:'Move Earnings → Savings.' },
-      { sels:['#moveDonToSave'],  pl:'Move Gifts → Savings – przenieś prezenty do oszczędności.',  en:'Move Gifts → Savings.' },
-
-      // Rest of the app
-      { sels:['#globalTrendsCard','.global-trends'],                 pl:'Global Trends – migawka świata.', en:'Global Trends – world snapshot.' },
-      { sels:['#watchlist','.watchlist','.wl-container'],            pl:'Watchlist – Twoja lista obserwowanych.', en:'Watchlist – your list of instruments.' },
-      { sels:['#stockMarket','.stock-market','.tab-stocks'],         pl:'Stock Market – wybierz spółkę, dodaj do koszyka.', en:'Stock Market – pick a stock, add to basket.' },
-      { sels:['#fxMarket','.fx-market','.tab-fx'],                   pl:'Currency Market – pary walutowe i kursy.', en:'Currency Market – currency pairs and rates.' },
-      { sels:['[data-basket-list="stocks"]','.basket-stocks','#basketStocks'], pl:'Basket – koszyk zakupów z gotówki inwestycyjnej.', en:'Basket – investment-cash buy list.' },
-      { sels:['#portfolioBody','.stock-portfolio'],                  pl:'Portfolio – tabela pozycji i P/L.', en:'Portfolio – positions and P/L.' },
-      { sels:['.data-mode','#liveModeLabel','#liveStatus'],          pl:'Data Mode – Symulacja vs Live.', en:'Data Mode – Simulation vs Live.' },
-      { sels:['#ai-fab'],                                            pl:'Przycisk „AI” – zadaj pytania, np. „kurs AAPL”, „co to watchlist”.', en:'“AI” button – ask “price AAPL”, “what is watchlist”.' }
+      { textMatch:'savings', pl:'Suma środków w słoiku Oszczędności.', en:'Savings jar amount.' },
+      { textMatch:'earnings', pl:'Suma środków w słoiku Zarobków.', en:'Earnings jar amount.' },
+      { textMatch:'gifts', pl:'Suma środków w słoiku Prezentów.', en:'Gifts jar amount.' },
+      { textMatch:'investments', pl:'Gotówka przeznaczona na inwestycje.', en:'Cash dedicated for investments.' },
+      { textMatch:'inv. value fx', pl:'Wartość pozycji walutowych (FX).', en:'Market value of FX positions.' },
+      { textMatch:'inv. value stocks', pl:'Wartość pozycji akcyjnych.', en:'Market value of stock positions.' },
+      { textMatch:'inv. value total', pl:'Łączna wartość FX + akcji.', en:'Combined value of FX + Stocks.' },
+      { textMatch:'total earned', pl:'Skumulowane zrealizowane zyski.', en:'Accumulated realized profits.' },
+      { textMatch:'total loss', pl:'Skumulowane zrealizowane straty.', en:'Accumulated realized losses.' },
+      { sels:['#saveAmt'], pl:'Słoik Oszczędności – odkładanie na cele. +Add.', en:'Savings jar – use +Add.' },
+      { sels:['#spendAmt'], pl:'Słoik Zarobków – Twoje zarobki.', en:'Earnings jar – money you earned.' },
+      { sels:['#giveAmt'], pl:'Słoik Prezentów – prezenty.', en:'Gifts jar – present money.' },
+      { sels:['#investAmt'], pl:'Inwestycje – gotówka na aktywa.', en:'Investments jar – cash for assets.' },
+      { sels:['#netWorth'], pl:'Wartość netto – słoiki + portfele.', en:'Net Worth – jars + portfolios.' },
+      { sels:['#availableCash','#miniCash'], pl:'Available Cash – suma trzech słoików.', en:'Available Cash – sum of three jars.' },
+      { sels:['#addAllowance'], pl:'Allowance 10 USD.', en:'Allowance 10 USD.' },
+      { sels:['#moveSpendSave'], pl:'Earnings → Savings.', en:'Earnings → Savings.' },
+      { sels:['#moveDonToSave'], pl:'Gifts → Savings.', en:'Gifts → Savings.' },
+      { sels:['#globalTrendsCard','.global-trends'], pl:'Global Trends – migawka.', en:'Global Trends – snapshot.' },
+      { sels:['#watchlist','.watchlist','.wl-container'], pl:'Watchlist – obserwowane.', en:'Watchlist – instruments.' },
+      { sels:['#stockMarket','.stock-market','.tab-stocks'], pl:'Rynek akcji.', en:'Stock market.' },
+      { sels:['#fxMarket','.fx-market','.tab-fx'], pl:'Rynek walut.', en:'FX market.' },
+      { sels:['[data-basket-list="stocks"]','.basket-stocks','#basketStocks'], pl:'Koszyk zakupów.', en:'Basket.' },
+      { sels:['#portfolioBody','.stock-portfolio'], pl:'Portfel i P/L.', en:'Portfolio and P/L.' },
+      { sels:['.data-mode','#liveModeLabel','#liveStatus'], pl:'Tryb danych.', en:'Data mode.' },
+      { sels:['#ai-fab'], pl:'Przycisk „AI”.', en:'“AI” button.' }
     ];
-
-    // Usuń kroki "Add child" i "Parent" gdy role=child
     const steps = stepsAll.filter(st => !(role==='child' && (st.textMatch?.includes('add child') || st.textMatch?.includes('parent'))));
 
     let i=0;
-    const overlay = document.createElement('div');
+    const overlay=document.createElement('div');
     overlay.id='ai-tour';
-    overlay.style.cssText="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.28);pointer-events:none";
-    const bubble = document.createElement('div');
-    bubble.style.cssText="position:absolute;max-width:360px;background:#0b1324;border:1px solid #334155;color:#e5e7eb;padding:10px 12px;border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);pointer-events:auto";
-    const meta = document.createElement('div'); meta.style.cssText="font-size:12px;opacity:.7;margin-bottom:6px";
-    const next = document.createElement('button'); next.style.cssText="margin-top:8px;background:#111827;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
-    const close = document.createElement('button'); close.style.cssText="margin:8px 0 0 8px;background:#1f2937;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
+    overlay.style.cssText="position:fixed;inset:0;z-index:2147483645;background:rgba(0,0,0,.28);pointer-events:none";
+    const bubble=document.createElement('div');
+    bubble.style.cssText="position:absolute;max-width:320px;background:#0b1324;border:1px solid #334155;color:#e5e7eb;padding:10px 12px;border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);pointer-events:auto";
+    const meta=document.createElement('div'); meta.style.cssText="font-size:12px;opacity:.7;margin-bottom:6px";
+    const next=document.createElement('button'); next.style.cssText="margin-top:8px;background:#111827;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
+    const close=document.createElement('button'); close.style.cssText="margin:8px 0 0 8px;background:#1f2937;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
     next.textContent = S('Dalej','Next'); close.textContent = S('Zamknij','Close');
 
-    function stepToText(st){ return S(st.pl, st.en); }
+    const stepToText = (st)=> S(st.pl, st.en);
     function showStep(){
       const st=steps[i]; if(!st){ overlay.remove(); return; }
-      const ref = anchorFor(st);
-      highlight(ref);
-      // build bubble
-      bubble.innerHTML=''; meta.textContent = S(`Krok ${i+1}/${steps.length}`, `Step ${i+1}/${steps.length}`);
+      const ref=anchorFor(st); highlight(ref);
+      bubble.innerHTML=''; meta.textContent=S(`Krok ${i+1}/${steps.length}`,`Step ${i+1}/${steps.length}`);
       bubble.appendChild(meta); bubble.appendChild(document.createTextNode(stepToText(st)));
       bubble.appendChild(document.createElement('br')); bubble.appendChild(next); bubble.appendChild(close);
-      // place
       placeBubble(bubble, ref);
     }
     next.onclick=()=>{ i++; showStep(); };
@@ -4686,19 +4842,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const q = String(raw||'').trim();
     if(!q){ log(helpText()); return; }
 
-    // language
     let m = q.match(/^lang\s+(pl|en)$/i);
     if(m){ setLang(m[1]); log(helpText()); return; }
 
-    // TTS on/off
     if (/^(czytaj|read)$/i.test(q)) { const t=$('#ai-log')?.textContent||''; if(t) speak(t); return; }
     if (/^(stop|pause|przestań|przestan)$/i.test(q)) { stopSpeak(); return; }
 
-    // price/kurs SYMBOL
     m = q.match(/\b(?:price|kurs)\s+([A-Z]{2,5}(?:\/[A-Z]{2,5})?)\b/i);
     if(m){ await checkPrice(m[1].toUpperCase()); return; }
 
-    // buy/kup SYMBOL QTY
     m = q.match(/\b(?:buy|kup)\s+([A-Z]{1,5})\s+(\d+(?:\.\d+)?)\b/i);
     if(m){
       const detail={type:'stock',symbol:m[1].toUpperCase(),qty:parseFloat(m[2])};
@@ -4708,7 +4860,6 @@ window.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // show chart / pokaż wykres
     m = q.match(/\b(?:show chart|pokaż wykres|pokaz wykres)\s+([A-Z]{2,5}(?:\/[A-Z]{2,5})?)\s+(?:for\s+|z\s+)?(day|week|month|dnia|tygodnia|miesiąca|miesiaca)\b/i);
     if(m){
       const sym=m[1].toUpperCase();
@@ -4719,7 +4870,6 @@ window.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // ile/how much ...
     if (/^(ile|how much)\b/i.test(q)){
       const key = resolveConcept(q);
       if(key && KB[key].ids?.length){
@@ -4728,7 +4878,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // definicje: co to / what is
     if (/^(co to|czym jest|co to jest|what is|explain)\b/i.test(q) || true){
       const key = resolveConcept(q);
       if(key){
@@ -4739,10 +4888,8 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // tutorial
     if (/^(tutorial|start tutorial|pomoc start)$/i.test(q)) { startTour(); return; }
 
-    // fallback
     log(helpText());
   }
 
@@ -4752,7 +4899,13 @@ window.addEventListener('DOMContentLoaded', () => {
     if(e.code==='KeyA'){ e.preventDefault(); ensurePanel(); }
     if(e.code==='KeyR'){ e.preventDefault(); const t=$('#ai-log')?.textContent||''; if(t) speak(t); }
     if(e.code==='KeyS'){ e.preventDefault(); stopSpeak(); }
-  });
+  }, true);
+
+  // ---------- global capture for FAB ----------
+  document.addEventListener('pointerup', (e)=>{
+    const t=e.target;
+    if (t && (t.id==='ai-fab' || t.closest?.('#ai-fab'))) { e.preventDefault(); ensurePanel(); }
+  }, true);
 
   // ---------- start ----------
   onReady(() => {
@@ -4762,4 +4915,3 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
 })();
-
