@@ -3876,3 +3876,32 @@ width: 110px;
     display: block !important;
   }
 }
+/* Watchlist: kompaktowy picker */
+.panel.watchlist #wl-form {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* Domyślnie ~połowa szerokości kontenera */
+.panel.watchlist #wl-pick {
+  flex: 0 1 50%;
+  max-width: 50%;
+  min-width: 140px;      /* niech zostanie czytelny */
+}
+
+/* Na bardzo małych ekranach jeszcze ciaśniej */
+@media (max-width: 480px) {
+  .panel.watchlist #wl-pick {
+    flex-basis: 60%;
+    max-width: 60%;
+  }
+}
+
+/* Gdy chcesz wyjątkowo wąsko na super-małych */
+@media (max-width: 360px) {
+  .panel.watchlist #wl-pick {
+    flex-basis: 70%;
+    max-width: 70%;
+  }
+}
