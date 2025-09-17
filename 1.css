@@ -3882,72 +3882,25 @@ width: 110px;
   align-items: center;
   gap: .5rem;
 }
-
-/* Domyślnie ~połowa szerokości kontenera */
-.panel.watchlist #wl-pick {
-  flex: 0 1 50%;
-  max-width: 50%;
-  min-width: 140px;      /* niech zostanie czytelny */
-}
-
-/* Na bardzo małych ekranach jeszcze ciaśniej */
-@media (max-width: 480px) {
-  .panel.watchlist #wl-pick {
-    flex-basis: 60%;
-    max-width: 60%;
-  }
-}
-
-/* Watchlist form – elastyczny układ */
-.panel.watchlist #wl-form {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-}
-
-/* Select węższy na mobile */
-.panel.watchlist #wl-pick {
-  flex: 1 1 auto;
-  min-width: 120px;
-  max-width: calc(100% - 90px); /* zostaw ~90px na +Add */
-}
-
-/* Na małych ekranach jeszcze ciaśniej */
-@media (max-width: 600px) {
-  .panel.watchlist #wl-pick {
-    max-width: calc(100% - 75px); /* 75px na przycisk */
-  }
-}
-/* WATCHLIST: formularz (select + Add) */
+/* Watchlist: select + Add w jednym rzędzie */
 .panel.watchlist #wl-form{
-  display: grid;
-  grid-template-columns: 1fr auto; /* select zajmuje resztę, Add szer. własna */
+  display: flex;
+  flex-wrap: nowrap;
   gap: .5rem;
   align-items: center;
-  overflow: hidden; /* obetnij ewentualne 1px overflow */
 }
 
-/* Sam select – żadnych sztywnych szerokości */
 .panel.watchlist #wl-pick{
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;          /* KLUCZ w grid/flex – pozwala się ścisnąć */
+  flex: 1 1 auto;           /* zajmuje resztę miejsca */
+  min-width: 0;             /* pozwala się ścisnąć */
+  width: auto !important;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
-/* Przycisk +Add nie rozciąga się i nie zawija */
 .panel.watchlist #wl-add{
+  flex: 0 0 auto;           /* nie rozciąga się */
   white-space: nowrap;
-  flex: 0 0 auto;
 }
 
-/* Mobile: kiedy bardzo ciasno, kładziemy Add pod selektem (pewność 100%) */
-@media (max-width: 560px){
-  .panel.watchlist #wl-form{
-    grid-template-columns: 1fr;      /* jedna kolumna */
-  }
-  .panel.watchlist #wl-add{
-    justify-self: end;               /* przy prawym brzegu */
-    width: auto;
-  }
-}
+ 
