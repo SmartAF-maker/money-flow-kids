@@ -4272,6 +4272,14 @@ window.addEventListener('DOMContentLoaded', () => {
   // safety retry na wypadek asynchronicznego ładowania rynku
   setTimeout(fillPicker, 600);
   setTimeout(fillPicker, 2000);
+  // >>> FIX: zwęż select na mobile (niech nie wypycha +Add)
+  (function fixPickerWidth(){
+    const sel = document.getElementById('wl-pick');
+    if (!sel) return;
+    sel.style.width = '';
+    sel.style.maxWidth = '100%';
+    sel.style.minWidth = '0';
+  })();
 })();
 
 
