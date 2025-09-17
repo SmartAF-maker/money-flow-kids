@@ -3625,7 +3625,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const $wlTabs = $panel?.querySelector('.wl-tabs') || null;
 
   // ---------- LISTY ----------
-  // ⬇️ NOWE: zamiast ręcznej listy, bierzemy tickery ze STOCK_UNIVERSE (fallback poniżej)
   const STOCKS_ALL = (Array.isArray(window.STOCK_UNIVERSE) && window.STOCK_UNIVERSE.length)
     ? Array.from(new Set(
         window.STOCK_UNIVERSE
@@ -3657,7 +3656,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const WDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MONTHS= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  // ====== UI currency / formatting (NEW) ======
+  // ====== UI currency / formatting ======
   function uiQuote() {
     const q = (typeof window.fxQuote === 'function') ? window.fxQuote() : 'PLN';
     return String(q || 'PLN').toUpperCase();
@@ -3737,7 +3736,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return { dates:g.dates.map(toISO), closes:g.values };
   }
 
-  // ---------- unified spot + currency conversion (NEW) ----------
+  // ---------- unified spot + currency conversion ----------
   const normalizeSymbol = s => String(s||'').toUpperCase().replace(/\.US$/,'');
 
   // access helpers
@@ -3749,7 +3748,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return HUB[k];
   }
   function hubGetAny(keys){
-    for (const k of keys){
+    for (const k of (Array.isArray(keys)?keys:[keys])){
       let v = hubRawGet(k);
       if (v && typeof v==='object') v = v.price ?? v.last ?? v.value ?? null;
       v = Number(v);
@@ -3770,24 +3769,70 @@ window.addEventListener('DOMContentLoaded', () => {
     return [ `${b}/${q}`, `${k}`, `${k}=X`, `${b}-${q}`, `${b}_${q}` ];
   }
 
-  function hubSpotFx(base, quote, fallback){
-    const v = hubGetAny(fxAliases(base,quote));
-    if (Number.isFinite(v) && v > 0) return v;
-    return Number.isFinite(fallback) ? fallback : basePriceFx(base, quote);
+  // --- SAFE FX CHAIN (HUB -> fxRate -> invert -> baseFx -> helpers) ---
+  function fxFromBaseMap(base, quote){
+    const M = window.baseFx || window.BASE_FX || null; // PLN-per-1
+    if (!M) return NaN;
+    const b = Number(M[String(base).toUpperCase()]);
+    const q = Number(M[String(quote).toUpperCase()]);
+    if (Number.isFinite(b) && Number.isFinite(q) && q > 0) return b / q;
+    return NaN;
+  }
+  function fxChain(base, quote, fallback){
+    const b = String(base).toUpperCase();
+    const q = String(quote).toUpperCase();
+
+    // 1) PRICE_HUB
+    const hub = hubGetAny(fxAliases(b,q));
+    if (Number.isFinite(hub) && hub > 0) return hub;
+
+    // 2) fxRate('b/q')
+    if (typeof window.fxRate === 'function'){
+      const r1 = Number(window.fxRate(`${b}/${q}`));
+      if (Number.isFinite(r1) && r1 > 0) return r1;
+
+      // 3) fxRate('q/b') → odwróć
+      const r2 = Number(window.fxRate(`${q}/${b}`));
+      if (Number.isFinite(r2) && r2 > 0) return 1 / r2;
+    }
+
+    // 4) baseFx (PLN-per-1) → iloraz
+    const r3 = fxFromBaseMap(b, q);
+    if (Number.isFinite(r3) && r3 > 0) return r3;
+
+    // 5) helpers USD
+    if (b === 'USD' && typeof window.convertFromUSD === 'function'){
+      const r4 = Number(window.convertFromUSD(1, q));
+      if (Number.isFinite(r4) && r4 > 0) return r4;
+    }
+    if (q === 'USD' && typeof window.convertToUSD === 'function'){
+      const r5 = Number(window.convertToUSD(1, b));
+      if (Number.isFinite(r5) && r5 > 0) return 1 / r5;
+    }
+
+    // 6) fallback / sandbox
+    if (Number.isFinite(fallback) && fallback > 0) return fallback;
+    return basePriceFx(b, q);
   }
 
+  // --- FX spot z pełnym fallbackiem ---
+  function hubSpotFx(base, quote, fallback){
+    return fxChain(base, quote, fallback);
+  }
+
+  // --- STOCK spot, zawsze w walucie UI ---
   function hubSpotStock(sym, fallback){
     // 1) Spróbuj dostać cenę już w walucie UI
     const pref = hubGetAny(stockAliases(sym).slice(0,5));
     if (Number.isFinite(pref) && pref > 0) return pref;
 
-    // 2) Weź neutralny i przelicz do UI
+    // 2) Weź neutralny (najczęściej USD) i przelicz
     const any = hubGetAny(stockAliases(sym).slice(5));
     if (Number.isFinite(any) && any > 0){
-      const q = CURRENT_QUOTE;
-      if (q && q !== 'USD'){ // zakładamy bazę USD — podmień jeśli u Ciebie inna
-        const fx = hubSpotFx('USD', q, NaN);
-        if (Number.isFinite(fx) && fx>0) return any * fx;
+      const q = CURRENT_QUOTE || 'USD';
+      if (q !== 'USD'){
+        const fx = fxChain('USD', q, NaN);
+        if (Number.isFinite(fx) && fx > 0) return any * fx;
       }
       return any;
     }
@@ -3839,14 +3884,14 @@ window.addEventListener('DOMContentLoaded', () => {
       return out;
     }
 
-    // 5D — ostatnie 5 dni roboczych (Mon..Fri) z samej serii
+    // 5D — ostatnie 5 dni roboczych
     if (L === '5D') {
       const dayTicks = [];
       let lastKey = null;
       for (let i = 0; i < datesMs.length; i++) {
         const d  = new Date(datesMs[i]);
-        const wd = d.getDay();                 // 0=Sun ... 6=Sat
-        if (wd === 0 || wd === 6) continue;    // weekend out
+        const wd = d.getDay();
+        if (wd === 0 || wd === 6) continue;
         const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
         if (key !== lastKey) {
           dayTicks.push({ i, lbl: WDAYS[wd] });
@@ -3989,7 +4034,6 @@ window.addEventListener('DOMContentLoaded', () => {
     return [k, k+'=X'];
   }
 
-  // uses fmtMoney and updates prev (NEW)
   function applyLiveToCard(el, cur, prev){
     const p = el.querySelector('.wl-price');
     const d = el.querySelector('.wl-diff');
@@ -4041,11 +4085,21 @@ window.addEventListener('DOMContentLoaded', () => {
       const unsub = (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function')
         ? window.PRICE_HUB.subscribe((key,val) => {
             const keys = hubKeyFor(item);
-            const hit = Array.isArray(keys) ? keys.some(k => String(key).toUpperCase()===String(k).toUpperCase())
-                                            : (String(key).toUpperCase()===String(keys).toUpperCase());
+            const hit = Array.isArray(keys)
+              ? keys.some(k => String(key).toUpperCase()===String(k).toUpperCase())
+              : (String(key).toUpperCase()===String(keys).toUpperCase());
             if (!hit) return;
-            const prevLive = el._wl_prev ?? cur;
-            applyLiveToCard(el, Number(val), prevLive);
+
+            let curLive = Number(val);
+            if (!Number.isFinite(curLive)) return;
+
+            // jeśli to akcja i UI != USD, przelicz live tick
+            if (item.type !== 'fx' && CURRENT_QUOTE !== 'USD'){
+              const fx = fxChain('USD', CURRENT_QUOTE, NaN);
+              if (Number.isFinite(fx) && fx > 0) curLive = curLive * fx;
+            }
+            const prevLive = el._wl_prev ?? curLive;
+            applyLiveToCard(el, curLive, prevLive);
           })
         : null;
       el._wl_unsub = unsub;
@@ -4126,9 +4180,13 @@ window.addEventListener('DOMContentLoaded', () => {
           const hit = Array.isArray(keys) ? keys.some(k => String(k).toUpperCase()===String(key).toUpperCase())
                                           : (String(keys).toUpperCase()===String(key).toUpperCase());
           if (!hit) return;
-          const prev = $big?._seriesPrev ?? Number(val);
-          const cur  = Number(val);
+          let cur  = Number(val);
           if (!Number.isFinite(cur)) return;
+          if (item.type !== 'fx' && CURRENT_QUOTE !== 'USD'){
+            const fx = fxChain('USD', CURRENT_QUOTE, NaN);
+            if (Number.isFinite(fx) && fx > 0) cur = cur * fx;
+          }
+          const prev = $big?._seriesPrev ?? cur;
           const ch   = cur - (prev ?? cur);
           const pc   = (prev && prev!==0) ? (ch/prev)*100 : 0;
           $mPrice.textContent = fmtMoney(cur);
@@ -4197,7 +4255,7 @@ window.addEventListener('DOMContentLoaded', () => {
     saveLS(); render();
   });
 
-  // ---------- currency change listeners (NEW) ----------
+  // ---------- currency change listeners ----------
   function onQuoteChanged(){
     const next = uiQuote();
     if (next === CURRENT_QUOTE) return;
@@ -4236,6 +4294,7 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
+
 
 
 
