@@ -4213,33 +4213,51 @@ window.addEventListener('DOMContentLoaded', () => {
     Array.from(ranges).forEach(btn => btn.onclick = () => setRange(btn));
   }
 
-  // ---------- TABS / TRYB ----------
-  function applyMode(next){
-    mode = next; filter = next;
-    fillPicker(); render();
-    if ($wlTabs){
-      $wlTabs.querySelectorAll('button').forEach(b => {
-        const on = b.dataset.filter===filter || (filter==='stock' && b.dataset.filter==='stocks');
-        b.classList.toggle('is-active', on);
-      });
-    }
-  }
-  document.querySelectorAll('[data-tab]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const t = (btn.getAttribute('data-tab')||'').toLowerCase();
-      if (t==='invest' || t==='stocks' || t==='tab-invest') applyMode('stock');
-      if (t==='fx'     || t==='currencies' || t==='tab-fx')  applyMode('fx');
-    });
-  });
+ // ---------- TABS / TRYB (fixed: robust mapping) ----------
+function applyMode(next){
+  mode = next;            // 'stock' | 'fx'
+  filter = next;          // to samo na start (poza "All")
+  fillPicker(); render();
+
   if ($wlTabs){
-    $wlTabs.addEventListener('click', (e)=>{
-      const b = e.target.closest('button[data-filter]'); if (!b) return;
-      const f = b.dataset.filter;
-      if (f==='all'){ filter='all'; fillPicker(); render(); }
-      if (f==='stocks'){ applyMode('stock'); }
-      if (f==='fx' || f==='currencies'){ applyMode('fx'); }
+    $wlTabs.querySelectorAll('button[data-filter]').forEach(b => {
+      const bf = (b.dataset.filter||'').toLowerCase();
+      const on =
+        (filter==='all'   && bf==='all') ||
+        (filter==='stock' && (bf==='stock' || bf==='stocks' || bf==='equities')) ||
+        (filter==='fx'    && (bf==='fx' || bf==='currencies' || bf==='currency'));
+      b.classList.toggle('is-active', on);
     });
   }
+}
+
+// przyciski globalne z [data-tab] (np. w topbarze)
+document.querySelectorAll('[data-tab]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const t = (btn.getAttribute('data-tab')||'').toLowerCase();
+    if (t==='invest' || t==='stock' || t==='stocks' || t==='tab-invest') applyMode('stock');
+    if (t==='fx'     || t==='currencies' || t==='currency' || t==='tab-fx')  applyMode('fx');
+  });
+});
+
+// lokalne zakładki w panelu Watchlist (All / Stocks / Currencies)
+if ($wlTabs){
+  $wlTabs.addEventListener('click', (e)=>{
+    const b = e.target.closest('button[data-filter]'); if (!b) return;
+    const f = (b.dataset.filter||'').toLowerCase();
+
+    if (f==='all'){ 
+      // pokaż oba typy, ale nie zmieniaj trybu dodawania
+      filter='all'; fillPicker(); render();
+    }
+    if (f==='stock' || f==='stocks' || f==='equities'){ 
+      applyMode('stock'); 
+    }
+    if (f==='fx' || f==='currencies' || f==='currency'){ 
+      applyMode('fx'); 
+    }
+  });
+}
 
   // ---------- ADD ----------
   $form?.addEventListener('submit', e=>{
