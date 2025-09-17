@@ -3751,3 +3751,63 @@ width: 110px;
   justify-self: end;
   align-self: center;
 }
+/* ===== MOBILE LAYOUT FIX for Basket (Stocks + FX) ===== */
+@media (max-width: 768px){
+
+  /* 1) Wiersz koszyka jako FLEX z miejscem na X po prawej */
+  #stock-basket .basket-item,
+  #fx-basket   .basket-item{
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    position: relative;        /* do pozycjonowania X */
+    padding-right: 56px;       /* rezerwujemy miejsce na X */
+    min-height: 56px;
+  }
+
+  /* 2) Pokaż ticker/nazwę, ukryj pierwszą (lewą) cenę i ewent. myślnik */
+  #stock-basket .basket-item .b-name,
+  #fx-basket   .basket-item .b-name{
+    display: inline !important;
+    visibility: visible !important;
+  }
+  #stock-basket .basket-item .b-price,
+  #fx-basket   .basket-item .b-price,
+  #stock-basket .basket-item .b-change,
+  #fx-basket   .basket-item .b-change{
+    display: none !important;
+  }
+
+  /* 3) Stałe szerokości dla qty/set; suma dosuwa się do prawej */
+  #stock-basket .basket-item .b-qty,
+  #fx-basket   .basket-item .b-qty{
+    flex: 0 0 72px;            /* input z ilością */
+  }
+  #stock-basket .basket-item .b-set,
+  #fx-basket   .basket-item .b-set{
+    flex: 0 0 64px;            /* przycisk Set */
+  }
+  #stock-basket .basket-item .b-subtotal,
+  #fx-basket   .basket-item .b-subtotal{
+    margin-left: auto;         /* $ kwota po prawej */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 4) X zawsze widoczny i nie nachodzi na nic: przypinamy do prawej */
+  #stock-basket .basket-item .b-remove,
+  #fx-basket   .basket-item .b-remove{
+    display: inline-flex !important;
+    position: absolute !important;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border-c);
+    align-items: center; justify-content: center;
+    z-index: 2;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+}
