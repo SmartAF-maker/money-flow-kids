@@ -3751,19 +3751,41 @@ width: 110px;
   justify-self: end;
   align-self: center;
 }
-/* === MOBILE: pokaż małego X na końcu wiersza === */
+/* === MOBILE: mały X w wierszu koszyka, bez zmiany układu === */
 @media (max-width: 768px){
+  /* rezerwujemy trochę miejsca na X, nie zmieniamy grida/flexa */
+  #stock-basket .basket-item,
+  #fx-basket   .basket-item{
+    position: relative;
+    padding-right: 34px; /* miejsce na X po prawej */
+  }
+
+  /* sam X – absolutnie przypięty do prawej, mały i lekki */
   #stock-basket .basket-item .b-remove,
   #fx-basket   .basket-item .b-remove{
     display: inline-flex !important;
-    width: 24px;
-    height: 24px;
+    position: absolute !important;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
     font-size: 14px;
     line-height: 1;
     border-radius: 6px;
     border: 1px solid var(--border-c);
     align-items: center;
     justify-content: center;
-    cursor: pointer;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  /* efekt dotknięcia (opcjonalnie) */
+  #stock-basket .basket-item .b-remove:active,
+  #fx-basket   .basket-item .b-remove:active{
+    background: rgba(239, 68, 68, .15);
+    border-color: rgba(239, 68, 68, .6);
   }
 }
+
