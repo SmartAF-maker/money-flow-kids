@@ -3813,54 +3813,66 @@ width: 110px;
     background: rgba(239,68,68,0.3);
   }
 }
-/* ===== MOBILE ONLY: Watchlist modal & chart ===== */
+/* ===== MOBILE ONLY: zakresy czasu w modalu wykresu ===== */
 @media (max-width: 768px){
-  /* sam modal */
+
+  /* wąskie marginesy w modalu, żeby zrobić miejsce na przyciski */
   #wl-modal{
-    inset: 8px !important;               /* małe marginesy */
-    width: auto; height: auto;
+    padding: 12px 12px 14px !important;
+    border-radius: 14px !important;
     max-height: calc(100vh - 16px);
-    border-radius: 14px;
-    padding: 12px 12px 14px;
   }
 
-  /* nagłówek: tytuł + cena pod sobą */
-  #wl-modal .wl-head{ display:grid; grid-template-columns: 1fr auto; gap:6px; }
-  #wl-modal .wl-title{ font-size: 20px; }
-  #wl-modal .wl-price{ font-size: 18px; }
-  #wl-modal .wl-change{ font-size: 14px; }
-
-  /* przycisk zamknięcia */
-  #wl-modal .wl-close{
-    position: absolute; right: 10px; top: 10px;
-    width: 36px; height: 36px; border-radius: 10px;
-  }
-
-  /* zakresy czasu – poziomy scroll, mniejsze przyciski */
+  /* wiersz z zakresami — zawsze w jednej linii + poziomy scroll */
   #wl-modal .wl-range,
-  #wl-modal .range-row{
-    display: flex; gap: 8px; overflow-x: auto;
+  #wl-modal .wl-ranges,
+  #wl-modal .range-row,
+  #wl-modal .range-tabs,
+  #wl-modal .tabs.range {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
-    padding: 6px 2px; margin: 4px 0 8px;
-  }
-  #wl-modal .wl-range button,
-  #wl-modal .range-row button{
-    flex: 0 0 auto; min-width: 56px;     /* mieści 1D/5D/1M/6M/YTD/1Y */
-    padding: 6px 10px; font-size: 14px;
+    white-space: nowrap !important;
+    padding: 6px 2px !important;
+    margin: 6px -2px 10px !important; /* minimalne marginesy */
   }
 
-  /* obszar wykresu */
-  #wl-modal .chart-wrap,
-  #wl-modal .wl-canvas-wrap{
-    height: 44vh;                         /* ~prawie połowa ekranu */
-    max-height: 430px; min-height: 220px;
+  /* ukryj maski/gradienty które „przycinają” końce paska z przyciskami */
+  #wl-modal .range-mask,
+  #wl-modal .overflow-mask,
+  #wl-modal .tabs-fade,
+  #wl-modal .tabs::after,
+  #wl-modal .tabs::before {
+    display: none !important;
+    content: none !important;
   }
+
+  /* same przyciski – kompaktowe i niełamane */
+  #wl-modal .wl-range button,
+  #wl-modal .wl-ranges button,
+  #wl-modal .range-row button,
+  #wl-modal .range-tabs button,
+  #wl-modal .tabs.range button,
+  #wl-modal .btn-range {
+    flex: 0 0 auto !important;   /* nie rozciągaj, nie łam */
+    min-width: 56px !important;  /* mieści 1D/5D/1M/6M/YTD/1Y */
+    padding: 6px 10px !important;
+    font-size: 14px !important;
+  }
+
+  /* obszar canvasa niech ma stabilną wysokość na mobile */
+  #wl-modal .chart-wrap,
+  #wl-modal .wl-canvas-wrap {
+    min-height: 220px !important;
+    max-height: 430px !important;
+    height: 44vh !important;
+  }
+
   #wl-modal canvas{
     width: 100% !important;
     height: 100% !important;
-    display: block;
+    display: block !important;
   }
 }
-
-/* blokada przewijania tła, gdy modal otwarty */
-body.wl-modal-open{ overflow:hidden; }
