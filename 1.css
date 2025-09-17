@@ -3918,23 +3918,36 @@ width: 110px;
     max-width: calc(100% - 75px); /* 75px na przycisk */
   }
 }
-/* Watchlist: select + Add w jednym rzędzie */
+/* WATCHLIST: formularz (select + Add) */
 .panel.watchlist #wl-form{
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: 1fr auto; /* select zajmuje resztę, Add szer. własna */
   gap: .5rem;
   align-items: center;
+  overflow: hidden; /* obetnij ewentualne 1px overflow */
 }
 
+/* Sam select – żadnych sztywnych szerokości */
 .panel.watchlist #wl-pick{
-  flex: 1 1 auto;           /* zajmuje resztę miejsca */
-  min-width: 0;             /* pozwala się ścisnąć */
-  width: auto !important;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;          /* KLUCZ w grid/flex – pozwala się ścisnąć */
   box-sizing: border-box;
 }
 
+/* Przycisk +Add nie rozciąga się i nie zawija */
 .panel.watchlist #wl-add{
-  flex: 0 0 auto;           /* nie rozciąga się */
   white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* Mobile: kiedy bardzo ciasno, kładziemy Add pod selektem (pewność 100%) */
+@media (max-width: 560px){
+  .panel.watchlist #wl-form{
+    grid-template-columns: 1fr;      /* jedna kolumna */
+  }
+  .panel.watchlist #wl-add{
+    justify-self: end;               /* przy prawym brzegu */
+    width: auto;
+  }
 }
