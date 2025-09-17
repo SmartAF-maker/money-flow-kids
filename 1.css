@@ -3707,3 +3707,10 @@ width: 110px;
 .card:has(#availableCash) > :is(h1,h2,h3,h4,strong,.title):first-child {
   color:  #dee792 !important;
 }
+/* ===== MOBILE ONLY — hide name + first price in basket ===== */
+@media (max-width: 768px) {
+  .basket .item .name,       /* nazwa akcji/waluty */
+  .basket .item .price:first-of-type { /* pierwsza cena */
+    display: none !important;
+  }
+}

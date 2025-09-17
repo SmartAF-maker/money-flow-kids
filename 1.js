@@ -3625,11 +3625,18 @@ window.addEventListener('DOMContentLoaded', () => {
   const $wlTabs = $panel?.querySelector('.wl-tabs') || null;
 
   // ---------- LISTY ----------
-  const STOCKS_ALL = [
-    'AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','NFLX',
-    'QCOM','TXN','AMD','INTC','IBM','GE','BA','CAT','DE','NKE','KO','PEP',
-    'WMT','COST','HD','LOW','MCD','SBUX','DIS','V','MA','PYPL','JPM','GS'
-  ];
+  // ⬇️ NOWE: zamiast ręcznej listy, bierzemy tickery ze STOCK_UNIVERSE (fallback poniżej)
+  const STOCKS_ALL = (Array.isArray(window.STOCK_UNIVERSE) && window.STOCK_UNIVERSE.length)
+    ? Array.from(new Set(
+        window.STOCK_UNIVERSE
+          .map(s => String(s.t || s.symbol || '').toUpperCase())
+          .filter(Boolean)
+      ))
+    : [
+        'AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','NFLX',
+        'QCOM','TXN','AMD','INTC','IBM','GE','BA','CAT','DE','NKE','KO','PEP',
+        'WMT','COST','HD','LOW','MCD','SBUX','DIS','V','MA','PYPL','JPM','GS'
+      ];
 
   // ---------- STATE ----------
   let mode   = 'stock';
@@ -4104,7 +4111,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const ch = lastLive - (prevSeries ?? lastLive);
       const pc = (prevSeries && prevSeries!==0) ? (ch/prevSeries)*100 : 0;
-      $mPrice.textContent = fmtMoney(lastLive); // <— currency format (NEW)
+      $mPrice.textContent = fmtMoney(lastLive);
       $mChg.textContent   = `${ch>=0?'+':''}${fmtPlain(ch)} (${pc.toFixed(2)}%)`;
       $mChg.style.color   = ch>=0 ? 'var(--ok)' : '#b91c1c';
 
@@ -4124,7 +4131,7 @@ window.addEventListener('DOMContentLoaded', () => {
           if (!Number.isFinite(cur)) return;
           const ch   = cur - (prev ?? cur);
           const pc   = (prev && prev!==0) ? (ch/prev)*100 : 0;
-          $mPrice.textContent = fmtMoney(cur); // <— currency format (NEW)
+          $mPrice.textContent = fmtMoney(cur);
           $mChg.textContent   = `${ch>=0?'+':''}${fmtPlain(ch)} (${pc.toFixed(2)}%)`;
           $mChg.style.color   = ch>=0 ? 'var(--ok)' : '#b91c1c';
         });
@@ -4229,6 +4236,7 @@ window.addEventListener('DOMContentLoaded', () => {
   fillPicker();
   render();
 })();
+
 
 
 /* =========================================================================
