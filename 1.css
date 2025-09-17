@@ -3746,8 +3746,20 @@ width: 110px;
   font-variant-numeric: tabular-nums;
 }
 
+/* 5) Przywróć widoczność przycisku X i ustaw go poprawnie */
 #stock-basket .basket-item .b-remove,
 #fx-basket   .basket-item .b-remove{
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: static !important;     /* usuń ewentualne absolutne pozycjonowanie */
   justify-self: end;
   align-self: center;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-c);
+  border-radius: 10px;
 }
