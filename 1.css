@@ -3788,8 +3788,7 @@ width: 110px;
     background: rgba(239, 68, 68, .15);
     border-color: rgba(239, 68, 68, .6);
   }
-}
-/* === MOBILE: poprawki dla quantity i X w koszyku === */
+}/* === MOBILE: poprawki dla quantity i X w koszyku === */
 @media (max-width: 768px){
 
   /* Input quantity mniejszy */
@@ -3812,5 +3811,48 @@ width: 110px;
   #stock-basket .basket-item .b-remove:active,
   #fx-basket   .basket-item .b-remove:active{
     background: rgba(239,68,68,0.3);
+  }
+}
+/* === MOBILE: wyczyść bordową obwódkę X i zostaw prosty znak === */
+@media (max-width: 768px){
+  #stock-basket .basket-item .b-remove,
+  #fx-basket   .basket-item .b-remove{
+    display: inline-flex !important;
+    width: 24px; height: 24px;
+    justify-content: center; align-items: center;
+    padding: 0 !important; margin: 0 !important;
+
+    /* kill ramki / tła / cienie narzucone przez .btn/.pill */
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+    color: #ef4444 !important;        /* sam czerwony „×” */
+  }
+
+  /* wyłącz pseudo-elementy robiące bordową poświatę */
+  #stock-basket .basket-item .b-remove::before,
+  #stock-basket .basket-item .b-remove::after,
+  #fx-basket   .basket-item .b-remove::before,
+  #fx-basket   .basket-item .b-remove::after{
+    content: none !important;
+    display: none !important;
+  }
+
+  /* jeśli .b-remove ma klasy .btn/.pill – też wyczyść */
+  #stock-basket .basket-item .b-remove.btn,
+  #stock-basket .basket-item .b-remove.pill,
+  #fx-basket   .basket-item .b-remove.btn,
+  #fx-basket   .basket-item .b-remove.pill{
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* bez efektu focus-ring */
+  #stock-basket .basket-item .b-remove:focus,
+  #fx-basket   .basket-item .b-remove:focus{
+    outline: none !important;
+    box-shadow: none !important;
   }
 }
