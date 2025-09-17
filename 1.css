@@ -3707,59 +3707,57 @@ width: 110px;
 .card:has(#availableCash) > :is(h1,h2,h3,h4,strong,.title):first-child {
   color:  #dee792 !important;
 }
-/* === BASKET (Stocks + FX): zostaw nazwę, ukryj TYLKO 1. cenę i dopasuj układ === */
+/* === BASKET: stabilny układ i poprawna pozycja X === */
+#stock-basket .basket-item,
+#fx-basket   .basket-item{
+  display: grid !important;
+  grid-template-columns: auto 88px 74px 1fr 42px; /* asset | qty | Set | subtotal | X */
+  gap: 12px;
+  align-items: center;
+}
 
-/* 1) Przywróć nazwę aktywa (gdy wcześniej została ukryta) */
+/* Nazwa ma być widoczna, pierwsza/„lewa” cena ukryta */
 #stock-basket .basket-item .b-name,
 #fx-basket   .basket-item .b-name{
   display: inline !important;
   visibility: visible !important;
 }
-
-/* 2) Ukryj wyłącznie lewą/1. cenę */
 #stock-basket .basket-item .b-price,
 #fx-basket   .basket-item .b-price{
   display: none !important;
 }
-
-/* (opcjonalnie) jeśli w środku bywa tylko myślnik – ukryj change,
-   żeby nie zostawał samotny „—” */
+/* opcjonalnie ukryj samotny myślnik */
 #stock-basket .basket-item .b-change,
-#fx-basket   .basket-item .b-change{
-  display: none !important;
-}
+#fx-basket   .basket-item .b-change{ display:none !important; }
 
-/* 3) Przedefiniuj siatkę po ukryciu kolumny z ceną:
-      asset | qty | Set | subtotal | X */
-#stock-basket .basket-item,
-#fx-basket   .basket-item{
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
-  gap: 12px;
-  align-items: center;
-}
-
-/* 4) Wyrównania, żeby nic nie „zjeżdżało” */
+/* Uporządkuj kolejność, niezależnie od DOM (fallback, gdy klasy różne) */
+#stock-basket .basket-item > :first-child,
+#fx-basket   .basket-item > :first-child{ order:1; }           /* asset/ticker */
+#stock-basket .basket-item .b-qty,
+#fx-basket   .basket-item .b-qty{ order:2; }
+#stock-basket .basket-item .b-set,
+#fx-basket   .basket-item .b-set{ order:3; }
 #stock-basket .basket-item .b-subtotal,
 #fx-basket   .basket-item .b-subtotal{
-  justify-self: end;
-  font-variant-numeric: tabular-nums;
+  order:4; justify-self:end; font-variant-numeric: tabular-nums;
 }
-
-/* 5) Przywróć widoczność przycisku X i ustaw go poprawnie */
+/* X zawsze jako ostatnia kolumna, bez absolutów i bez nakładania */
 #stock-basket .basket-item .b-remove,
 #fx-basket   .basket-item .b-remove{
-  display: inline-flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  position: static !important;     /* usuń ewentualne absolutne pozycjonowanie */
-  justify-self: end;
-  align-self: center;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--border-c);
-  border-radius: 10px;
+  order:5;
+  display:inline-flex !important;
+  position: static !important;
+  justify-self:end; align-self:center;
+  width: 36px; height: 36px; border-radius:10px;
+  border:1px solid var(--border-c);
+  z-index: 1; margin:0; opacity:1 !important; pointer-events:auto !important;
+}
+
+/* MOBILE dopasowanie szerokości */
+@media (max-width: 768px){
+  #stock-basket .basket-item,
+  #fx-basket   .basket-item{
+    grid-template-columns: 1fr 72px 68px auto 40px;
+    gap: 10px;
+  }
 }
