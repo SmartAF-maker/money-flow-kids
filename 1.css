@@ -3707,10 +3707,42 @@ width: 110px;
 .card:has(#availableCash) > :is(h1,h2,h3,h4,strong,.title):first-child {
   color:  #dee792 !important;
 }
-/* ===== MOBILE ONLY — hide name + first price in basket ===== */
+/* ===== MOBILE: ukryj nazwę i pierwszą cenę w Basket (Stocks + Currencies) ===== */
 @media (max-width: 768px) {
-  .basket .item .name,       /* nazwa akcji/waluty */
-  .basket .item .price:first-of-type { /* pierwsza cena */
+  /* Basket Stocks */
+  #basket-stocks .basket-item .ticker,
+  #basket-stocks .basket-item .symbol,
+  #basket-stocks .basket-item .name,
+  #basket-stocks .basket-row  .ticker,
+  #basket-stocks .basket-row  .symbol,
+  #basket-stocks .basket-row  .name,
+  #basket-stocks .basket-item .price:not(:last-of-type),
+  #basket-stocks .basket-row  .price:not(:last-of-type),
+
+  /* Basket Currencies */
+  #basket-fx .basket-item .ticker,
+  #basket-fx .basket-item .symbol,
+  #basket-fx .basket-item .name,
+  #basket-fx .basket-row  .ticker,
+  #basket-fx .basket-row  .symbol,
+  #basket-fx .basket-row  .name,
+  #basket-fx .basket-item .price:not(:last-of-type),
+  #basket-fx .basket-row  .price:not(:last-of-type),
+
+  /* alternatywne ID/klasy – jeśli używasz innych */
+  #basket-currencies .basket-item .ticker,
+  #basket-currencies .basket-item .symbol,
+  #basket-currencies .basket-item .name,
+  #basket-currencies .basket-item .price:not(:last-of-type),
+  .basket.stocks  .basket-item .price:not(:last-of-type),
+  .basket.fx      .basket-item .price:not(:last-of-type) {
+    display: none !important;
+  }
+
+  /* Fallback: gdy nie ma klas – ukryj 1–3 element w wierszu (ticker, nazwa, 1. cena) */
+  #basket-stocks .basket-item > :nth-child(-n+3),
+  #basket-fx     .basket-item > :nth-child(-n+3),
+  #basket-currencies .basket-item > :nth-child(-n+3) {
     display: none !important;
   }
 }
