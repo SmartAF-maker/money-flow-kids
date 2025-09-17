@@ -4706,3 +4706,49 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
 })();
+(() => {
+  const DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+
+  function sizeWatchlistModalChart(){
+    if (!window.matchMedia('(max-width: 768px)').matches) return;
+    const modal = document.querySelector('#wl-modal');
+    const canvas = modal?.querySelector('canvas');
+    if (!canvas) return;
+
+    const wrap = canvas.parentElement;
+    const W = Math.floor(wrap.clientWidth || modal.clientWidth || window.innerWidth - 24);
+    const H = Math.floor(Math.max(220, Math.min(window.innerHeight * 0.44, 430)));
+
+    // CSS size
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+
+    // backing store for crisper lines
+    canvas.width  = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+
+    // jeżeli masz funkcję rysującą – wywołaj odświeżenie
+    if (typeof window.redrawModalChart === 'function') {
+      window.redrawModalChart({ dpr: DPR });
+    }
+  }
+
+  // Nasłuchiwanie otwarcia modala – dodaj/usuń klasę na body
+  function onOpen(){
+    document.body.classList.add('wl-modal-open');
+    sizeWatchlistModalChart();
+  }
+  function onClose(){
+    document.body.classList.remove('wl-modal-open');
+  }
+
+  // Hooki – wywołuj te eventy w swoim kodzie przy otwieraniu/zamykaniu modala
+  document.addEventListener('open:wl-modal', onOpen);
+  document.addEventListener('close:wl-modal', onClose);
+
+  // Reakcja na obrót/zmianę rozmiaru
+  window.addEventListener('resize', sizeWatchlistModalChart, { passive:true });
+
+  // Gdy modal jest już otwarty i przeładowujesz stronę
+  document.addEventListener('DOMContentLoaded', sizeWatchlistModalChart);
+})();
