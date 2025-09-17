@@ -3898,10 +3898,23 @@ width: 110px;
   }
 }
 
-/* Gdy chcesz wyjątkowo wąsko na super-małych */
-@media (max-width: 360px) {
+/* Watchlist form – elastyczny układ */
+.panel.watchlist #wl-form {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* Select węższy na mobile */
+.panel.watchlist #wl-pick {
+  flex: 1 1 auto;
+  min-width: 120px;
+  max-width: calc(100% - 90px); /* zostaw ~90px na +Add */
+}
+
+/* Na małych ekranach jeszcze ciaśniej */
+@media (max-width: 600px) {
   .panel.watchlist #wl-pick {
-    flex-basis: 70%;
-    max-width: 70%;
+    max-width: calc(100% - 75px); /* 75px na przycisk */
   }
 }
