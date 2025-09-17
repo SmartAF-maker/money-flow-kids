@@ -3951,3 +3951,28 @@ width: 110px;
     width: auto;
   }
 }
+/* WATCHLIST: formularz (select + Add) w jednej linii */
+.panel.watchlist #wl-form {
+  display: grid;
+  grid-template-columns: 1fr auto; /* select + Add */
+  gap: .4rem;
+  align-items: center;
+}
+
+/* Select */
+.panel.watchlist #wl-pick {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  font-size: 0.9rem;       /* trochę mniejszy tekst */
+  padding: .35rem .5rem;   /* ciaśniejsze marginesy */
+}
+
+/* Przycisk Add */
+.panel.watchlist #wl-add {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 0.85rem;      /* mniejszy napis */
+  padding: .35rem .65rem;  /* ciaśniejszy button */
+}
