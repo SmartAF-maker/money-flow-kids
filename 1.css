@@ -3789,3 +3789,28 @@ width: 110px;
     border-color: rgba(239, 68, 68, .6);
   }
 }
+/* === MOBILE: poprawki dla quantity i X w koszyku === */
+@media (max-width: 768px){
+
+  /* Input quantity mniejszy */
+  #stock-basket .basket-item .b-qty input,
+  #fx-basket   .basket-item .b-qty input{
+    max-width: 60px !important;
+    padding: 4px 6px !important;
+    font-size: 14px !important;
+    text-align: center;
+  }
+
+  /* X – usuń bordową otoczkę */
+  #stock-basket .basket-item .b-remove,
+  #fx-basket   .basket-item .b-remove{
+    border: none !important;   /* usuwa ramkę */
+    background: rgba(239,68,68,0.15); /* delikatne tło */
+    color: #ef4444;             /* czerwony symbol X */
+  }
+
+  #stock-basket .basket-item .b-remove:active,
+  #fx-basket   .basket-item .b-remove:active{
+    background: rgba(239,68,68,0.3);
+  }
+}
