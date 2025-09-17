@@ -3729,7 +3729,8 @@ width: 110px;
   display: none !important;
 }
 
-/* 3) Layout bazowy (bez wpływu na desktop) */
+/* 3) Przedefiniuj siatkę po ukryciu kolumny z ceną:
+      asset | qty | Set | subtotal | X */
 #stock-basket .basket-item,
 #fx-basket   .basket-item{
   display: grid;
@@ -3745,19 +3746,8 @@ width: 110px;
   font-variant-numeric: tabular-nums;
 }
 
-/* 5) X na końcu TYLKO na telefonie */
-@media (max-width: 768px){
-  /* ostatnia kolumna na X */
-  #stock-basket .basket-item,
-  #fx-basket   .basket-item{
-    grid-template-columns: 1fr auto auto auto 40px; /* asset | qty | Set | suma | X */
-  }
-  #stock-basket .basket-item .b-remove,
-  #fx-basket   .basket-item .b-remove{
-    grid-column: 5;     /* przenieś do ostatniej kolumny */
-    order: 5;           /* gdyby istniały inne reguły z order */
-    justify-self: end;
-    align-self: center;
-    position: static !important;   /* zapobiega nakładaniu */
-  }
+#stock-basket .basket-item .b-remove,
+#fx-basket   .basket-item .b-remove{
+  justify-self: end;
+  align-self: center;
 }
