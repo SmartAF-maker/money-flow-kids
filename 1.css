@@ -3751,6 +3751,7 @@ width: 110px;
   justify-self: end;
   align-self: center;
 }
+ 
 /* === MOBILE: mały X w wierszu koszyka, bez zmiany układu === */
 @media (max-width: 768px){
   /* rezerwujemy trochę miejsca na X, nie zmieniamy grida/flexa */
@@ -3788,4 +3789,3 @@ width: 110px;
     border-color: rgba(239, 68, 68, .6);
   }
 }
-
