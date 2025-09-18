@@ -3606,11 +3606,12 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
-/// ===== WATCHLIST (stocks + FX) — unified w/ PRICE_HUB + dynamic X-axis =====
+
+// ===== WATCHLIST (stocks + FX) — 1 source of truth with Currencies Market / World Trends =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
 
-  /* ---------- DOM ---------- */
+  // ---------- DOM ----------
   const $panel = document.querySelector('.panel.watchlist');
   const $list  = document.getElementById('wl-list');
   const $form  = document.getElementById('wl-form');
@@ -3624,9 +3625,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const $wlTabs = $panel?.querySelector('.wl-tabs') || null;
 
-  /* ---------- STATE ---------- */
-  let mode   = 'stock';              // 'stock' | 'fx'  (tryb dodawania)
-  let filter = 'stock';              // 'stock' | 'fx' | 'all' (filtr kart)
+  // ---------- STATE ----------
+  let mode   = 'stock';              // 'stock' | 'fx'
+  let filter = 'stock';              // 'stock' | 'fx' | 'all'
   let watchlist = loadLS();
 
   function loadLS(){
@@ -3637,7 +3638,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function saveLS(){ localStorage.setItem(LS_KEY, JSON.stringify(watchlist)); }
 
-  /* ---------- STOCK UNIVERSE: ta sama referencja co rynek ---------- */
+  // ---------- helpers ----------
   function normalizeTicker(t){
     const s = String(t||'').toUpperCase().trim();
     if (['BRK.B','BRK_B','BRK-B','BRKB'].includes(s)) return 'BRKB';
@@ -3651,14 +3652,15 @@ window.addEventListener('DOMContentLoaded', () => {
     return [];
   }
 
-  /* ---------- FX źródła ---------- */
+  // ---- FX sources: EXACTLY the same as Market/Trends ----
   function safeISO(){
-    if (Array.isArray(window.ISO) && window.ISO.length) return window.ISO;
+    if (Array.isArray(window.ISO) && window.ISO.length) return window.ISO.slice();
     return ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD','SEK','NOK','CZK','HUF'];
   }
   function safeQuote(){ return String((typeof window.fxQuote==='function' ? (window.fxQuote()||'USD') : 'USD')).toUpperCase(); }
+  function fxRate(pair){ return (typeof window.fxRate === 'function') ? Number(window.fxRate(pair)) : NaN; } // ⬅️ JEDYNE źródło
 
-  /* ---------- UI currency / formatting ---------- */
+  // ---- UI money / formatting ----
   function uiQuote() {
     const q = (typeof window.fxQuote === 'function') ? window.fxQuote() : 'PLN';
     return String(q || 'PLN').toUpperCase();
@@ -3675,8 +3677,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
   const fmtPlain = (x) => Number(x ?? 0).toLocaleString(uiLocaleFor(CURRENT_QUOTE),{maximumFractionDigits:2});
+  const fmtFx    = (x) => new Intl.NumberFormat(uiLocaleFor(CURRENT_QUOTE),{minimumFractionDigits:4,maximumFractionDigits:4}).format(Number(x||0));
 
-  /* ---------- sandbox / wykresy ---------- */
+  // ---- sandbox / history (offline only) ----
   const DPR   = Math.min(2, Math.max(1, window.devicePixelRatio||1));
   const pad2  = n => String(n).padStart(2,'0');
   const WDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -3685,19 +3688,12 @@ window.addEventListener('DOMContentLoaded', () => {
   function seedRng(s){
     let h = 2166136261>>>0;
     for (let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return function(){
-      h += 0x6D2B79F5; let t = Math.imul(h^(h>>>15), 1|h);
+    return function(){ h += 0x6D2B79F5; let t = Math.imul(h^(h>>>15), 1|h);
       t ^= t + Math.imul(t^(t>>>7), 61|t);
       return ((t^(t>>>14))>>>0)/4294967296;
     };
   }
   const basePriceStock = sym => { const r=seedRng('STK:'+String(sym).toUpperCase()); return 40+Math.floor(r()*360); };
-  const basePriceFx    = (a,b)=>{ const p=`${a}/${b}`.toUpperCase();
-    const presets={'EUR/USD':1.10,'USD/EUR':0.91,'USD/PLN':4.0,'EUR/PLN':4.35,'GBP/USD':1.26,'USD/JPY':150,'EUR/JPY':165,'CHF/PLN':4.6,'AUD/USD':0.66,'NZD/USD':0.60};
-    if(presets[p]!=null) return presets[p];
-    const r=seedRng('FX:'+p); if(/JPY$/.test(p)) return 120+Math.floor(r()*80);
-    if(/PLN$/.test(p)) return 3.5+r()*1.2; return 0.8+r()*0.6;
-  };
   function genSeries({points, stepMs, start, drift, vol}){
     const dates=new Array(points), values=new Array(points);
     const r=seedRng(JSON.stringify({points,stepMs,start,drift,vol}));
@@ -3709,129 +3705,75 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     return {dates, values};
   }
-  const span = L => {
-    L = String(L||'1D').toUpperCase();
-    if (L==='1D') return { points: 288,        step: 5*60*1000 };
-    if (L==='5D') return { points: 288*7,      step: 5*60*1000 };
-    if (L==='1M') return { points: 22,         step: 24*60*60*1000 };
-    if (L==='6M') return { points: 26,         step: 7*24*60*60*1000 };
-    if (L==='1Y'||L==='YTD') return { points: 52, step: 7*24*60*1000 };
-    return { points: 288, step: 5*60*1000 };
-  };
-  async function yahooChart(symbol, range){
-    const s = span(range==='5d'?'5D':range==='1mo'?'1M':range==='6mo'?'6M':(range==='1y'?'1Y':(range==='ytd'?'YTD':'1D')));
-    const isFx = /=X$/.test(String(symbol));
-    const start = isFx ? (()=>{ const m=String(symbol).match(/^([A-Z]{3})([A-Z]{3})=X$/)||[]; return basePriceFx(m[1]||'EUR', m[2]||'USD'); })() : basePriceStock(symbol);
-    const drift = isFx ? 0.0001 : 0.0006;
-    const vol   = isFx ? 0.0025 : 0.009;
-    const g = genSeries({ points:s.points, stepMs:s.step, start, drift, vol });
-    return { dates:g.dates, closes:g.values };
-  }
   async function stockHistory(symbol, days=420){
     const g = genSeries({ points:Math.max(30,Math.min(420,Math.floor(days))), stepMs:24*60*60*1000, start:basePriceStock(symbol), drift:0.0005, vol:0.008 });
     const toISO = ms => new Date(ms).toISOString().slice(0,10);
     return { dates:g.dates.map(toISO), closes:g.values };
   }
   async function fxHistory(base, quote, days=210){
-    const g = genSeries({ points:Math.max(30,Math.min(420,Math.floor(days))), stepMs:24*60*60*1000, start:basePriceFx(base,quote), drift:0.00012, vol:0.0028 });
+    // generujemy tylko wykres (losowy), ale CENA LIVE idzie z fxRate()
+    const start = (typeof window.baseFx==='object' && window.baseFx)
+      ? (window.baseFx[base] / window.baseFx[quote])
+      : 1.0;
+    const g = genSeries({ points:Math.max(30,Math.min(420,Math.floor(days))), stepMs:24*60*60*1000, start, drift:0.00012, vol:0.0028 });
     const toISO = ms => new Date(ms).toISOString().slice(0,10);
     return { dates:g.dates.map(toISO), closes:g.values };
   }
 
-  /* ---------- unified spot + currency conversion ---------- */
-  const normalizeSymbol = s => String(s||'').toUpperCase().replace(/\.US$/,'');
-
-  function hubRawGet(k){
-    const HUB = window.PRICE_HUB;
-    if (!HUB) return undefined;
-    if (typeof HUB.use==='function') return HUB.use(k, HUB[k]);
-    if (typeof HUB.get==='function') return HUB.get(k);
-    return HUB[k];
-  }
-  function hubGetAny(keys){
-    for (const k of (Array.isArray(keys)?keys:[keys])){
-      let v = hubRawGet(k);
-      if (v && typeof v==='object') v = v.price ?? v.last ?? v.value ?? null;
-      v = Number(v);
-      if (Number.isFinite(v) && v>0) return v;
-    }
-    return NaN;
-  }
-  function stockAliases(sym){
-    const S = normalizeSymbol(sym);
-    const q = CURRENT_QUOTE;
-    return [
-      `${S}:${q}`, `${S}/${q}`, `${S}-${q}`, `${S}_${q}`, `${S}.${q}`,
-      S, `${S}.US`
-    ];
-  }
-  function fxAliases(base, quote){
-    const b=String(base).toUpperCase(), q=String(quote).toUpperCase(), k=b+q;
-    return [ `${b}/${q}`, `${k}`, `${k}=X`, `${b}-${q}`, `${b}_${q}` ];
-  }
-  function fxFromBaseMap(base, quote){
-    const M = window.baseFx || window.BASE_FX || null; // PLN-per-1
-    if (!M) return NaN;
-    const b = Number(M[String(base).toUpperCase()]);
-    const q = Number(M[String(quote).toUpperCase()]);
-    if (Number.isFinite(b) && Number.isFinite(q) && q > 0) return b / q;
-    return NaN;
-  }
-  function fxChain(base, quote, fallback){
-    const b = String(base).toUpperCase();
-    const q = String(quote).toUpperCase();
-
-    const hub = hubGetAny(fxAliases(b,q));
-    if (Number.isFinite(hub) && hub > 0) return hub;
-
-    if (typeof window.fxRate === 'function'){
-      const r1 = Number(window.fxRate(`${b}/${q}`));
-      if (Number.isFinite(r1) && r1 > 0) return r1;
-      const r2 = Number(window.fxRate(`${q}/${b}`));
-      if (Number.isFinite(r2) && r2 > 0) return 1 / r2;
-    }
-    const r3 = fxFromBaseMap(b, q);
-    if (Number.isFinite(r3) && r3 > 0) return r3;
-
-    if (b === 'USD' && typeof window.convertFromUSD === 'function'){
-      const r4 = Number(window.convertFromUSD(1, q));
-      if (Number.isFinite(r4) && r4 > 0) return r4;
-    }
-    if (q === 'USD' && typeof window.convertToUSD === 'function'){
-      const r5 = Number(window.convertToUSD(1, b));
-      if (Number.isFinite(r5) && r5 > 0) return 1 / r5;
-    }
-    if (Number.isFinite(fallback) && fallback > 0) return fallback;
-    return basePriceFx(b, q);
-  }
-  function hubSpotFx(base, quote, fallback){ return fxChain(base, quote, fallback); }
+  // ---------- unified spot ----------
   function hubSpotStock(sym, fallback){
-    const pref = hubGetAny(stockAliases(sym).slice(0,5));
-    if (Number.isFinite(pref) && pref > 0) return pref;
-    const any = hubGetAny(stockAliases(sym).slice(5));
-    if (Number.isFinite(any) && any > 0){
-      const q = CURRENT_QUOTE;
-      if (q !== 'USD'){
-        const fx = fxChain('USD', q, NaN);
-        if (Number.isFinite(fx) && fx > 0) return any * fx;
+    // 1st try: PRICE_HUB (jak wcześniej)
+    const HUB = window.PRICE_HUB;
+    const S = String(sym||'').toUpperCase().replace(/\.US$/,'');
+    const keys = [ `${S}:${CURRENT_QUOTE}`, `${S}/${CURRENT_QUOTE}`, `${S}-${CURRENT_QUOTE}`, `${S}_${CURRENT_QUOTE}`, `${S}.${CURRENT_QUOTE}`, S, `${S}.US` ];
+    let v = NaN;
+    if (HUB) {
+      for (const k of keys){
+        let raw = (typeof HUB.use==='function') ? HUB.use(k, null)
+                 : (typeof HUB.get==='function') ? HUB.get(k)
+                 : HUB[k];
+        if (raw && typeof raw==='object') raw = raw.price ?? raw.last ?? raw.value;
+        const n = Number(raw);
+        if (Number.isFinite(n) && n>0){ v = n; break; }
       }
-      return any;
+      if (Number.isFinite(v) && CURRENT_QUOTE!=='USD' && !keys.includes(S+':'+CURRENT_QUOTE)) {
+        // przelicz z USD->quote jeśli trzeba
+        if (typeof window.fxRate==='function'){
+          const r = window.fxRate('USD/'+CURRENT_QUOTE);
+          if (Number.isFinite(r) && r>0) v = v*r;
+        }
+      }
     }
-    return Number.isFinite(fallback) ? fallback : basePriceStock(sym);
+    if (!Number.isFinite(v)) v = Number.isFinite(fallback) ? fallback : basePriceStock(sym);
+    return v;
   }
 
-  /* ---------- picker (bez kopii, z tej samej referencji) ---------- */
+  // ⬇⬇⬇ KLUCZ: FX zawsze z tego samego źródła co Market/Trends
+  function liveFx(base, quote){
+    const pair = `${String(base).toUpperCase()}/${String(quote).toUpperCase()}`;
+    const r = fxRate(pair);
+    if (Number.isFinite(r) && r>0) return r;
+    // twardy fallback (gdyby fxRate nie istniało)
+    if (typeof window.baseFx==='object'){
+      const a = Number(window.baseFx[base]); const b = Number(window.baseFx[quote]);
+      if (Number.isFinite(a) && Number.isFinite(b) && b>0) return a/b;
+    }
+    return NaN;
+  }
+
+  // ---------- picker (shared refs) ----------
   function fillPicker(){
     if (!$pick) return;
 
     if (mode === 'fx'){
-      const ISO = safeISO(); const quote = safeQuote();
+      const ISO = safeISO();
+      const quote = safeQuote();
       const arr = ISO.filter(c => c!==quote).map(b => `${b}/${quote}`);
       $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
       return;
     }
 
-    const rows = stockUniverseRef();       // ← TA SAMA TABLICA CO W STOCK MARKET
+    const rows = stockUniverseRef();
     const seen = new Set(); const out = [];
     for (const o of rows){
       const t = normalizeTicker(o?.t);
@@ -3843,7 +3785,7 @@ window.addEventListener('DOMContentLoaded', () => {
     $pick.innerHTML = out.join('');
   }
 
-  /* ---------- X-ticks (Mon..Fri, months) ---------- */
+  // ---------- X ticks ----------
   function computeXTicks(datesMs, rangeLabel){
     const out = [];
     if (!datesMs?.length) return out;
@@ -3852,7 +3794,6 @@ window.addEventListener('DOMContentLoaded', () => {
       while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m]<x) lo=m+1; else { ans=m; hi=m-1; } }
       return Math.max(0,Math.min(ans,arr.length-1));
     };
-
     if (L==='1D'){
       const first = datesMs[0], last = datesMs.at(-1);
       const d = new Date(first); d.setMinutes(0,0,0);
@@ -3866,7 +3807,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       return out;
     }
-
     if (L === '5D') {
       const dayTicks = [];
       let lastKey = null;
@@ -3875,24 +3815,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const wd = d.getDay();
         if (wd === 0 || wd === 6) continue;
         const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        if (key !== lastKey) {
-          dayTicks.push({ i, lbl: WDAYS[wd] });
-          lastKey = key;
-        }
+        if (key !== lastKey) { dayTicks.push({ i, lbl: WDAYS[wd] }); lastKey = key; }
       }
       return dayTicks.slice(-5);
     }
-
     const monthStart = (y,m)=>{ const d=new Date(y,m,1); d.setHours(0,0,0,0); return d.getTime(); };
-    function ticksPrevAndCurrentMonth(){
-      const now=new Date();
-      const prev=new Date(now.getFullYear(), now.getMonth()-1, 1);
-      const curr=new Date(now.getFullYear(), now.getMonth(),   1);
-      return [
-        { y:prev.getFullYear(), m:prev.getMonth(), lbl:MONTHS[prev.getMonth()] },
-        { y:curr.getFullYear(), m:curr.getMonth(), lbl:MONTHS[curr.getMonth()] },
-      ];
-    }
     function ticksLastNMonths(n){
       const now=new Date(); const arr=[];
       for(let k=n-1;k>=0;k--){ const d=new Date(now.getFullYear(), now.getMonth()-k, 1); arr.push({ y:d.getFullYear(), m:d.getMonth(), lbl:MONTHS[d.getMonth()] }); }
@@ -3902,24 +3829,20 @@ window.addEventListener('DOMContentLoaded', () => {
     function ticks1Y(){ const arr=ticksLastNMonths(12); arr[0].lbl=`${arr[0].lbl} ${arr[0].y}`; arr.at(-1).lbl=`${arr.at(-1).lbl} ${arr.at(-1).y}`; return arr; }
 
     let plan=[];
-    if (L==='1M')      plan = ticksPrevAndCurrentMonth();
+    if (L==='1M')      plan = ticksLastNMonths(2).slice(-2);
     else if (L==='6M') plan = ticksLastNMonths(6);
     else if (L==='YTD')plan = ticksYTD();
     else if (L==='1Y') plan = ticks1Y();
 
     if (plan.length){
-      for(const m of plan){
-        const idx=lowerBound(datesMs, monthStart(m.y,m.m));
-        out.push({ i: idx, lbl: m.lbl });
-      }
-      const seen=new Set(), uniq=[];
-      for(const t of out){ if(!seen.has(t.i)){ uniq.push(t); seen.add(t.i); } }
+      for(const m of plan){ out.push({ i: lowerBound(datesMs, monthStart(m.y,m.m)), lbl: m.lbl }); }
+      const seen=new Set(), uniq=[]; for(const t of out){ if(!seen.has(t.i)){ uniq.push(t); seen.add(t.i); } }
       return uniq;
     }
     return out;
   }
 
-  /* ---------- rysowanie ---------- */
+  // ---------- draw ----------
   function _domain(values){
     let lo=Math.min(...values), hi=Math.max(...values);
     if (lo===hi){ const pad=Math.max(1,Math.abs(hi)*0.005); lo-=pad; hi+=pad; }
@@ -3977,7 +3900,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctx.lineWidth=2*DPR; ctx.strokeStyle=up?"#00ff6a":"#b91c1c"; ctx.stroke();
   }
 
-  /* ---------- karty ---------- */
+  // ---------- cards ----------
   const io = ('IntersectionObserver' in window)
     ? new IntersectionObserver((entries) => {
         for (const e of entries) {
@@ -3993,7 +3916,7 @@ window.addEventListener('DOMContentLoaded', () => {
     : null;
 
   function hubKeyFor(item){
-    if (item.type==='stock') return normalizeSymbol(item.symbol);
+    if (item.type==='stock') return String(item.symbol||'').toUpperCase().replace(/\.US$/,'');
     const k = `${item.base}${item.quote}`.toUpperCase();
     return [k, k+'=X'];
   }
@@ -4002,10 +3925,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const p = el.querySelector('.wl-price');
     const d = el.querySelector('.wl-diff');
     if (!p || !d) return;
-    p.textContent = fmtMoney(cur);
+    const isFx = (el._wl_item?.type === 'fx');
+
+    // cena
+    p.textContent = isFx ? fmtFx(cur) : fmtMoney(cur);
+
+    // zmiana / %
     const ch = cur - (prev ?? cur);
     const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
-    d.textContent = `${ch>=0?'+':''}${fmtPlain(ch)} (${pc.toFixed(2)}%)`;
+    d.textContent = `${ch>=0?'+':''}${isFx ? fmtFx(ch) : fmtPlain(ch)} (${pc.toFixed(2)}%)`;
     d.className   = 'wl-diff ' + (ch>=0 ? 'pos' : 'neg');
     el._wl_prev   = cur;
   }
@@ -4043,9 +3971,10 @@ window.addEventListener('DOMContentLoaded', () => {
       if (io) io.observe(el); else requestAnimationFrame(() => drawSpark(spark, vals));
 
       const last = vals.at(-1), prev = vals.at(-2) ?? last;
-      const cur  = (item.type==='fx') ? hubSpotFx(item.base,item.quote,last) : hubSpotStock(item.symbol,last);
-      applyLiveToCard(el, cur, prev);
+      const cur  = (item.type==='fx') ? liveFx(item.base,item.quote) : hubSpotStock(item.symbol,last);
+      applyLiveToCard(el, cur, (item.type==='fx') ? prev : prev);
 
+      // subskrypcja HUB (jeśli jest feed)
       const unsub = (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function')
         ? window.PRICE_HUB.subscribe((key,val) => {
             const keys = hubKeyFor(item);
@@ -4057,10 +3986,7 @@ window.addEventListener('DOMContentLoaded', () => {
             let curLive = Number(val);
             if (!Number.isFinite(curLive)) return;
 
-            if (item.type !== 'fx' && CURRENT_QUOTE !== 'USD'){
-              const fx = fxChain('USD', CURRENT_QUOTE, NaN);
-              if (Number.isFinite(fx) && fx > 0) curLive = curLive * fx;
-            }
+            // dla FX z HUB-a (np. EURUSD) – to również kurs bazowy; nie formatuj jak money
             const prevLive = el._wl_prev ?? curLive;
             applyLiveToCard(el, curLive, prevLive);
           })
@@ -4082,12 +4008,9 @@ window.addEventListener('DOMContentLoaded', () => {
       .forEach((item, idx) => mountCard(item, idx));
   }
 
-  /* ---------- MODAL ---------- */
+  // ---------- MODAL ----------
   let MODAL_SUB = null;
   const normRangeLabel = s => (['1D','5D','1M','6M','YTD','1Y'].includes(String(s||'').toUpperCase()) ? String(s).toUpperCase() : '1D');
-  const computeRangeParams = L => ({ range: ({'1D':'1d','5D':'5d','1M':'1mo','6M':'6mo','YTD':'ytd','1Y':'1y'})[normRangeLabel(L)] || '1d' });
-  const yahooFxSymbol = (b,q) => `${String(b).toUpperCase()}${String(q).toUpperCase()}=X`;
-
   function stopModalLive(){ if (MODAL_SUB){ try{MODAL_SUB();}catch{} MODAL_SUB=null; } }
 
   function openModal(item){
@@ -4098,18 +4021,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const ranges = $modal.querySelectorAll('.wl-range button');
     const isFx   = (item.type === 'fx');
-    const modalSeries = new Map();
-
-    async function fetchRange(label){
-      const L = normRangeLabel(label);
-      if (modalSeries.has(L)) return modalSeries.get(L);
-      const { range } = computeRangeParams(L);
-      const ySym = isFx ? yahooFxSymbol(item.base, item.quote) : ttl;
-      const y = await yahooChart(ySym, range);
-      const out = { dates: y.dates, values: y.closes };
-      modalSeries.set(L, out);
-      return out;
-    }
 
     function paint(datesMs, values, label){
       if (!datesMs?.length || !values?.length){
@@ -4121,14 +4032,15 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       ranges.forEach(b=> b.disabled = false);
 
+      // cenę modalową też bierzemy z jednego źródła
       const lastSeries = values.at(-1);
       const prevSeries = values.at(-2) ?? lastSeries;
-      const lastLive   = isFx ? hubSpotFx(item.base,item.quote,lastSeries) : hubSpotStock(item.symbol,lastSeries);
+      const lastLive   = isFx ? liveFx(item.base,item.quote) : hubSpotStock(item.symbol,lastSeries);
 
       const ch = lastLive - (prevSeries ?? lastLive);
       const pc = (prevSeries && prevSeries!==0) ? (ch/prevSeries)*100 : 0;
-      $mPrice.textContent = fmtMoney(lastLive);
-      $mChg.textContent   = `${ch>=0?'+':''}${fmtPlain(ch)} (${pc.toFixed(2)}%)`;
+      $mPrice.textContent = isFx ? fmtFx(lastLive) : fmtMoney(lastLive);
+      $mChg.textContent   = `${ch>=0?'+':''}${isFx?fmtFx(ch):fmtPlain(ch)} (${pc.toFixed(2)}%)`;
       $mChg.style.color   = ch>=0 ? 'var(--ok)' : '#b91c1c';
 
       drawBig($big, datesMs, values, label);
@@ -4136,7 +4048,7 @@ window.addEventListener('DOMContentLoaded', () => {
       $big._seriesPrev = prevSeries;
 
       stopModalLive();
-      if (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function'){
+      if (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function' && !isFx){
         const keys = hubKeyFor(item);
         MODAL_SUB = window.PRICE_HUB.subscribe((key,val)=>{
           const hit = Array.isArray(keys) ? keys.some(k => String(k).toUpperCase()===String(key).toUpperCase())
@@ -4144,10 +4056,6 @@ window.addEventListener('DOMContentLoaded', () => {
           if (!hit) return;
           let cur  = Number(val);
           if (!Number.isFinite(cur)) return;
-          if (item.type !== 'fx' && CURRENT_QUOTE !== 'USD'){
-            const fx = fxChain('USD', CURRENT_QUOTE, NaN);
-            if (Number.isFinite(fx) && fx > 0) cur = cur * fx;
-          }
           const prev = $big?._seriesPrev ?? cur;
           const ch   = cur - (prev ?? cur);
           const pc   = (prev && prev!==0) ? (ch/prev)*100 : 0;
@@ -4158,24 +4066,18 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    async function setRange(btn){
-      Array.from(ranges).forEach(b=>b.classList.remove('is-active'));
-      btn.classList.add('is-active');
-      const label = normRangeLabel(btn.dataset.range);
-      const {dates, values} = await fetchRange(label);
-      paint(dates, values, label);
-    }
-
-    const def = $modal.querySelector('.wl-range button[data-range]') || ranges[0];
-    setRange(def);
+    // prosta jedna-doba seria (wystarczy do UI)
+    (async () => {
+      const hist = isFx ? await fxHistory(item.base,item.quote,210) : await stockHistory(item.symbol,420);
+      paint(hist.dates.map(d => new Date(d).getTime()), hist.closes, '1D');
+    })();
 
     const closeModal = () => { $modal.setAttribute('aria-hidden','true'); stopModalLive(); };
     $modal?.querySelector('.wl-close')?.addEventListener('click', closeModal, { once:true });
     $modal?.querySelector('.wl-modal__backdrop')?.addEventListener('click', closeModal, { once:true });
-    Array.from(ranges).forEach(btn => btn.onclick = () => setRange(btn));
   }
 
-  /* ---------- TABS / TRYB ---------- */
+  // ---------- TABS / MODE ----------
   function applyMode(next){
     mode = next;
     filter = next;
@@ -4211,7 +4113,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------- ADD ---------- */
+  // ---------- ADD ----------
   $form?.addEventListener('submit', e=>{
     e.preventDefault();
     const val = $pick?.value; if (!val) return;
@@ -4225,25 +4127,17 @@ window.addEventListener('DOMContentLoaded', () => {
     saveLS(); render();
   });
 
-  /* ---------- currency/lang/universe change ---------- */
+  // ---------- currency/lang/universe change ----------
   function onQuoteChanged(){
     const next = uiQuote();
     if (next === CURRENT_QUOTE) return;
     CURRENT_QUOTE = next;
     fillPicker();
     render();
-    if ($modal && $modal.getAttribute('aria-hidden') === 'false') {
-      const active = $modal.querySelector('.wl-range button.is-active') ||
-                     $modal.querySelector('.wl-range button[data-range]');
-      if (active) active.click();
-    }
   }
   window.addEventListener('fx:quote-changed', onQuoteChanged);
   window.addEventListener('lang:changed', onQuoteChanged);
-
-  // >>> to jest kluczowe: odśwież picker, gdy rynek zmieni universum
   document.addEventListener('stock:universe', fillPicker);
-  // kompatybilność z Twoim wcześniejszym eventem
   document.addEventListener('mfk:stock_universe_ready', fillPicker);
 
   try{
@@ -4251,7 +4145,7 @@ window.addEventListener('DOMContentLoaded', () => {
     mo.observe(document.documentElement, { attributes:true, attributeFilter:['lang','data-locale','data-currency'] });
   }catch{}
 
-  /* ---------- RESIZE redraw ---------- */
+  // ---------- RESIZE redraw ----------
   let _rTO=null;
   window.addEventListener('resize', () => {
     clearTimeout(_rTO);
@@ -4265,14 +4159,23 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 120);
   });
 
-  /* ---------- init ---------- */
+  // ---------- FX live refresh (sync with Market/Trends) ----------
+  setInterval(() => {
+    document.querySelectorAll('.wl-card').forEach(card => {
+      const it = card._wl_item;
+      if (!it || it.type!=='fx') return;
+      const cur = liveFx(it.base, it.quote);
+      if (!Number.isFinite(cur) || cur<=0) return;
+      const prev = card._wl_prev ?? cur;
+      applyLiveToCard(card, cur, prev);
+    });
+  }, 1500);
+
+  // ---------- init ----------
   function initWL(){ fillPicker(); render(); }
   initWL();
 
-  // safety retry na wypadek asynchronicznego ładowania rynku
-  setTimeout(fillPicker, 600);
-  setTimeout(fillPicker, 2000);
-  // >>> FIX: zwęż select na mobile (niech nie wypycha +Add)
+  // safety: zawęż select na mobile (nie wypycha +Add)
   (function fixPickerWidth(){
     const sel = document.getElementById('wl-pick');
     if (!sel) return;
@@ -4284,12 +4187,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-/* =========================================================================
- * Money Flow Kids — AI Agent v6.3 (compact header + laptop size + robust FAB)
- * ========================================================================= */
+ /* ============================================================================
+ * Money Flow Kids — AI Agent v7.0 (richer copy + kids trading glossary + quiz)
+ * Compact header • Laptop-friendly • Voice • Missions • Safety tips
+ * Drop-in replacement for v6.3 — same public hooks: mfkOpenAIAgent()
+ * ============================================================================ */
 (() => {
-  if (window.__AIAgentV70__) return; window.__AIAgentV70__ = true;
+  if (window.__AIAgentV70_PLUS__) return; window.__AIAgentV70_PLUS__ = true;
 
   /* ========== helpers ========== */
   const $  = (s, r=document) => r.querySelector(s);
@@ -4297,7 +4201,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const onReady = (fn)=> (document.readyState==='loading')
     ? document.addEventListener('DOMContentLoaded', fn, {once:true})
     : fn();
-  const toNum = (x)=> { if(x==null) return 0; const t=String(x).replace(/[^\d.,-]/g,'').replace(',', '.'); const v=parseFloat(t); return Number.isFinite(v)?v:0; };
+  const toNum = (x)=> { if(x==null) return 0; const t=String(x).replace(/[\s\u00A0]/g,'').replace(/[^\d.,-]/g,'').replace(',', '.'); const v=parseFloat(t); return Number.isFinite(v)?v:0; };
   const getLang = ()=> {
     const sel = $("#langSelect")?.value?.toLowerCase();
     const attr = document.documentElement.getAttribute('lang') || '';
@@ -4317,112 +4221,147 @@ window.addEventListener('DOMContentLoaded', () => {
   const save = (k,v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} };
   const load = (k,d=null)=>{ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch{ return d; } };
 
-  /* ========== UI text ========== */
+  /* ========== UI text (expanded, friendlier) ========== */
   const UI = {
-    title:{pl:"AI Agent",en:"AI Agent"},
-    subtitle:{pl:"Pytaj • Ucz się • Odkrywaj",en:"Ask • Learn • Explore"},
-    tabs:{pl:["Chat","Nauka","Tutoriale"],en:["Chat","Learn","Tutorials"]},
+    title:{pl:"AI Agent+",en:"AI Agent+"},
+    subtitle:{pl:"Pytaj • Ucz się • Graj • Odkrywaj",en:"Ask • Learn • Play • Explore"},
+    tabs:{pl:["Chat","Nauka","Tutoriale","Zabawa"],en:["Chat","Learn","Tutorials","Play"]},
     send:{pl:"Wyślij",en:"Send"},
     read:{pl:"Czytaj",en:"Read"},
     stop:{pl:"Stop",en:"Stop"},
     tour:{pl:"Start tour",en:"Start tour"},
-    ph:{pl:"Napisz… (np. co to trading, kurs AAPL, pokaż wykres EUR/USD tydzień)",
-        en:"Type… (e.g., what is trading, price AAPL, show chart EUR/USD week)"},
-    quick:{pl:["Wyjaśnij wykres","Sprawdź kurs","Rebalans"],
-           en:["Explain chart","Check price","Rebalance"]},
+    ph:{pl:"Napisz… (np. co to trading, kurs AAPL, pokaż wykres EUR/USD tydzień, start quiz)",
+        en:"Type… (e.g., what is trading, price AAPL, show chart EUR/USD week, start quiz)"},
+    quick:{pl:["Wyjaśnij wykres","Sprawdź kurs","Rebalans","Start quiz"],
+           en:["Explain chart","Check price","Rebalance","Start quiz"]},
     learnHead:{pl:"Tematy Nauki",en:"Learning Topics"},
     tutHead:{pl:"Szybkie Tutoriale",en:"Quick Tutorials"},
+    playHead:{pl:"Mini gry i quizy",en:"Mini games & quizzes"},
     noPrice:{pl:"Nie znalazłam kursu dla",en:"Couldn't find a price for"},
+    good:{pl:"Brawo!",en:"Nice!"}, bad:{pl:"Spróbuj ponownie",en:"Try again"}
   };
 
-  /* ========== Knowledge mini-cards (Learn) ========== */
+  /* ========== Richer LEARN content (kid-friendly) ========== */
   const LEARN = {
+    jars_intro:{
+      title:{pl:"Słoiki: baza Twoich finansów",en:"Jars: your money base"},
+      body:{
+        pl:`Tutaj poznasz, jak kieszonkowe, oszczędzanie i wyzwania budują umiejętności pieniędzy. Każda decyzja przesuwa Cię bliżej prowadzenia własnej historii finansowej. Bezpiecznie, ciekawie i na próbę!\n\n🟢 Oszczędności – odkładasz na później, na poduszkę lub wielki cel.\n🟠 Zarobki – kasa na rzeczy potrzebne teraz.\n🔴 Prezenty – niespodzianki z urodzin lub świąt.\n🔵 Inwestycje – kupowanie aktywów, które mogą urosnąć w przyszłości.`,
+        en:`Here you’ll explore how pocket money, savings, and challenges build money skills. Each choice brings you closer to leading your financial story—safe, exciting, and hands‑on!\n\n🟢 Savings – keep for later (safety net or big dream).\n🟠 Earnings – money for things you want or need now.\n🔴 Gifts – birthday/holiday surprises.\n🔵 Investments – buy assets that can grow for the future.`
+      }
+    },
+    savings:{
+      title:{pl:"Słoik Oszczędności (🟢)",en:"Savings Jar (🟢)"},
+      body:{
+        pl:`To Twoja baza bezpieczeństwa. Tu cierpliwość działa jak supermoc – nawet małe kwoty rosną w czasie.`,
+        en:`Your safety base. Patience is a superpower here—small amounts grow over time.`
+      }
+    },
+    earnings:{
+      title:{pl:"Słoik Zarobków (🟠)",en:"Earnings Jar (🟠)"},
+      body:{
+        pl:`Tu trafiają profity z transakcji i prace domowe. Możesz wydać albo przerzucić do Oszczędności, by szybciej budować majątek.`,
+        en:`Profits from trades and chores live here. Spend now or move to Savings to build wealth faster.`
+      }
+    },
+    gifts:{
+      title:{pl:"Słoik Prezentów (🔴)",en:"Gifts Jar (🔴)"},
+      body:{
+        pl:`Przypomina, że bogactwo to też dzielenie się. Możesz przekazać część komuś albo dodać do Oszczędności.`,
+        en:`A reminder that wealth also means giving. Share with causes you care about or move some to Savings.`
+      }
+    },
+    invest:{
+      title:{pl:"Słoik Inwestycji (🔵)",en:"Investments Jar (🔵)"},
+      body:{
+        pl:`Tu jest gotówka na zakupy akcji i walut. Inwestycje mogą rosnąć, spadać albo stać – dlatego uczymy ryzyka i dywersyfikacji.`,
+        en:`Cash you deploy into stocks and currencies. Investments can rise, fall, or stay flat—learn risk and diversification.`
+      }
+    },
     trading_intro:{
       title:{pl:"Co to jest trading?",en:"What is trading?"},
       body:{
-        pl:`Trading to kupowanie i sprzedawanie aktywów (akcje, waluty, ETF-y) z myślą o zysku. 
-Kluczowe pojęcia:
-• Bid/Ask & Spread – cena kupna/sprzedaży; różnica to koszt wejścia.
-• Zlecenia: Market (realizacja natychmiast) vs Limit (realizacja po Twojej cenie).
-• Długi vs Krótki: długi = zarabiasz, gdy cena rośnie; krótki = gdy spada (zaawansowane).
-• Ryzyko: używaj stop-loss i nie ryzykuj więcej niż 1–2% kapitału na transakcję.
-• Dywersyfikacja: nie wkładaj wszystkiego w jeden walor.
-• Dźwignia (FX/CFD): zwiększa zysk i ryzyko — używaj ostrożnie.`,
-        en:`Trading is buying and selling assets (stocks, currencies, ETFs) aiming for profit.
-Key ideas:
-• Bid/Ask & Spread – buy/sell prices; the difference is your entry cost.
-• Orders: Market (execute now) vs Limit (execute at your price).
-• Long vs Short: long profits when price rises; short when it falls (advanced).
-• Risk: use stop-loss; risk only 1–2% of capital per trade.
-• Diversification: don’t put everything into one asset.
-• Leverage (FX/CFDs): amplifies both gains and losses — use carefully.`
+        pl:`Kupowanie i sprzedawanie aktywów (akcje, waluty, ETF-y), by zarobić.\n• Bid/Ask & Spread – cena kupna/sprzedaży; różnica to koszt wejścia.\n• Zlecenia: Market, Limit, Stop-Loss, Take-Profit, OCO.\n• Długi vs Krótki – zarabiasz na wzroście albo spadku (zaaw.).\n• Ryzyko: nie więcej niż 1–2% kapitału na transakcję.\n• Dywersyfikacja i dziennik transakcji.`,
+        en:`Buying and selling assets (stocks, currencies, ETFs) to make a profit.\n• Bid/Ask & Spread\n• Orders: Market, Limit, Stop-Loss, Take-Profit, OCO\n• Long vs Short (advanced)\n• Risk: 1–2% per trade\n• Diversification & trading journal.`
       }
     },
-    orders:{
-      title:{pl:"Typy zleceń",en:"Order types"},
+    market_stock:{
+      title:{pl:"Akcje i giełda",en:"Stocks & the market"},
       body:{
-        pl:`• Market – najszybsze, ale bez gwarancji ceny.
-• Limit – realizuje się tylko po wskazanej lub lepszej cenie.
-• Stop-loss – automatyczne wyjście przy stracie.
-• Take-profit – automatyczne domknięcie zysku.
-• OCO – łączy TP i SL (jedno anuluje drugie).`,
-        en:`• Market – fastest, but no price guarantee.
-• Limit – fills only at your price or better.
-• Stop-loss – exits automatically at loss.
-• Take-profit – closes automatically at a target.
-• OCO – combines TP and SL (one cancels the other).`
+        pl:`Akcja to kawałek firmy. Giełda to jak wielki sklep na kupno/sprzedaż. Ceny zmieniają się przez wiadomości i decyzje ludzi.`,
+        en:`A stock is a piece of a company. The market is like a huge store for buying/selling. Prices move with news and decisions.`
       }
     },
-    risk:{
-      title:{pl:"Zarządzanie ryzykiem",en:"Risk management"},
+    market_fx:{
+      title:{pl:"Waluty (FX)",en:"Currencies (FX)"},
       body:{
-        pl:`• Reguła 1–2%: tyle ryzykuj na jedną transakcję.
-• Wielkość pozycji = (ryzyko kwotowe) / (odległość SL).
-• Unikaj nadmiernej dźwigni i trzymania strat.
-• Dziennik transakcji: zapisuj plan, wejście/wyjście i wnioski.`,
-        en:`• 1–2% rule: risk that much per trade.
-• Position size = (cash you risk) / (distance to SL).
-• Avoid excessive leverage and holding losers.
-• Trading journal: log plan, entries/exits, lessons.`
+        pl:`Para EUR/USD pokazuje, ile USD kosztuje 1 EUR. Możesz ćwiczyć kupno/sprzedaż bez ryzyka.`,
+        en:`A pair like EUR/USD shows how many USD one EUR costs. Practice buying/selling safely here.`
       }
     },
-    stocks_vs_fx:{
-      title:{pl:"Akcje vs Waluty (FX)",en:"Stocks vs Currencies (FX)"},
+    accounting:{
+      title:{pl:"Księgowość = ślad pieniędzy",en:"Accounting = money trail"},
       body:{
-        pl:`Akcje: udziały w firmach, raporty kwartalne, dywidendy. 
-FX: handel parami (EUR/USD), często z dźwignią; zwróć uwagę na spread i płynność.
-W aplikacji: “Stock Market” dla akcji, “Currency Market” dla FX.`,
-        en:`Stocks: ownership in companies, earnings reports, dividends.
-FX: pairs (EUR/USD), often leveraged; mind spread & liquidity.
-In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
+        pl:`Każdy ruch to transakcja. Gdy bank potwierdzi — rozliczona. W aplikacji słoiki pokazują, gdzie jest Twoja kasa.`,
+        en:`Every move is a transaction; once confirmed, it’s settled. Jars show exactly where your money is.`
+      }
+    },
+    pl_meaning:{
+      title:{pl:"P/L – wynik gry",en:"P/L – your score"},
+      body:{
+        pl:`Zysk = więcej niż start. Strata = mniej niż start. Realized P/L – zamknięte zagrania. Unrealized P/L – w trakcie.`,
+        en:`Profit means more than you started; loss means less. Realized P/L = closed trades. Unrealized P/L = still running.`
+      }
+    },
+    safety:{
+      title:{pl:"Bezpieczeństwo 100%",en:"100% Safety"},
+      body:{
+        pl:`Brak prawdziwych pieniędzy. PIN rodzica i limity chronią każdy ruch. Możesz cofnąć i próbować znów.`,
+        en:`No real money at risk. Parent PINs and limits protect every step. Undo, retry, learn freely.`
+      }
+    },
+    howto_stock:{
+      title:{pl:"Krok po kroku: kup akcję",en:"Step by step: buy a stock"},
+      body:{
+        pl:`1. Wybierz Stocks z górnego paska.\n2. Sprawdź Global Trends.\n3. Wyszukaj spółkę (np. AAPL).\n4. Dodaj do koszyka i ustaw ilość.\n5. Kliknij Buy.\n6. Obserwuj pozycję i P/L.`,
+        en:`1. Choose Stocks.\n2. Check Global Trends.\n3. Search a company (e.g., AAPL).\n4. Add to Basket and set quantity.\n5. Press Buy.\n6. Watch position and P/L.`
       }
     }
   };
 
-  /* ========== FAQ (Chat placeholder help) ========== */
+  /* ========== Glossary (kid-friendly trading terms) ========== */
+  const GLOSSARY = {
+    spread:{pl:"Spread — różnica między ceną kupna i sprzedaży. Mały = taniej wejść.", en:"Spread — the gap between buy and sell. Smaller = cheaper to enter."},
+    ticker:{pl:"Ticker — krótkie ID spółki na giełdzie (np. AAPL).", en:"Ticker — short ID for a company on the exchange (e.g., AAPL)."},
+    leverage:{pl:"Dźwignia — pożyczona moc. Zwiększa zyski i straty — ostrożnie!", en:"Leverage — borrowed power. Boosts gains and losses — be careful!"},
+    liquidity:{pl:"Płynność — jak łatwo kupić/sprzedać po dobrej cenie.", en:"Liquidity — how easily you can trade at a fair price."},
+    diversification:{pl:"Dywersyfikacja — nie wkładaj wszystkiego do jednego koszyka.", en:"Diversification — don’t put all eggs in one basket."},
+    stoploss:{pl:"Stop‑loss — zlecenie, które automatycznie ucina stratę.", en:"Stop‑loss — an order that cuts your loss automatically."},
+    takeprofit:{pl:"Take‑profit — zlecenie automatycznie zamyka zysk.", en:"Take‑profit — an order that locks in profit automatically."}
+  };
+
+  /* ========== FAQ quick prompts ========== */
   const FAQ = {
     pl: [
-      "co to trading?", "jak działa dźwignia?", "typy zleceń",
-      "co to Available Cash?", "co to Net Worth?",
-      "pokaż wykres AAPL tydzień", "kurs EUR/USD", "rebalance",
-      "tutorial start", "lang pl"
+      "co to trading?", "co to spread?", "jak działa dźwignia?", "typy zleceń",
+      "pokaż wykres AAPL tydzień", "kurs EUR/USD", "start quiz", "rebalance",
+      "co to P/L?", "krok po kroku kup akcję"
     ],
     en: [
-      "what is trading?", "how does leverage work?", "order types",
-      "what is Available Cash?", "what is Net Worth?",
-      "show chart AAPL week", "price EUR/USD", "rebalance",
-      "tutorial start", "lang en"
+      "what is trading?", "what is spread?", "how does leverage work?", "order types",
+      "show chart AAPL week", "price EUR/USD", "start quiz", "rebalance",
+      "what is P/L?", "step by step buy a stock"
     ]
   };
 
-  /* ========== App concepts (Chat “what is …”) ========== */
+  /* ========== App concepts mapping for contextual reads ========== */
   const KB = {
     availableCash:{aliases:["available cash","cash","gotówka","dostępna gotówka"], ids:["#availableCash","#miniCash"],
       desc:{en:"Available Cash – money ready to spend or invest. Equals Savings + Earnings + Gifts.", pl:"Available Cash – środki dostępne od razu. Suma: Oszczędności + Zarobki + Prezenty."}},
     netWorth:{aliases:["net worth","wartość netto","wartosc netto"], ids:["#netWorth"],
       desc:{en:"Net Worth – total of jars + stock portfolio + FX portfolio.", pl:"Wartość netto – suma słoików oraz portfeli: akcji i walut."}},
     savings:{aliases:["savings","oszczędności","oszczednosci","słoik oszczędności"], ids:["#saveAmt"],
-      desc:{en:"Savings jar – long-term saving. Use +Add under the jar.", pl:"Słoik Oszczędności – odkładanie na dłużej. Użyj +Add pod słoikiem."}},
+      desc:{en:"Savings jar – long-term saving. Use +Add under the jar.", pl:"Słoik Oszczędności – odkładanie na dłużej. Użyj +Add."}},
     earnings:{aliases:["earnings","zarobki","słoik zarobków"], ids:["#spendAmt"],
       desc:{en:"Earnings jar – money you earned (chores).", pl:"Słoik Zarobków – pieniądze za obowiązki/zadania."}},
     gifts:{aliases:["gifts","prezenty","słoik prezentów"], ids:["#giveAmt"],
@@ -4474,6 +4413,8 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
       writeLog(`${r.symbol} — ${price!=null?price:'—'} ${r.currency||''}\n${arrow} ${(chgp||0).toFixed(2)}% (${(chg||0).toFixed(2)})`);
     }catch{ writeLog(`${UI.noPrice[lang]} ${symbol}.`); }
   }
+
+  /* ========== Rebalance tip ========== */
   function rebalanceTip(){
     const lang=getLang();
     const cash = toNum($('#saveAmt')?.textContent)+toNum($('#spendAmt')?.textContent)+toNum($('#giveAmt')?.textContent);
@@ -4486,13 +4427,57 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
       ? (lang==='pl'?`• Za dużo gotówki (~${diff}pp). Rozważ zakup za ok. ${fmtCur(amt)}.`:`• Too much cash (~${diff}pp). Consider buying ~${fmtCur(amt)}.`)
       : (lang==='pl'?`• Za dużo w aktywach (~${Math.abs(diff)}pp). Sprzedaj i podnieś gotówkę o ~${fmtCur(amt)}.`:`• Too much in assets (~${Math.abs(diff)}pp). Sell to raise ~${fmtCur(amt)} cash.`);
   }
+
+  /* ========== Chart explainer (kid tone) ========== */
   const explainSeries = (series)=>{
     const lang=getLang();
     const s = Array.isArray(series)&&series.length>1?series:window.__LAST_SERIES__||[{x:0,y:10},{x:1,y:9.8},{x:2,y:10.2},{x:3,y:10.6},{x:4,y:10.5}];
     const y0=+s[0].y, y1=+s.at(-1).y, diff=+(y1-y0).toFixed(2);
-    if(diff>0) return lang==='pl'?`Od początku zmiana: ${diff}. Wzrost (zielony nad osią).`:`From start change: ${diff}. Rise (green above axis).`;
-    if(diff<0) return lang==='pl'?`Od początku zmiana: ${diff}. Spadek (czerwony pod osią).`:`From start change: ${diff}. Drop (red below axis).`;
-    return lang==='pl'?`Od początku zmiana: ${diff}. Bez większych zmian.`:`From start change: ${diff}. No big change.`;
+    if(diff>0) return lang==='pl'?`Start → teraz: +${diff}. Trend w górę. Zielony = rośnie.`:`Start → now: +${diff}. Up trend. Green = rising.`;
+    if(diff<0) return lang==='pl'?`Start → teraz: ${diff}. Trend w dół. Czerwony = spada.`:`Start → now: ${diff}. Down trend. Red = falling.`;
+    return lang==='pl'?`Start → teraz: 0. Bez większych zmian.`:`Start → now: 0. No big change.`;
+  };
+
+  /* ========== Quiz engine (Play tab) ========== */
+  const QUIZ_BANK = [
+    {q:{pl:"Co to ticker?",en:"What is a ticker?"}, a:[
+      {pl:"Krótki kod spółki (np. AAPL)", en:"A short company code (e.g., AAPL)", ok:true},
+      {pl:"Imię CEO", en:"The CEO’s name"},
+      {pl:"Rodzaj wykresu", en:"A chart type"}
+    ]},
+    {q:{pl:"Co robi stop‑loss?",en:"What does a stop‑loss do?"}, a:[
+      {pl:"Automatycznie ucina stratę",en:"Cuts a loss automatically", ok:true},
+      {pl:"Dodaje dywidendę",en:"Adds a dividend"},
+      {pl:"Zwiększa dźwignię",en:"Increases leverage"}
+    ]},
+    {q:{pl:"EUR/USD oznacza…",en:"EUR/USD means…"}, a:[
+      {pl:"Ile USD kosztuje 1 EUR",en:"How many USD for 1 EUR", ok:true},
+      {pl:"Ile EUR kosztuje 1 USD",en:"How many EUR for 1 USD"},
+      {pl:"Nazwę giełdy",en:"The exchange name"}
+    ]},
+    {q:{pl:"Spread to…",en:"Spread is…"}, a:[
+      {pl:"Różnica bid/ask",en:"Difference between bid/ask", ok:true},
+      {pl:"Zysk dzienny",en:"Daily profit"},
+      {pl:"Podatek",en:"A tax"}
+    ]}
+  ];
+  let quizIdx=0, quizScore=load('__ai_q_score__',0), quizRun=false;
+  function startQuiz(){ quizRun=true; quizIdx=0; quizScore=0; save('__ai_q_score__',0); renderQuiz(); writeToast('quiz'); }
+  function answerQuiz(i){ if(!quizRun) return; const bank=QUIZ_BANK[quizIdx]; if(!bank) return; const ok=!!bank.a[i]?.ok; const L=getLang(); if(ok){ quizScore++; save('__ai_q_score__',quizScore); writeToast('good'); } else { writeToast('bad'); }
+    quizIdx++; if(quizIdx>=QUIZ_BANK.length){ const msg = (L==='pl'?`Koniec! Wynik: ${quizScore}/${QUIZ_BANK.length}.`:`Done! Score: ${quizScore}/${QUIZ_BANK.length}.`); writeLog(msg); quizRun=false; } renderQuiz(); }
+
+  /* ========== Missions (lightweight goals) ========== */
+  const MISSIONS = {
+    pl:[
+      {id:'watch-1w', title:'Obserwuj tydzień', text:'Znajdź spółkę, obejrzyj wykres 1W i opisz trend jednym zdaniem.'},
+      {id:'buy-1', title:'Pierwszy zakup', text:'Dodaj 1 akcję wybranej spółki do koszyka i kup.'},
+      {id:'fx-compare', title:'Porównaj waluty', text:'Sprawdź kurs EUR/USD i GBP/USD. Która para bardziej się zmieniła dziś?'}
+    ],
+    en:[
+      {id:'watch-1w', title:'Watch 1W', text:'Pick a stock, view 1W chart, describe the trend in one sentence.'},
+      {id:'buy-1', title:'First buy', text:'Add 1 share of any stock to the basket and buy.'},
+      {id:'fx-compare', title:'Compare FX', text:'Check EUR/USD vs GBP/USD. Which moved more today?'}
+    ]
   };
 
   /* ========== Panel + FAB ========== */
@@ -4511,7 +4496,7 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     b.addEventListener('pointerup', open, {capture:true});
   }
 
-  /* ====== Panel with Tabs (Chat/Learn/Tutorials) ====== */
+  /* ====== Panel with Tabs (Chat/Learn/Tutorials/Play) ====== */
   function ensurePanel(){
     const existing = $('#ai-agent');
     if (existing){
@@ -4524,10 +4509,10 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     const root=document.createElement('div'); root.id='ai-agent';
     root.style.cssText="position:fixed;right:18px;bottom:18px;z-index:2147483647;font-family:inherit;color:#e5e7eb";
 
-    const [tabChat, tabLearn, tabTour] = UI.tabs[lang];
+    const [tabChat, tabLearn, tabTour, tabPlay] = UI.tabs[lang];
 
     root.innerHTML=`
-      <div style="width:min(420px,94vw);max-height:min(78vh,680px);background:rgba(8,12,22,.94);border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);display:flex;flex-direction:column;overflow:hidden">
+      <div style="width:min(460px,94vw);max-height:min(80vh,720px);background:rgba(8,12,22,.94);border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);display:flex;flex-direction:column;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)">
           <div style="min-width:0">
             <div id="ai-t" style="font-weight:800;line-height:1">${UI.title[lang]}</div>
@@ -4544,6 +4529,7 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
           <button class="tab t--active" data-tab="chat">${tabChat}</button>
           <button class="tab" data-tab="learn">${tabLearn}</button>
           <button class="tab" data-tab="tuts">${tabTour}</button>
+          <button class="tab" data-tab="play">${tabPlay}</button>
           <div style="flex:1"></div>
           <button id="ai-tour" class="abtn abtn--xs">${UI.tour[lang]}</button>
         </div>
@@ -4554,12 +4540,14 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
             <button id="ai-explain" class="abtn">${UI.quick[lang][0]}</button>
             <button id="ai-price"   class="abtn">${UI.quick[lang][1]}</button>
             <button id="ai-rebal"   class="abtn">${UI.quick[lang][2]}</button>
+            <button id="ai-quiz"    class="abtn">${UI.quick[lang][3]}</button>
           </div>
           <div style="display:flex;gap:8px;margin-bottom:8px">
             <input id="ai-input" placeholder="${UI.ph[lang]}" style="flex:1;padding:9px 10px;border-radius:10px;border:1px solid #334155;background:#0b1324;color:#e5e7eb;font-size:13px" />
             <button id="ai-send" class="abtn abtn--sm">${UI.send[lang]}</button>
           </div>
-          <div id="ai-log" style="border:1px dashed rgba(255,255,255,.12);border-radius:10px;padding:10px;font-size:13px;min-height:80px;max-height:40vh;overflow:auto;white-space:pre-wrap"></div>
+          <div id="ai-log" style="border:1px dashed rgba(255,255,255,.12);border-radius:10px;padding:10px;font-size:13px;min-height:96px;max-height:42vh;overflow:auto;white-space:pre-wrap"></div>
+          <div id="ai-toast" style="position:absolute;right:26px;bottom:88px;pointer-events:none"></div>
         </div>
 
         <!-- LEARN -->
@@ -4579,6 +4567,21 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
             <button class="abtn abtn--w" data-tour="portfolio">Portfolio & P/L</button>
           </div>
         </div>
+
+        <!-- PLAY (Quiz + Missions) -->
+        <div class="tabpane" data-pane="play" style="display:none;padding:8px">
+          <div style="font-size:12px;opacity:.8;margin:2px 0 8px">${UI.playHead[lang]}</div>
+          <div id="ai-quiz-wrap" style="border:1px solid #334155;border-radius:10px;padding:10px;background:#0b1324;margin-bottom:10px">
+            <div id="ai-quiz-q" style="font-weight:700;margin-bottom:8px"></div>
+            <div id="ai-quiz-a" style="display:grid;gap:6px"></div>
+            <div id="ai-quiz-meta" style="font-size:12px;opacity:.8;margin-top:6px"></div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+              <button id="ai-quiz-start" class="abtn abtn--xs">Start quiz</button>
+              <div id="ai-quiz-score" style="font-size:12px;opacity:.9"></div>
+            </div>
+          </div>
+          <div id="ai-missions" style="display:grid;gap:8px"></div>
+        </div>
       </div>`;
 
     // button styles
@@ -4597,6 +4600,7 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     $('#ai-explain').onclick = ()=> writeLog(explainSeries(window.__LAST_SERIES__));
     $('#ai-price').onclick   = ()=> runCmd((getLang()==='pl'?'kurs':'price')+' AAPL');
     $('#ai-rebal').onclick   = ()=> writeLog(rebalanceTip());
+    $('#ai-quiz').onclick    = ()=> { startQuiz(); switchTab('play'); };
     $('#ai-send').onclick    = ()=> { const v=$('#ai-input').value.trim(); if(v) runCmd(v); };
     $('#ai-input').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#ai-send').click(); }});
     $('#ai-read').onclick    = ()=> { const t=$('#ai-log')?.textContent||''; if(t) speak(t); };
@@ -4605,38 +4609,39 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
 
     // tab switching
     root.querySelectorAll('.tab').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        root.querySelectorAll('.tab').forEach(b=> b.classList.remove('t--active') );
-        btn.classList.add('t--active'); root.querySelectorAll('.tab').forEach(b=> b.style.background='#111827'); btn.style.background='#1f2937';
-        const tab = btn.dataset.tab;
-        root.querySelectorAll('.tabpane').forEach(p => p.style.display = (p.dataset.pane===tab?'block':'none'));
-      });
+      btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
     });
 
-    // learn cards
+    // learn cards + play area
     fillLearn();
-
-    // tutorial buttons
-    $('#ai-tuts').querySelectorAll('[data-tour]').forEach(b=>{
-      b.addEventListener('click', ()=> startTour(b.dataset.tour));
-    });
+    renderQuiz();
+    renderMissions();
 
     writeHelp();
     window.mfkOpenAIAgent = ensurePanel; // console emergency
+  }
+
+  function switchTab(tab){
+    const root = $('#ai-agent'); if(!root) return;
+    root.querySelectorAll('.tab').forEach(b=> b.classList.remove('t--active'));
+    const btn = root.querySelector(`.tab[data-tab="${tab}"]`); if(btn){ btn.classList.add('t--active'); root.querySelectorAll('.tab').forEach(b=> b.style.background='#111827'); btn.style.background='#1f2937'; }
+    root.querySelectorAll('.tabpane').forEach(p => p.style.display = (p.dataset.pane===tab?'block':'none'));
   }
 
   function refreshPanelLang(){
     const lang=getLang();
     $('#ai-t') && ($('#ai-t').textContent = UI.title[lang]);
     $('#ai-st') && ($('#ai-st').textContent = UI.subtitle[lang]);
-    const [tabChat, tabLearn, tabTour] = UI.tabs[lang];
+    const [tabChat, tabLearn, tabTour, tabPlay] = UI.tabs[lang];
     const tabs = $$('.tab');
     if (tabs[0]) tabs[0].textContent = tabChat;
     if (tabs[1]) tabs[1].textContent = tabLearn;
     if (tabs[2]) tabs[2].textContent = tabTour;
+    if (tabs[3]) tabs[3].textContent = tabPlay;
     $('#ai-explain') && ($('#ai-explain').textContent = UI.quick[lang][0]);
     $('#ai-price')   && ($('#ai-price').textContent   = UI.quick[lang][1]);
     $('#ai-rebal')   && ($('#ai-rebal').textContent   = UI.quick[lang][2]);
+    $('#ai-quiz')    && ($('#ai-quiz').textContent    = UI.quick[lang][3]);
     $('#ai-send')    && ($('#ai-send').textContent    = UI.send[lang]);
     $('#ai-read')    && ($('#ai-read').textContent    = UI.read[lang]);
     $('#ai-stop')    && ($('#ai-stop').textContent    = UI.stop[lang]);
@@ -4644,6 +4649,8 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     $('#ai-input')   && ($('#ai-input').placeholder   = UI.ph[lang]);
     writeHelp();
     fillLearn();
+    renderQuiz();
+    renderMissions();
   }
 
   /* ===== Chat help ===== */
@@ -4656,6 +4663,14 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
   function writeLog(t){ const el=$('#ai-log'); if(el){ el.dataset.help = (t===buildHelp()?'1':''); el.textContent=String(t||''); } }
   const writeHelp = ()=> writeLog(buildHelp());
 
+  function writeToast(type){
+    const host = $('#ai-toast'); if(!host) return; host.innerHTML='';
+    const el=document.createElement('div'); el.style.cssText='background:#0b1324;border:1px solid #334155;color:#e5e7eb;border-radius:10px;padding:8px 10px;box-shadow:0 10px 28px rgba(2,8,23,.45)';
+    const L=getLang();
+    el.textContent = type==='good'?UI.good[L]:type==='bad'?UI.bad[L]: (L==='pl'?'Start!':'Go!');
+    host.appendChild(el); setTimeout(()=>{ el.remove(); }, 1200);
+  }
+
   /* ===== Learn cards builder ===== */
   function cardHTML(title, body){
     return `<div class="learn-card" style="border:1px solid #334155;border-radius:10px;padding:10px;background:#0b1324">
@@ -4666,14 +4681,46 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
   function fillLearn(){
     const lang=getLang(); const wrap = $('#ai-learn'); if(!wrap) return;
     wrap.innerHTML = [
-      LEARN.trading_intro, LEARN.orders, LEARN.risk, LEARN.stocks_vs_fx
+      LEARN.jars_intro, LEARN.savings, LEARN.earnings, LEARN.gifts, LEARN.invest,
+      LEARN.trading_intro, LEARN.market_stock, LEARN.market_fx, LEARN.accounting,
+      LEARN.pl_meaning, LEARN.safety, LEARN.howto_stock
     ].map(card => cardHTML(card.title[lang], card.body[lang])).join('');
   }
 
-  /* ========== TOUR ========== */
+  /* ========== PLAY: Quiz + Missions rendering ========== */
+  function renderQuiz(){
+    const L=getLang(); const qEl=$('#ai-quiz-q'), aEl=$('#ai-quiz-a'), mEl=$('#ai-quiz-meta'), sEl=$('#ai-quiz-score');
+    if(!qEl||!aEl||!mEl||!sEl) return;
+    $('#ai-quiz-start')?.addEventListener('click', startQuiz, {once:true});
+    sEl.textContent = (L==='pl'?`Wynik: ${quizScore}`:`Score: ${quizScore}`);
+    if(!quizRun){ qEl.textContent = (L==='pl'? 'Kliknij Start quiz' : 'Press Start quiz'); aEl.innerHTML=''; mEl.textContent=''; return; }
+    const q = QUIZ_BANK[quizIdx]; if(!q){ qEl.textContent='—'; aEl.innerHTML=''; mEl.textContent=''; return; }
+    qEl.textContent = q.q[L]; aEl.innerHTML='';
+    q.a.forEach((opt, i)=>{
+      const b=document.createElement('button'); b.className='abtn'; b.textContent=opt[L]; b.style.marginRight='6px';
+      b.addEventListener('click', ()=> answerQuiz(i)); aEl.appendChild(b);
+    });
+    mEl.textContent = `${quizIdx+1}/${QUIZ_BANK.length}`;
+  }
+  function renderMissions(){
+    const L=getLang(); const box=$('#ai-missions'); if(!box) return; box.innerHTML='';
+    const list = MISSIONS[L] || [];
+    list.forEach(m=>{
+      const card=document.createElement('div'); card.style.cssText='border:1px solid #334155;border-radius:10px;padding:10px;background:#0b1324;display:flex;gap:10px;align-items:flex-start';
+      const check=document.createElement('input'); check.type='checkbox'; check.style.marginTop='3px';
+      check.checked = !!load('__ai_m_'+m.id, false);
+      check.addEventListener('change', ()=> save('__ai_m_'+m.id, check.checked));
+      const content=document.createElement('div');
+      const h=document.createElement('div'); h.style.fontWeight='700'; h.textContent=m.title; const p=document.createElement('div'); p.style.fontSize='13px'; p.style.opacity='0.95'; p.textContent=m.text;
+      content.appendChild(h); content.appendChild(p);
+      card.appendChild(check); card.appendChild(content); box.appendChild(card);
+    });
+  }
+
+  /* ========== Guided tours (kept from v6.3, extended lightly) ========== */
   function findByText(text){
     const q = text.toLowerCase();
-    const nodes = $$('button, a, span, div, h1, h2, h3');
+    const nodes = $$("button, a, span, div, h1, h2, h3");
     return nodes.find(el => el.textContent?.trim().toLowerCase().includes(q)) || null;
   }
   const firstExisting = (arr)=> { for(const s of arr||[]){ const el=$(s); if(el) return el; } return null; };
@@ -4691,7 +4738,6 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     bubble.style.maxWidth = B.w+'px';
   }
 
-  // step factories (ordered, role-aware, dłuższe opisy)
   const STEPSETS = {
     onboarding(L, role){
       const S=(pl,en)=> (L==='pl'?pl:en);
@@ -4710,7 +4756,7 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
         { sels:['#watchlist','.watchlist'], pl:'Watchlist – Twoje instrumenty z mini-wykresami.', en:'Watchlist – your instruments with mini charts.' },
         { sels:['#stockMarket','.stock-market'], pl:'Stock Market – ustaw ilość i dodaj do koszyka.', en:'Stock Market – set quantity and add to basket.' },
         { sels:['#fxMarket','.fx-market'], pl:'Currency Market – pary walutowe, zwróć uwagę na spread.', en:'Currency Market – currency pairs; mind the spread.' },
-        { sels:['[data-basket-list="stocks"]','#basketStocks'], pl:'Basket – przedsionek zakupu. Finalizuj przyciskiem Buy.', en:'Basket – pre-trade staging. Execute with Buy.' },
+        { sels:['[data-basket-list="stocks"]','#basketStocks'], pl:'Koszyk – przedsionek zakupu. Finalizuj przyciskiem Buy.', en:'Basket – pre-trade staging. Execute with Buy.' },
         { sels:['#portfolioBody','.stock-portfolio'], pl:'Portfolio – śr.koszt, wartość, P/L.', en:'Portfolio – avg cost, value, P/L.' },
         { sels:['.data-mode','#liveModeLabel','#liveStatus'], pl:'Tryb danych: Demo vs Live (backend).', en:'Data mode: Demo vs Live (backend).' },
         { sels:['#ai-fab'], pl:'Otwieraj Agenta klikając „AI”.', en:'Open the Agent via the “AI” button.' }
@@ -4740,7 +4786,6 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
 
   function startTour(kind='onboarding'){
     const L=getLang(), role=getRole();
-    const S=(pl,en)=> (L==='pl'?pl:en);
     const set =
       kind==='topbar'    ? STEPSETS.topbar(L,role)
     : kind==='markets'   ? STEPSETS.markets(L,role)
@@ -4749,16 +4794,12 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     : STEPSETS.onboarding(L,role);
 
     // build overlay
-    const overlay=document.createElement('div');
-    overlay.id='ai-tour';
-    overlay.style.cssText="position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.28);pointer-events:none";
-    const bubble=document.createElement('div');
-    bubble.style.cssText="position:absolute;max-width:340px;background:#0b1324;border:1px solid #334155;color:#e5e7eb;padding:12px;border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);pointer-events:auto";
+    const overlay=document.createElement('div'); overlay.id='ai-tour'; overlay.style.cssText="position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.28);pointer-events:none";
+    const bubble=document.createElement('div'); bubble.style.cssText="position:absolute;max-width:340px;background:#0b1324;border:1px solid #334155;color:#e5e7eb;padding:12px;border-radius:12px;box-shadow:0 12px 36px rgba(2,8,23,.55);pointer-events:auto";
     const meta=document.createElement('div'); meta.style.cssText="font-size:12px;opacity:.7;margin-bottom:6px";
-    const next=document.createElement('button'); next.style.cssText="margin-top:8px;background:#111827;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
-    const back=document.createElement('button'); back.style.cssText="margin:8px 0 0 8px;background:#1f2937;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
-    const close=document.createElement('button'); close.style.cssText="margin:8px 0 0 8px;background:#1f2937;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer";
-    next.textContent = S('Dalej','Next'); back.textContent=S('Wstecz','Back'); close.textContent=S('Zamknij','Close');
+    const next=document.createElement('button'); next.style.cssText="margin-top:8px;background:#111827;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer"; next.textContent = (L==='pl'?'Dalej':'Next');
+    const back=document.createElement('button'); back.style.cssText="margin:8px 0 0 8px;background:#1f2937;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer"; back.textContent=(L==='pl'?'Wstecz':'Back');
+    const close=document.createElement('button'); close.style.cssText="margin:8px 0 0 8px;background:#1f2937;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer"; close.textContent=(L==='pl'?'Zamknij':'Close');
 
     let i = load('__ai_tour_idx__', 0);
     const steps = set;
@@ -4766,7 +4807,7 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     function showStep(){
       const st=steps[i]; if(!st){ overlay.remove(); return; }
       const ref=anchorFor(st); highlight(ref);
-      bubble.innerHTML=''; meta.textContent=S(`Krok ${i+1}/${steps.length}`,`Step ${i+1}/${steps.length}`);
+      bubble.innerHTML=''; meta.textContent=(L==='pl'?`Krok ${i+1}/${steps.length}`:`Step ${i+1}/${steps.length}`);
       const text = (L==='pl'?st.pl:st.en) || '';
       bubble.appendChild(meta); bubble.appendChild(document.createTextNode(text));
       bubble.appendChild(document.createElement('br')); bubble.appendChild(next); bubble.appendChild(back); bubble.appendChild(close);
@@ -4781,7 +4822,9 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     showStep();
   }
 
-  /* ========== Commands ========== */
+  /* ========== Commands (more natural, with glossary & quiz) ========== */
+  function isFxPair(sym){ return /^[A-Z]{3}\/[A-Z]{3}$/.test(sym); }
+
   async function runCmd(raw){
     const q = String(raw||'').trim();
     if(!q){ writeHelp(); return; }
@@ -4794,8 +4837,19 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     if (/^(czytaj|read)$/i.test(q)) { const t=$('#ai-log')?.textContent||''; if(t) speak(t); return; }
     if (/^(stop|pause|przestań|przestan)$/i.test(q)) { stopSpeak(); return; }
 
-    // price
-    m = q.match(/\b(?:price|kurs)\s+([A-Z]{2,5}(?:\/[A-Z]{2,5})?)\b/i);
+    // quiz
+    if (/^(start quiz|quiz start|quiz)$/i.test(q)) { startQuiz(); switchTab('play'); return; }
+
+    // glossary terms: "co to spread?", "what is leverage", etc.
+    const low = q.toLowerCase();
+    for (const [key, val] of Object.entries(GLOSSARY)){
+      if (low.includes(key) || low.includes(key.replace(/\s/g,''))) {
+        writeLog(val[getLang()]); return;
+      }
+    }
+
+    // price or FX pair
+    m = q.match(/\b(?:price|kurs)\s+([A-Z]{2,5}(?:\/[A-Z]{3})?)\b/i);
     if(m){ await checkPrice(m[1].toUpperCase()); return; }
 
     // buy
@@ -4809,7 +4863,7 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
     }
 
     // show chart
-    m = q.match(/\b(?:show chart|pokaż wykres|pokaz wykres)\s+([A-Z]{2,5}(?:\/[A-Z]{2,5})?)\s+(?:for\s+|z\s+)?(day|week|month|dnia|tygodnia|miesiąca|miesiaca)\b/i);
+    m = q.match(/\b(?:show chart|pokaż wykres|pokaz wykres)\s+([A-Z]{2,5}(?:\/[A-Z]{3})?)\s+(?:for\s+|z\s+)?(day|week|month|dnia|tygodnia|miesiąca|miesiaca)\b/i);
     if(m){
       const sym=m[1].toUpperCase();
       const pr=(m[2]||'').toLowerCase();
@@ -4828,7 +4882,7 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
       }
     }
 
-    // Explain/What is … (app concepts)
+    // Explain/What is … (app concepts + learn topics)
     if (/^(co to|czym jest|co to jest|what is|explain)\b/i.test(q)){
       const key = resolveConcept(q);
       if(key){
@@ -4837,28 +4891,23 @@ In-app: use “Stock Market” for stocks, “Currency Market” for FX.`
         writeLog(v ? `${def}\n\n${getLang()==='pl'?'Aktualna wartość:':'Current value:'} ${v}` : def);
         return;
       }
+      // fallbacks: P/L, trading, stock, fx
+      const intent = low;
+      if(intent.includes('p/l')||intent.includes('pl ')) { writeLog(LEARN.pl_meaning.body[getLang()]); return; }
+      if(intent.includes('trading')) { writeLog(LEARN.trading_intro.body[getLang()]); return; }
+      if(intent.includes('stock')||intent.includes('akcj')) { writeLog(LEARN.market_stock.body[getLang()]); return; }
+      if(intent.includes('fx')||intent.includes('walut')||intent.includes('currency')) { writeLog(LEARN.market_fx.body[getLang()]); return; }
     }
 
-    // Learning intents (trading primer)
-    const t = q.toLowerCase();
-    if (/(what is|co to).*(trading)|^trading\b/.test(t)){
-      const c = LEARN.trading_intro.body[getLang()]; writeLog(c); return;
-    }
-    if (/(order|zleceń|zlecen|typy zleceń|typy zlecen)/.test(t)){
-      const c = LEARN.orders.body[getLang()]; writeLog(c); return;
-    }
-    if (/(risk|ryzyko|stop[- ]?loss|position size|wielkość pozycji)/.test(t)){
-      const c = LEARN.risk.body[getLang()]; writeLog(c); return;
-    }
-    if (/(stocks.*fx|akcje.*walut|waluty|fx)/.test(t)){
-      const c = LEARN.stocks_vs_fx.body[getLang()]; writeLog(c); return;
-    }
-
-    // tutorial
+    // tutorials
     if (/^(tutorial|start tutorial|tutorial start|pomoc start)$/i.test(q)) { startTour('onboarding'); return; }
-    if (/^tutorial (topbar|markets|basket|portfolio)$/i.test(q)) {
-      const k=q.split(' ')[1]; startTour(k); return;
-    }
+    if (/^tutorial (topbar|markets|basket|portfolio)$/i.test(q)) { const k=q.split(' ')[1]; startTour(k); return; }
+
+    // keyword: safety
+    if (/safety|bezpieczen|bezpieczeństwo/.test(low)) { writeLog(LEARN.safety.body[getLang()]); return; }
+
+    // step-by-step buy
+    if (/krok.*kup|step.*buy/.test(low)) { writeLog(LEARN.howto_stock.body[getLang()]); return; }
 
     // default
     writeHelp();
