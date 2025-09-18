@@ -27,7 +27,9 @@
       });
     });
   }
-
+function labelizeAll(){
+  document.querySelectorAll('table').forEach(labelize);
+}
  function applyLabelizeIfMobile() {
   if (window.matchMedia('(max-width:640px)').matches) {
     labelizeAll();   // tylko na mobile
@@ -396,7 +398,7 @@ function refreshStaticI18n() {
 const defaults = {
   childrenOrder: [], children: {}, activeChildId: null, pinHash: null, pinTries: 0, pinLockedUntil: 0,
   dailyLimit: 500, liveMode: false, trends: { stocks: {}, fx: {} },
-  basket: { stocks: [], fx: [] }  //⬅️ NEW
+  basket: { stocks: [], fx: [] },  // ⬅️ NEW
 };
 
 /* === BASKETS ENGINE (stocks + fx) === */
@@ -2105,34 +2107,6 @@ function addToBasketStocks(sym, name, price, qty) {
   toast(`Added to basket: ${qty} × ${sym}`);
 }
 
-// --- add to basket: FX (para bazowa vs USD)
-function addToBasketFx(pair, priceUsd, qty) {
-  qty = Math.max(1, parseFloat(qty || "1"));
-
-  // 1) weź liczbę i ZAOKRĄGLIJ do 2 miejsc (centy)
-  let px = Number(priceUsd || 0);
-  if (!pair || !qty || !(px > 0)) return;
-  const px2 = Math.round(px * 100) / 100;   // <- 1.1278 -> 1.13
-
-  if (!app.basket) app.basket = { stocks: [], fx: [] };
-
-  // 2) wyszukaj po kluczu (pair)
-  const it = findBasketItem(app.basket.fx, pair);
-
-  if (it) {
-    it.qty = Number(it.qty || 0) + qty;
-    it.price = px2;                         // <- zapisujemy już 2-miejscową cenę
-  } else {
-    const [base] = pair.split("/");
-    const baseName = (CURRENCY_NAMES[base] || base) + " vs USD";
-    app.basket.fx.push({ key: pair, pair, n: baseName, price: px2, qty });
-  }
-
-  save(app);
-  renderBasketFx();
-  toast(`Added to basket: ${qty} × ${pair}`);
-}
-
 // --- remove
 function removeFromBasketStocks(sym) {
   if (!app?.basket?.stocks) return;
@@ -2628,6 +2602,7 @@ function simulateFxOfflineTick() {
   });
   baseFx = next;
 
+  
   const fxSearchEl = document.getElementById("fxSearch");
   renderFxList((fxSearchEl && fxSearchEl.value) || "");
   renderPortfolioFx(); renderJars(); renderProfits();
@@ -2934,7 +2909,7 @@ async function yahooQuote(symbolsArr) {
   for (let c = 0; c < chunks.length; c++) {
     const { list, rateLimited } = await fetchList(chunks[c].join(","));
     if (rateLimited) { anyRateLimited = true; break; }
-    if (list && list.length) out.push(...list);
+   if (list && list.length) out.push(...list);
     await sleep(1500 + Math.random() * 800); // jitter
   }
 
@@ -3077,11 +3052,20 @@ async function refreshStocksFromApi() {
     }
 
     ch.stocks = ch.stocks.map(s => {
-      const ySym = String(mapToYahoo(s.t)).toUpperCase();
-      const q = bySym[ySym];
-      const px = pickPrice(q);
-      return (px != null) ? Object.assign({}, s, { p: Number(px) }) : s;
-    });
+  const ySym = String(mapToYahoo(s.t)).toUpperCase();
+  const q = bySym[ySym];
+  const px = pickPrice(q);
+  if (px != null) {
+    const v = Number(px);
+    const next = Object.assign({}, s, { p: v });
+    if (window.PRICE_HUB && typeof PRICE_HUB.set === 'function') {
+      PRICE_HUB.set(s.t, v); // ► klucz = Twój ticker (np. AAPL)
+    }
+    return next;
+  }
+  return s;
+});
+
 
     save(app);
     const stSearchEl = document.getElementById("stockSearch");
@@ -3622,6 +3606,8 @@ window.getFxUniverse = () => Object.keys(window.baseFx).filter(k=>/^[A-Z]{3}$/.t
 // (gdy doładowujesz lub zmieniasz listę)
 window.dispatchEvent(new Event('fx:universe-changed'));
 
+
+
 // ===== WATCHLIST (stocks + FX) — unified with Currency Market / World Trends =====
 (() => {
   const LS_KEY = 'mfk_watchlist_v1';
@@ -3668,25 +3654,22 @@ window.dispatchEvent(new Event('fx:universe-changed'));
 
   /* ---------- FX UNIVERSE (1 źródło prawdy) ---------- */
   function fxUniverseFromMarket(){
-    // 1) preferuj gotową listę z rynku (jeśli masz)
     if (typeof window.getFxUniverse === 'function') {
       const arr = window.getFxUniverse();
       if (Array.isArray(arr) && arr.length) return arr.slice();
     }
-    // 2) wprost po kluczach baseFx (PLN-per-1)
     if (window.baseFx && typeof window.baseFx === 'object'){
       const keys = Object.keys(window.baseFx).filter(k=>/^[A-Z]{3}$/.test(k)).sort();
       if (keys.length) return keys;
     }
-    // 3) fallback – ISO z rynku (jeśli jest)
     if (Array.isArray(window.ISO) && window.ISO.length) return window.ISO.slice().sort();
-    // 4) twarde minimum
     return ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD','SEK','NOK','CZK','HUF'];
   }
   function safeQuote(){
     const q = (typeof window.fxQuote==='function') ? window.fxQuote() : 'USD';
     return String(q||'USD').toUpperCase();
   }
+
   function fxRate(pair){
     if (typeof window.fxRate === 'function'){
       const v = Number(window.fxRate(pair));
@@ -3991,7 +3974,10 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     if (!p || !d) return;
     const isFx = (el._wl_item?.type === 'fx');
 
-    p.textContent = isFx ? fmtFx(cur) : fmtMoney(cur);
+    // ⭐ FX pokazujemy z jednostką quote (np. "4,2842 PLN")
+    p.textContent = isFx
+      ? `${fmtFx(cur)} ${(el._wl_item?.quote || CURRENT_QUOTE)}`
+      : fmtMoney(cur);
 
     const ch = cur - (prev ?? cur);
     const pc = (prev && prev !== 0) ? (ch/prev)*100 : 0;
@@ -4018,7 +4004,7 @@ window.dispatchEvent(new Event('fx:universe-changed'));
 
     let hist;
     if (item.type==='fx'){
-      t.textContent=`${item.base}/${item.quote}`; n.textContent='FX';
+      t.textContent=`${item.base}/${item.quote}`; n.textContent=`FX`;
       hist=await seriesFor(`${item.base}/${item.quote}`, '1D', true);
     } else {
       t.textContent=item.symbol.toUpperCase(); n.textContent='Stock';
@@ -4036,7 +4022,6 @@ window.dispatchEvent(new Event('fx:universe-changed'));
       const cur  = (item.type==='fx') ? liveFx(item.base,item.quote) : hubSpotStock(item.symbol,last);
       applyLiveToCard(el, Number.isFinite(cur)&&cur>0?cur:last, prev);
 
-      // subskrypcja HUB (akcje) + ewentualnie FX z HUB-a
       const unsub = (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function')
         ? window.PRICE_HUB.subscribe((key,val) => {
             const keys = hubKeyFor(item);
@@ -4048,7 +4033,6 @@ window.dispatchEvent(new Event('fx:universe-changed'));
             let curLive = Number(val);
             if (!Number.isFinite(curLive)) return;
 
-            // jeśli to akcja, a quote != USD, przelicz
             if (item.type !== 'fx' && CURRENT_QUOTE !== 'USD'){
               const rfx = fxRate(`USD/${CURRENT_QUOTE}`);
               if (Number.isFinite(rfx) && rfx > 0) curLive = curLive * rfx;
@@ -4115,14 +4099,13 @@ window.dispatchEvent(new Event('fx:universe-changed'));
 
       const ch = lastVal - (prev ?? lastVal);
       const pc = (prev && prev!==0) ? (ch/prev)*100 : 0;
-      $mPrice.textContent = isFx ? fmtFx(lastVal) : fmtMoney(lastVal);
+      $mPrice.textContent = isFx ? `${fmtFx(lastVal)} ${item.quote}` : fmtMoney(lastVal);
       $mChg.textContent   = `${ch>=0?'+':''}${isFx?fmtFx(ch):fmtPlain(ch)} (${pc.toFixed(2)}%)`;
       $mChg.style.color   = ch>=0 ? 'var(--ok)' : '#b91c1c';
 
       drawBig($big, datesMs, values, label);
 
       stopModalLive();
-      // dla akcji – live z HUB-a
       if (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function' && !isFx){
         const keys = hubKeyFor(item);
         MODAL_SUB = window.PRICE_HUB.subscribe((key,val)=>{
@@ -4214,11 +4197,31 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     saveLS(); render();
   });
 
+  /* ---------- Remap FX do aktualnego quote ---------- */
+  function remapWatchlistFxTo(quote){
+    const Q = String(quote||'USD').toUpperCase();
+    const seen = new Set();
+    watchlist = watchlist.map(it => {
+      if (it.type !== 'fx') return it;
+      const base = String(it.base).toUpperCase();
+      if (base === Q) return it; // nie tworzymy PLN/PLN
+      return { type:'fx', base, quote:Q };
+    }).filter(it => {
+      if (it.type !== 'fx') return true;
+      const key = `${it.base}/${it.quote}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    saveLS();
+  }
+
   /* ---------- currency/lang/universe change ---------- */
   function onQuoteChanged(){
     const next = uiQuote();
-    if (next === CURRENT_QUOTE) return;
+    if (!next || next === CURRENT_QUOTE) return;
     CURRENT_QUOTE = next;
+    remapWatchlistFxTo(CURRENT_QUOTE);
     fillPicker();
     render();
   }
@@ -4226,7 +4229,7 @@ window.dispatchEvent(new Event('fx:universe-changed'));
   window.addEventListener('lang:changed', onQuoteChanged);
   document.addEventListener('stock:universe', fillPicker);
   document.addEventListener('mfk:stock_universe_ready', fillPicker);
-  window.addEventListener('fx:universe-changed', fillPicker); // << ważne
+  window.addEventListener('fx:universe-changed', fillPicker);
 
   try{
     const mo = new MutationObserver(onQuoteChanged);
@@ -4261,36 +4264,14 @@ window.dispatchEvent(new Event('fx:universe-changed'));
   setInterval(pumpFx, 1500);
   window.addEventListener('fx:ticked', pumpFx);
 
-  /* ---------- init (czeka na FX universe jeśli trzeba) ---------- */
-  function fxReady(){
-    // uznajmy, że pełna lista to > 14 walut (więcej niż fallback)
-    const fromGet = (typeof window.getFxUniverse==='function') ? window.getFxUniverse() : null;
-    const n1 = Array.isArray(fromGet) ? fromGet.length : 0;
-    const n2 = (window.baseFx && typeof window.baseFx==='object') ? Object.keys(window.baseFx).length : 0;
-    return (n1 > 14) || (n2 > 14);
-  }
+  /* ---------- init ---------- */
   function initWL(){
+    // ⭐ ważne: remap NA STARcie, jeśli LocalStorage trzyma stare /USD
+    remapWatchlistFxTo(CURRENT_QUOTE);
     fillPicker();
     render();
   }
-
-  if (fxReady()) {
-    initWL();
-  } else {
-    // spróbuj kilka razy + słuchaj eventu od rynku
-    let tries = 0;
-    const iv = setInterval(() => {
-      if (fxReady() || ++tries > 20) { // ~2s
-        clearInterval(iv);
-        initWL();
-      }
-    }, 100);
-    window.addEventListener('fx:universe-changed', () => {
-      if (!fxReady()) return;
-      try{ clearInterval(iv); }catch{}
-      initWL();
-    }, { once:true });
-  }
+  initWL();
 
   // safety: zawęż select na mobile (nie wypycha +Add)
   (function fixPickerWidth(){
@@ -4301,6 +4282,7 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     sel.style.minWidth = '0';
   })();
 })();
+
 
 
 
