@@ -3606,6 +3606,21 @@ window.addEventListener('DOMContentLoaded', () => {
     applyLang();
   });
 })();
+// PRZED Watchlist (ważne!)
+window.baseFx = {
+  PLN: 1, USD: 3.90, EUR: 4.30, GBP: 5.05, CHF: 4.35, JPY: 0.026, AUD: 2.60, CAD: 2.85,
+  NOK: 0.36, SEK: 0.38, DKK: 0.58, CZK: 0.18, HUF: 0.011, UAH: 0.10, RUB: 0.045, TRY: 0.12,
+  ZAR: 0.22, CNY: 0.54, HKD: 0.50, NZD: 2.35, MXN: 0.22, BRL: 0.70, ILS: 1.05, INR: 0.047,
+  KRW: 0.0030, SGD: 2.90
+};
+// rozszerzenia (jeśli chcesz)
+(function(){
+  const ADD={AED:1.06,SAR:1.04,QAR:1.07,KWD:12.70,BHD:10.33,OMR:10.14,THB:0.11,PHP:0.07,MYR:0.82,TWD:0.12,RON:0.86,BGN:2.18,MAD:0.38,EGP:0.08,CLP:0.0043,COP:0.0010,ARS:0.0043,PEN:1.05};
+  for(const [ccy,pln] of Object.entries(ADD)) window.baseFx[ccy]=pln;
+})();
+window.getFxUniverse = () => Object.keys(window.baseFx).filter(k=>/^[A-Z]{3}$/.test(k)).sort();
+// (gdy doładowujesz lub zmieniasz listę)
+window.dispatchEvent(new Event('fx:universe-changed'));
 
 // ===== WATCHLIST (stocks + FX) — unified with Currency Market / World Trends =====
 (() => {
@@ -3665,7 +3680,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     // 3) fallback – ISO z rynku (jeśli jest)
     if (Array.isArray(window.ISO) && window.ISO.length) return window.ISO.slice().sort();
-    // 4) twardy minimum
+    // 4) twarde minimum
     return ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD','SEK','NOK','CZK','HUF'];
   }
   function safeQuote(){
@@ -3705,7 +3720,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const fmtPlain = (x) => Number(x ?? 0).toLocaleString(uiLocaleFor(CURRENT_QUOTE),{maximumFractionDigits:2});
   const fmtFx    = (x) => new Intl.NumberFormat(uiLocaleFor(CURRENT_QUOTE),{minimumFractionDigits:4,maximumFractionDigits:4}).format(Number(x||0));
 
-  /* ---------- sandbox / wykresy (różne dla każdego zakresu) ---------- */
+  /* ---------- sandbox / wykresy ---------- */
   const DPR   = Math.min(2, Math.max(1, window.devicePixelRatio||1));
   const pad2  = n => String(n).padStart(2,'0');
   const WDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -3721,7 +3736,6 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // unikalny „seed” per symbol + zakres => różne przebiegi dla 1D/5D/...
   function genSeries({points, stepMs, start, drift, vol, seedKey}){
     const dates=new Array(points), values=new Array(points);
     const r=seedRng(JSON.stringify({seedKey,points,stepMs,start,drift,vol}));
@@ -3745,7 +3759,6 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   function basePriceFxGuess(b,q){
-    // na start wykresu użyj bieżącego fxRate, żeby shape nie był identyczny między parami
     const live = fxRate(`${b}/${q}`);
     if (Number.isFinite(live) && live>0) return live;
     const m = window.baseFx || {};
@@ -3807,7 +3820,10 @@ window.addEventListener('DOMContentLoaded', () => {
     if (mode === 'fx'){
       const ISO = fxUniverseFromMarket();
       const quote = safeQuote();
-      const arr = ISO.filter(c => c!==quote).map(b => `${b}/${quote}`);
+      const arr = ISO
+        .filter(c => c!==quote && /^[A-Z]{3}$/.test(c))
+        .sort()
+        .map(b => `${b}/${quote}`);
       $pick.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
       return;
     }
@@ -4018,7 +4034,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const last = vals.at(-1), prev = vals.at(-2) ?? last;
       const cur  = (item.type==='fx') ? liveFx(item.base,item.quote) : hubSpotStock(item.symbol,last);
-      applyLiveToCard(el, Number.isFinite(cur)&&cur>0?cur:last, (item.type==='fx') ? prev : prev);
+      applyLiveToCard(el, Number.isFinite(cur)&&cur>0?cur:last, prev);
 
       // subskrypcja HUB (akcje) + ewentualnie FX z HUB-a
       const unsub = (window.PRICE_HUB && typeof window.PRICE_HUB.subscribe==='function')
@@ -4034,8 +4050,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // jeśli to akcja, a quote != USD, przelicz
             if (item.type !== 'fx' && CURRENT_QUOTE !== 'USD'){
-              const fx = fxRate(`USD/${CURRENT_QUOTE}`);
-              if (Number.isFinite(fx) && fx > 0) curLive = curLive * fx;
+              const rfx = fxRate(`USD/${CURRENT_QUOTE}`);
+              if (Number.isFinite(rfx) && rfx > 0) curLive = curLive * rfx;
             }
             const prevLive = el._wl_prev ?? curLive;
             applyLiveToCard(el, curLive, prevLive);
@@ -4116,8 +4132,8 @@ window.addEventListener('DOMContentLoaded', () => {
           let cur  = Number(val);
           if (!Number.isFinite(cur)) return;
           if (CURRENT_QUOTE !== 'USD'){
-            const fx = fxRate(`USD/${CURRENT_QUOTE}`);
-            if (Number.isFinite(fx) && fx > 0) cur = cur * fx;
+            const rfx = fxRate(`USD/${CURRENT_QUOTE}`);
+            if (Number.isFinite(rfx) && rfx > 0) cur = cur * rfx;
           }
           const prev = values.at(-2) ?? cur;
           const ch   = cur - (prev ?? cur);
@@ -4210,6 +4226,7 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('lang:changed', onQuoteChanged);
   document.addEventListener('stock:universe', fillPicker);
   document.addEventListener('mfk:stock_universe_ready', fillPicker);
+  window.addEventListener('fx:universe-changed', fillPicker); // << ważne
 
   try{
     const mo = new MutationObserver(onQuoteChanged);
@@ -4230,7 +4247,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 120);
   });
 
-  /* ---------- FX live refresh (sync with Market/Trends) ---------- */
+  /* ---------- FX live refresh ---------- */
   const pumpFx = () => {
     document.querySelectorAll('.wl-card').forEach(card => {
       const it = card._wl_item;
@@ -4242,11 +4259,38 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   };
   setInterval(pumpFx, 1500);
-  window.addEventListener('fx:ticked', pumpFx); // jeśli rynek wysyła event, skorzystamy
+  window.addEventListener('fx:ticked', pumpFx);
 
-  /* ---------- init ---------- */
-  function initWL(){ fillPicker(); render(); }
-  initWL();
+  /* ---------- init (czeka na FX universe jeśli trzeba) ---------- */
+  function fxReady(){
+    // uznajmy, że pełna lista to > 14 walut (więcej niż fallback)
+    const fromGet = (typeof window.getFxUniverse==='function') ? window.getFxUniverse() : null;
+    const n1 = Array.isArray(fromGet) ? fromGet.length : 0;
+    const n2 = (window.baseFx && typeof window.baseFx==='object') ? Object.keys(window.baseFx).length : 0;
+    return (n1 > 14) || (n2 > 14);
+  }
+  function initWL(){
+    fillPicker();
+    render();
+  }
+
+  if (fxReady()) {
+    initWL();
+  } else {
+    // spróbuj kilka razy + słuchaj eventu od rynku
+    let tries = 0;
+    const iv = setInterval(() => {
+      if (fxReady() || ++tries > 20) { // ~2s
+        clearInterval(iv);
+        initWL();
+      }
+    }, 100);
+    window.addEventListener('fx:universe-changed', () => {
+      if (!fxReady()) return;
+      try{ clearInterval(iv); }catch{}
+      initWL();
+    }, { once:true });
+  }
 
   // safety: zawęż select na mobile (nie wypycha +Add)
   (function fixPickerWidth(){
