@@ -47,6 +47,8 @@ matchMedia('(max-width:640px)').addEventListener('change', applyLabelizeIfMobile
 const DB_KEY = "kidmoney_multi_fx_live_i18n_v1";
 const AUTH_KEY = window.AUTH_KEY || 'mfk-auth-v1';// { role: 'guest'|'parent'|'child', childId?: string }
 const LANG_KEY = "pf_lang";
+// --- local backend proxy ---
+const PROXY = "http://localhost:3001";
 
 // ===== Display currency per language (EN->USD, PL->PLN) =====
 const CURRENCY_KEY = "pf_display_currency";
@@ -2577,10 +2579,10 @@ function setLiveTimers(on) {
   liveStTimer = null;
 
   if (on) {
-    // ⏱️ pierwszy tick
+    // pierwszy tick
     refreshStocksFromApi();
     refreshFxFromApi();
-    // ⏲️ cyklicznie (łagodnie dla limitów)
+    // cyklicznie (łagodniej dla limitów)
     liveStTimer = setInterval(() => refreshStocksFromApi(), 45_000);
     liveFxTimer = setInterval(() => refreshFxFromApi(),    70_000);
   }
@@ -2629,8 +2631,8 @@ async function liveSelfTest() {
     }
   }
 
-  const proxyUrl = "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(q);
-  const fxUrl    = "https://api.exchangerate.host/latest?base=USD&places=6";
+const proxyUrl = `${PROXY}/yahoo/quote?symbols=${encodeURIComponent(q)}`;
+const fxUrl    = `${PROXY}/fx/latest?base=USD&places=6`;
 
   const [proxy, fx] = await Promise.all([ ping(proxyUrl, "Proxy"), ping(fxUrl, "FXhost") ]);
   const ok = (proxy.ok && fx.ok);
@@ -2758,11 +2760,11 @@ document.addEventListener('visibilitychange', () => {
 
 // ====== LIVE DATA FETCHERS (BEGIN)
 
-// --- YAHOO (proxy-first) + cooldown ---
+// --- YAHOO (proxy-first) + cooldown + bezpieczny parser ---
 async function yahooQuote(symbolsArr) {
-  const CHUNK = 1;
-  const SLEEP_MS = 2300;
-  const MAX_CD_MS = 10 * 60 * 1000;
+  const CHUNK = 3;              // ile tickerów na jedno zapytanie
+  const SLEEP_MS = 2300;        // przerwa między chunkami
+  const MAX_CD_MS = 10 * 60 * 1000; // maks. cooldown po 429
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   function pickPrice(q) {
@@ -2771,6 +2773,7 @@ async function yahooQuote(symbolsArr) {
     return null;
   }
 
+  // cooldown – jeśli aktywny, zwróć „pusty” wynik, ale z flagą rate-limited
   if (window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil) {
     const arr = []; arr._pickPrice = pickPrice; arr._rateLimited = true; return arr;
   }
@@ -2779,24 +2782,37 @@ async function yahooQuote(symbolsArr) {
     try { return await r.json(); } catch { return JSON.parse(await r.text()); }
   }
 
-  async function fetchList(csv) {
-    const url = "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols="
-              + encodeURIComponent(csv) + "&nocache=" + Date.now();
-    const r = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
-    if (r.status === 429) {
+  async function fetchList(symbolsCsv) {
+    const url = `${PROXY}/yahoo/quote?symbols=${encodeURIComponent(symbolsCsv)}&nocache=${Date.now()}`;
+    try {
+      const r = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+      if (r.status === 429) {
+        const prev = window.__yahooCooldownSecs || 90;
+        const next = Math.min(prev * 2, Math.floor(MAX_CD_MS / 1000));
+        window.__yahooCooldownSecs  = next;
+        window.__yahooCooldownUntil = Date.now() + next * 1000;
+        return { list: [], rateLimited: true };
+      }
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await safeJson(r);
+      return { list: j?.quoteResponse?.result || [], rateLimited: false };
+    } catch (e) {
+      console.warn("[yahooQuote] fetch fail (network?)", e);
+      // potraktuj jak cooldown — nie zamrażaj UI
       const prev = window.__yahooCooldownSecs || 90;
       const next = Math.min(prev * 2, Math.floor(MAX_CD_MS / 1000));
-      window.__yahooCooldownSecs = next;
+      window.__yahooCooldownSecs  = next;
       window.__yahooCooldownUntil = Date.now() + next * 1000;
       return { list: [], rateLimited: true };
     }
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const j = await safeJson(r);
-    return { list: j?.quoteResponse?.result || [], rateLimited: false };
   }
 
-  const uniq = [...new Set((symbolsArr || []).map(s => String(s).trim()).filter(Boolean))];
-  const chunks = []; for (let i = 0; i < uniq.length; i += CHUNK) chunks.push(uniq.slice(i, i + CHUNK));
+  // unikalizacja i dzielenie na chunki
+  const uniq = Array.from(new Set((symbolsArr || []).map(s => String(s || "").trim()).filter(Boolean)));
+  const chunks = [];
+  for (let i = 0; i < uniq.length; i += CHUNK) chunks.push(uniq.slice(i, i + CHUNK));
+
+  // pobieranie
   const out = []; let anyRL = false;
   for (const c of chunks) {
     const { list, rateLimited } = await fetchList(c.join(","));
@@ -2804,38 +2820,39 @@ async function yahooQuote(symbolsArr) {
     if (list?.length) out.push(...list);
     await sleep(SLEEP_MS);
   }
-  out._pickPrice = pickPrice;
+
+  out._pickPrice   = pickPrice;
   out._rateLimited = anyRL;
   return out;
 }
 
-// --- SAFE MAP (na wypadek braku globalnej mapToYahoo) ---
-function mapToYahooSafe(sym) {
-  const map = { BRKB: 'BRK-B', BRK_B: 'BRK-B' };
-  if (typeof mapToYahoo === 'function') {
-    try { return mapToYahoo(sym); } catch {}
-  }
-  return map[sym] || sym;
-}
-
-// --- FX FETCHER ---
+// --- FX FETCHER (z obejściem 400 i fallbackami) ---
 async function refreshFxFromApi() {
   try {
     const next = { PLN: 1 };
 
-    // zbuduj bezpieczną listę symboli i usuń ewentualne „:1”
-    const isoList = Array.isArray(ISO) && ISO.length ? ISO : ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD'];
-    const symbolsCsv = isoList.join(',');
-    const symbolsParam = encodeURIComponent(symbolsCsv).replace(/%3A1/gi, '');
+    // lista walut: z ISO (obcięcie np. „:1”) albo domyślna
+    const isoList = Array.isArray(ISO) && ISO.length
+      ? ISO.map(s => String(s).replace(/:.*$/, ''))
+      : ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD'];
 
-    async function fetchFxBaseUsd() {
-      const url = `https://api.exchangerate.host/latest?base=USD&places=6&symbols=${symbolsParam}`;
-      const r = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+    async function fetchFxBaseUsd(symbolsCsvOrNull) {
+      const fxUrl = symbolsCsvOrNull
+        ? `${PROXY}/fx/latest?base=USD&places=6&symbols=${encodeURIComponent(symbolsCsvOrNull)}`
+        : `${PROXY}/fx/latest?base=USD&places=6`;
+      const r = await fetch(fxUrl, { headers: { "Accept": "application/json" }, cache: "no-store" });
       if (!r.ok) throw new Error("HTTP " + r.status);
       return await r.json().catch(async () => JSON.parse(await r.text()));
     }
 
-    const fx = await fetchFxBaseUsd();
+    // 1) próbuj z symbols, a jeśli (np. 400) → bez symbols
+    let fx;
+    try { fx = await fetchFxBaseUsd(isoList.join(',')); }
+    catch (e) {
+      console.warn("[FXhost via PROXY] symbols failed, retrying without symbols", e);
+      fx = await fetchFxBaseUsd(null);
+    }
+
     const rates = fx?.rates || null;
     const pln_per_usd = Number(rates?.PLN);
     if (Number.isFinite(pln_per_usd) && pln_per_usd > 0) {
@@ -2847,23 +2864,24 @@ async function refreshFxFromApi() {
       });
     }
 
-    // uzupełnij braki z Yahoo (EURPLN=X itp.)
+    // 2) Yahoo uzupełnia braki (np. EURPLN=X)
     const missing = isoList.filter(c => c !== "PLN" && !Number.isFinite(next[c]));
     if (missing.length) {
       const items = await yahooQuote(missing.map(c => `${c}PLN=X`));
-      const pick = items._pickPrice;
+      const pick  = items._pickPrice;
       items.forEach(q => {
-        const m = String(q?.symbol||"").match(/^([A-Z]{3})PLN=X$/);
+        const m  = String(q?.symbol || "").match(/^([A-Z]{3})PLN=X$/);
         const px = Number(pick(q));
         if (m && Number.isFinite(px) && px > 0) next[m[1]] = +px.toFixed(5);
       });
     }
 
-    // fallback dla USD przez base=PLN
+    // 3) fallback dla USD przez base=PLN
     if (!Number.isFinite(next.USD) || next.USD <= 0) {
       const urls = [
-        "https://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD",
-        "https://r.jina.ai/http://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD"
+        `${PROXY}/fx/latest?base=PLN&places=6&symbols=USD`,
+        // awaryjnie przez r.jina.ai (gdyby PROXY padł, a CSP na to pozwala)
+        `https://r.jina.ai/http://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD`
       ];
       for (const u of urls) {
         try {
@@ -2871,7 +2889,7 @@ async function refreshFxFromApi() {
           if (!r.ok) continue;
           const j = await r.json().catch(async () => JSON.parse(await r.text()));
           const usd_per_pln = Number(j?.rates?.USD);
-          if (usd_per_pln > 0) { next.USD = +(1/usd_per_pln).toFixed(5); break; }
+          if (usd_per_pln > 0) { next.USD = +(1 / usd_per_pln).toFixed(5); break; }
         } catch {}
       }
     }
@@ -2888,7 +2906,7 @@ async function refreshFxFromApi() {
     if (!Number.isFinite(next.USD) || next.USD <= 0) next.USD = baseFx?.USD > 0 ? baseFx.USD : 4.00;
 
     baseFx = next;
-    renderFxList(document.getElementById("fxSearch")?.value||"");
+    renderFxList(document.getElementById("fxSearch")?.value || "");
     renderPortfolioFx(); renderJars(); renderProfits();
     renderGlobalTrends(currentTrendsMode);
     return true;
@@ -2903,7 +2921,7 @@ async function refreshStocksFromApi() {
   try {
     const ch = activeChild(); if (!ch) return false;
 
-    const list = await yahooQuote((ch.stocks||[]).map(s => mapToYahooSafe(s.t)));
+    const list = await yahooQuote((ch.stocks || []).map(s => mapToYahooSafe(s.t)));
     const pick = list._pickPrice;
 
     const onCD = window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil;
@@ -2923,7 +2941,7 @@ async function refreshStocksFromApi() {
     });
 
     save(app);
-    renderStocks(document.getElementById("stockSearch")?.value||"");
+    renderStocks(document.getElementById("stockSearch")?.value || "");
     renderPortfolioStocks(); renderJars(); renderProfits();
     renderGlobalTrends(currentTrendsMode);
     return true;
@@ -2936,6 +2954,45 @@ async function refreshStocksFromApi() {
 // ====== LIVE DATA FETCHERS (END)
 
 
+
+
+// ====== CHART SERIES (Yahoo `chart` przez proxy, z fallbackiem) ======
+async function seriesFor(symbolOrPair, rangeLabel, isFx){
+  // Mapuj zakresy na range/interval Yahoo
+  const MAP = { '1D':['1d','5m'], '5D':['5d','15m'], '1M':['1mo','1d'],
+                '6M':['6mo','1d'], 'YTD':['ytd','1d'], '1Y':['1y','1d'] };
+  const L = String(rangeLabel||'1D').toUpperCase();
+  const [range, interval] = MAP[L] || MAP['1D'];
+
+  const key = isFx
+    ? String(symbolOrPair).replace('/','') + '=X'   // EUR/PLN -> EURPLN=X
+    : String(symbolOrPair).toUpperCase();
+
+  const url = `https://r.jina.ai/http://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(key)}?range=${range}&interval=${interval}`;
+
+  try {
+    const r = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    const res = j?.chart?.result?.[0];
+    const ts = (res?.timestamp || []).map(t => t*1000);
+    const cl = (res?.indicators?.quote?.[0]?.close || []).map(Number);
+    return { dates: ts, closes: cl };
+  } catch (e) {
+    console.warn("[seriesFor] Yahoo chart fail, using fallback", e);
+    // fallback syntetyczny – żeby sparkline'y zawsze żyły
+    const span = (function(){ if (L==='1D') return {n:288,step:300000};
+      if (L==='5D') return {n:2016,step:300000};
+      if (L==='1M') return {n:22,step:86400000};
+      if (L==='6M') return {n:26,step:604800000};
+      if (L==='YTD'||L==='1Y') return {n:52,step:604800000};
+      return {n:288,step:300000}; })();
+    const start = 40 + (Math.random()*360|0);
+    const dates = Array.from({length:span.n}, (_,i)=> Date.now()-span.n*span.step + i*span.step);
+    const closes = Array.from({length:span.n}, (_,i)=> +(start*(1+0.0006*i + (Math.random()-0.5)*0.02)).toFixed(4));
+    return { dates, closes };
+  }
+}
 
 
 
