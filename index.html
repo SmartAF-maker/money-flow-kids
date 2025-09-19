@@ -1,261 +1,168 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Money Flow Kids</title>
-<title>Money Flow Kids</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Money Flow Kids</title>
 
-<link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
-<link rel="preconnect" href="https://s.ytimg.com" crossorigin>
-<link rel="preconnect" href="https://i.ytimg.com" crossorigin>
-<link rel="preconnect" href="https://r4---sn.googlevideo.com" crossorigin>
-<link rel="dns-prefetch" href="//www.youtube-nocookie.com">
-<link rel="dns-prefetch" href="//s.ytimg.com">
-<link rel="dns-prefetch" href="//i.ytimg.com">
-<link rel="dns-prefetch" href="//googlevideo.com">
+  <!-- Preconnect/DNS -->
+  <link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
+  <link rel="preconnect" href="https://s.ytimg.com" crossorigin>
+  <link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+  <link rel="dns-prefetch" href="//www.youtube-nocookie.com">
+  <link rel="dns-prefetch" href="//s.ytimg.com">
+  <link rel="dns-prefetch" href="//i.ytimg.com">
 
-<link rel="stylesheet" href="1.css" />
+  <link rel="stylesheet" href="1.css" />
 
-<!-- BRAND TITLE GRADIENT -->
-<style>
-  :root{
-    --brand-blue:  #3b82f6; /* niebieski jak na screenie */
-    --brand-green: #22c55e; /* zielony jak na screenie */
-  }
+  <!-- BRAND TITLE GRADIENT -->
+  <style>
+    :root{ --brand-blue:#3b82f6; --brand-green:#22c55e; }
+    #t-appTitle,.brand-title{
+      background-image:linear-gradient(90deg,var(--brand-blue),var(--brand-green));
+      -webkit-background-clip:text;background-clip:text;
+      -webkit-text-fill-color:transparent!important;color:transparent!important;
+      display:inline-block;font-weight:800;
+    }
+  </style>
 
-  /* Tylko tytuł w topbarze + ewentualnie inne nagłówki z klasą .brand-title */
-  #t-appTitle,
-  .brand-title{
-    background-image: linear-gradient(90deg, var(--brand-blue), var(--brand-green));
-    -webkit-background-clip: text;
-            background-clip: text;
-    -webkit-text-fill-color: transparent !important;
-            color: transparent !important;
-    display: inline-block; /* pomaga dla background-clip */
-    font-weight: 800;      /* jak na zrzucie */
-  }
-</style>
+  <!-- WOW Jars – (Twoje style) -->
+  <style>
+    .jars{display:grid!important;grid-template-columns:repeat(4,minmax(220px,1fr));gap:12px;align-items:start;}
+    @media (max-width:1200px){.jars{grid-template-columns:repeat(2,minmax(220px,1fr));}}
+    @media (max-width:560px){.jars{grid-template-columns:1fr;}}
+    .wow-jars .jar-card{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;min-height:260px;}
+    .jar-svg{width:140px;height:auto;display:block;}
+    .jar-svg .liquid{transform:translateY(calc(-1 * var(--fill,0%)));transition:transform .6s cubic-bezier(.22,1,.36,1);}
+    .jar-svg .wave{transform-origin:50% 0%;animation:waveMove 3.5s ease-in-out infinite alternate;}
+    @keyframes waveMove{from{transform:translateY(-2px) scaleX(1.02);}to{transform:translateY(2px) scaleX(0.98);}}
+    .jar-svg .bubbles circle{animation:bubbleUp 4s linear infinite;}
+    .jar-svg .bubbles circle:nth-child(2){animation-delay:.8s;}
+    .jar-svg .bubbles circle:nth-child(3){animation-delay:1.6s;}
+    @keyframes bubbleUp{0%{transform:translateY(0);opacity:.7;}80%{transform:translateY(-26px);opacity:.3;}100%{transform:translateY(-32px);opacity:0;}}
+    .wow-jars .jar-card:hover .jar-svg{filter:drop-shadow(0 6px 12px rgba(31,61,98,.22));transform:translateY(-1px);transition:filter .25s,transform .25s;}
+    .jar-svg .liquid,.jar-svg .wave{filter:saturate(1.15) contrast(1.08) drop-shadow(0 0 8px var(--glow,rgba(255,255,255,.14))) drop-shadow(0 0 16px var(--glow,rgba(255,255,255,.10)));pointer-events:none;}
+    .wow-jars .jar-card:nth-child(1) .jar-svg{--liq-top:#1ff35b;--liq-bottom:#1e9e1e;--glow:#18ff64;}
+    .wow-jars .jar-card:nth-child(2) .jar-svg{--liq-top:#f38a03;--liq-bottom:#915201;--glow:#ffb341;}
+    .wow-jars .jar-card:nth-child(3) .jar-svg{--liq-top:#df48b9;--liq-bottom:#660a29;--glow:#ff0ac2;}
+    .wow-jars .jar-card:nth-child(4) .jar-svg{--liq-top:#134dc7;--liq-bottom:#0b2e77;--glow:#4e7cff;}
+    @media (max-width:520px){.jar-svg{width:110px;}}
+  </style>
 
-    <!-- WOW Jars – styl tylko dla słoików (zawsze widoczne) -->
-    <style>
-      /* ============= WOW JARS (always visible) ============= */
-      .jars {
-        display: grid !important;
-        grid-template-columns: repeat(4, minmax(220px, 1fr));
-        gap: 12px;
-        align-items: start;
-      }
-      @media (max-width: 1200px) { .jars { grid-template-columns: repeat(2, minmax(220px, 1fr)); } }
-      @media (max-width: 560px)  { .jars { grid-template-columns: 1fr; } }
+  <!-- RWD GRID PATCH -->
+  <style>
+    #tab-invest,#tab-fx,#tab-parent,#tab-profits{display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:12px;align-items:start;}
+    @media (max-width:1400px){#tab-invest,#tab-fx,#tab-profits{grid-template-columns:1fr;}}
+    #tab-parent{grid-template-columns:repeat(2,minmax(420px,1fr));gap:12px;}
+    @media (max-width:900px){#tab-parent{grid-template-columns:1fr;}}
+    #tab-invest>.card,#tab-fx>.card,#tab-parent>.card,#tab-profits>.card{min-width:0;}
+    #tab-invest .tableWrap,#tab-fx .tableWrap,#tab-profits .tableWrap{overflow-x:auto;}
+    .grid.g-3{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:12px;}
+    @media (max-width:1200px){.grid.g-3{grid-template-columns:1fr;}}
+    .kpi{background:var(--card-bg,rgba(255,255,255,0.03));border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px;}
+    .kpi>.muted{font-size:.9rem;}
+    .kpi>div:last-child{font-weight:700;font-size:1.1rem;}
+    #tab-profits{grid-template-columns:1fr!important;}
+    #tutorialModal .modal-content{width:min(720px,92vw);}
+    #tutorialModal img{max-width:100%;height:auto;display:block;}
+    #globalTrendsCard{display:block;}
+    .hidden{display:none!important;}
+  </style>
 
-      .wow-jars .jar-card {
-        display: flex; flex-direction: column; align-items: center; gap: 8px;
-        text-align: center; min-height: 260px;
-      }
-      .jar-svg { width: 140px; height: auto; display: block; }
+  <!-- CSP -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline' https://www.youtube.com https://www.youtube-nocookie.com https://s.ytimg.com;
+    style-src   'self' 'unsafe-inline';
+    img-src     'self' data: blob: https://i.ytimg.com https://img.youtube.com;
+    font-src    'self' data:;
+    media-src   'self' blob: https://*.googlevideo.com;
+    connect-src 'self'
+                 http://localhost:3001
+                 http://127.0.0.1:3001
+                 https://api.exchangerate.host
+                 https://query1.finance.yahoo.com
+                 https://query2.finance.yahoo.com
+                 https://r.jina.ai;
+    frame-src   'self' https://www.youtube.com https://www.youtube-nocookie.com;
+    frame-ancestors 'self';
+    worker-src  'self';
+    base-uri    'self';
+    form-action 'self'">
+</head>
 
-      /* Poziom cieczy: sterowany przez --fill */
-      .jar-svg .liquid { transform: translateY(calc(-1 * var(--fill, 0%))); transition: transform .6s cubic-bezier(.22,1,.36,1); }
+<body>
+  <!-- ===== TOP BAR (wrócił) ===== -->
+  <header class="topbar mfk-topbar" role="banner">
+    <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
+    <h1 id="t-appTitle" class="logo brand-title">Money Flow</h1>
+    <button id="lang-toggle" class="lang-btn" aria-label="Change language">PL</button>
 
-      /* Falowanie tafli */
-      .jar-svg .wave { transform-origin: 50% 0%; animation: waveMove 3.5s ease-in-out infinite alternate; }
-      @keyframes waveMove { from { transform: translateY(-2px) scaleX(1.02); } to { transform: translateY(2px) scaleX(0.98); } }
+    <div class="role-switch" id="mfkTopNav">
+      <select id="langSelect" title="Language">
+        <option value="pl">PL</option>
+        <option value="en" selected>EN</option>
+      </select>
 
-      /* Bąbelki */
-      .jar-svg .bubbles circle { animation: bubbleUp 4s linear infinite; }
-      .jar-svg .bubbles circle:nth-child(2){ animation-delay: .8s; }
-      .jar-svg .bubbles circle:nth-child(3){ animation-delay: 1.6s; }
-      @keyframes bubbleUp { 0%{transform:translateY(0);opacity:.7;}80%{transform:translateY(-26px);opacity:.3;}100%{transform:translateY(-32px);opacity:0;} }
+      <div class="role-parent-only" style="display:inline-flex;align-items:center;gap:6px">
+        <label class="muted" for="childSelector"></label>
+        <select id="childSelector" class="input" style="min-width:160px"></select>
+      </div>
 
-      /* Hover */
-      .wow-jars .jar-card:hover .jar-svg { filter: drop-shadow(0 6px 12px rgba(31,61,98,.22)); transform: translateY(-1px); transition: filter .25s, transform .25s; }
-
-      /* Glow */
-      .jar-svg .liquid, .jar-svg .wave {
-        filter: saturate(1.15) contrast(1.08)
-                drop-shadow(0 0 8px var(--glow, rgba(255,255,255,.14)))
-                drop-shadow(0 0 16px var(--glow, rgba(255,255,255,.10)));
-        pointer-events: none;
-      }
-
-      /* Kolory słoików */
-      .wow-jars .jar-card:nth-child(1) .jar-svg { --liq-top:#1ff35b; --liq-bottom:#1e9e1e; --glow:#18ff64; } /* Savings */
-      .wow-jars .jar-card:nth-child(2) .jar-svg { --liq-top:#f38a03; --liq-bottom:#915201; --glow:#ffb341; } /* Earnings */
-      .wow-jars .jar-card:nth-child(3) .jar-svg { --liq-top:#df48b9; --liq-bottom:#660a29; --glow:#ff0ac2; } /* Gifts */
-      .wow-jars .jar-card:nth-child(4) .jar-svg { --liq-top:#134dc7; --liq-bottom:#0b2e77; --glow:#4e7cff; } /* Invest */
-
-      /* RWD – sama grafika słoika */
-      @media (max-width: 520px) { .jar-svg { width: 110px; } }
-    </style>
-
-    <!-- RWD GRID PATCH (zakładki; NIE dotyka słoików) -->
-    <style>
-      #tab-invest, #tab-fx, #tab-parent, #tab-profits {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
-        gap: 12px;
-        align-items: start;
-      }
-      @media (max-width: 1400px) { #tab-invest, #tab-fx, #tab-profits { grid-template-columns: 1fr; } }
-
-      #tab-parent { grid-template-columns: repeat(2, minmax(420px, 1fr)); gap: 12px; }
-      @media (max-width: 900px) { #tab-parent { grid-template-columns: 1fr; } }
-
-      #tab-invest > .card, #tab-fx > .card, #tab-parent > .card, #tab-profits > .card { min-width: 0; }
-      #tab-invest .tableWrap, #tab-fx .tableWrap, #tab-profits .tableWrap { overflow-x: auto; }
-
-      
-      /* KPI – kontenerki */
-      .grid.g-3 { display: grid; grid-template-columns: repeat(3, minmax(220px,1fr)); gap: 12px; }
-      @media (max-width: 1200px) { .grid.g-3 { grid-template-columns: 1fr; } }
-      .kpi{ background: var(--card-bg, rgba(255,255,255,0.03)); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 12px; }
-      .kpi > .muted { font-size: .9rem; }
-      .kpi > div:last-child { font-weight: 700; font-size: 1.1rem; }
-
-      /* Profits – jedna kolumna: KPI -> Stocks -> FX */
-      #tab-profits { grid-template-columns: 1fr !important; }
-
-      /* Tutorial modal */
-      #tutorialModal .modal-content { width: min(720px, 92vw); }
-      #tutorialModal img { max-width: 100%; height: auto; display: block; }
-
-      /* Global Trends – widoczne; ukrywamy/wyświetlamy klasą .hidden z JS */
-      #globalTrendsCard { display: block; }
-      .hidden { display: none !important; }
-    </style>
-
-</style>
-
-    <!-- CSP: allow live data endpoints for fetch() (Tylko w <head>) -->
-    <meta http-equiv="Content-Security-Policy" content="
-  default-src 'self';
-  script-src  'self' 'unsafe-inline' https://www.youtube.com https://www.youtube-nocookie.com https://s.ytimg.com;
-  style-src   'self' 'unsafe-inline';
-  img-src     'self' data: blob: https://i.ytimg.com https://img.youtube.com;
-  font-src    'self' data:;
-  media-src   'self' blob: https://*.googlevideo.com;
-  connect-src 'self'
-               https://api.exchangerate.host
-               https://query1.finance.yahoo.com
-               https://query2.finance.yahoo.com
-               https://r.jina.ai;
-  frame-src   'self' https://www.youtube.com https://www.youtube-nocookie.com;
-  frame-ancestors 'self';
-  worker-src  'self';
-  base-uri    'self';
-  form-action 'self'">
-  </head>
-
-  <body>
-    <header class="topbar mfk-topbar" role="banner">
-  <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
-<h1 id="t-appTitle" class="logo brand-title">Money Flow</h1>
-<button id="lang-toggle" class="lang-btn" aria-label="Change language">PL</button>
-
-  <div class="role-switch" id="mfkTopNav">
-  <select id="langSelect" title="Language">
-  <option value="pl">PL</option>
-  <option value="en" selected>EN</option>
-</select>
-
-    <div class="role-parent-only" style="display:inline-flex;align-items:center;gap:6px">
-      <label class="muted" for="childSelector"></label>
-      <select id="childSelector" class="input" style="min-width:160px"></select>
+      <button id="addChildBtn" type="button" class="tab role-parent-only" data-i18n="addChild">+ Add child</button>
+      <button type="button" class="tab active" data-tab="invest" data-i18n="tabStocks">Stocks</button>
+      <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
+      <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
+      <button id="tutorialBtn" type="button" class="tab">📘 <span data-i18n="tutorial">Tutorial</span></button>
     </div>
 
-    <button id="addChildBtn" type="button" class="tab role-parent-only" data-i18n="addChild">+ Add child</button>
-    <button type="button" class="tab active" data-tab="invest" data-i18n="tabStocks">Stocks</button>
-    <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
-    <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
-    <button type="button" class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
-    <button id="tutorialBtn" type="button" class="tab">📘 <span data-i18n="tutorial">Tutorial</span></button>
-  </div>
-
-  <div class="authwrap">
-    <span id="authBadge" class="muted" aria-live="polite">Guest</span>
-    <button id="loginBtn" type="button" class="tab"><span id="t-btnLoginTop">Login</span></button>
-    <button id="logoutBtn" type="button" class="tab hidden"><span id="t-btnLogout">Logout</span></button>
-  </div>
-</header>
-<!-- Mobile drawer (appears on small screens) -->
-<aside id="mfkMobileDrawer" class="mfk-drawer" aria-hidden="true">
-  <nav class="mfk-drawer-nav">
-    <div class="row">
-      <label class="muted" for="childSelectorDrawer">Child</label>
-      <select id="childSelectorDrawer" class="input"></select>
+    <div class="authwrap">
+      <span id="authBadge" class="muted" aria-live="polite">Guest</span>
+      <button id="loginBtn" type="button" class="tab"><span id="t-btnLoginTop">Login</span></button>
+      <button id="logoutBtn" type="button" class="tab hidden"><span id="t-btnLogout">Logout</span></button>
     </div>
+  </header>
 
-    <button type="button" class="tab" data-tab="invest" data-i18n="tabStocks">Stocks</button>
-    <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
-    <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
-    <button type="button" class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
-    <!-- ważne: ID poniżej -->
-    <button id="drawerTutorial" type="button" class="tab" data-tab="tutorial" data-i18n="tutorial">Tutorial</button>
+  <!-- ===== Mobile drawer (poza topbarem) ===== -->
+  <aside id="mfkMobileDrawer" class="mfk-drawer" aria-hidden="true">
+    <nav class="mfk-drawer-nav">
+      <div class="row">
+        <label class="muted" for="childSelectorDrawer">Child</label>
+        <select id="childSelectorDrawer" class="input"></select>
+      </div>
+      <button type="button" class="tab" data-tab="invest" data-i18n="tabStocks">Stocks</button>
+      <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
+      <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
+      <button type="button" class="tab role-parent-only" data-tab="parent" data-i18n="tabParent">Parent</button>
+      <button id="drawerTutorial" type="button" class="tab" data-tab="tutorial" data-i18n="tutorial">Tutorial</button>
+      <hr />
+      <button id="drawerLogin" type="button" class="tab">Login</button>
+      <button id="drawerLogout" type="button" class="tab hidden">Logout</button>
+    </nav>
+  </aside>
+  <div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
 
-    <hr />
-    <button id="drawerLogin" type="button" class="tab">Login</button>
-    <button id="drawerLogout" type="button" class="tab hidden">Logout</button>
-  </nav>
-</aside>
+  <!-- ===== Sticky mini jars ===== -->
+  <section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
+    <!-- (Twoje mini-jar elementy – zostawiłem bez zmian) -->
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="miniCash">Available cash</div><div id="miniCash" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="jarSavings">Savings</div><div id="miniSave" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="jarSpending">Earnings</div><div id="miniSpend" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="jarGiving">Gifts</div><div id="miniGive" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="miniInv">Investments</div><div id="miniInvest" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="miniInvFx">INV. value FX</div><div id="miniInvFx" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="miniInvStocks">INV. value Stocks</div><div id="miniInvStocks" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="miniInvTotal">INV. value Total</div><div id="miniInvTotal" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="miniProfits">Total earned</div><div id="miniTotalEarned" class="mini-jar-value">0.00 USD</div></div>
+    <div class="mini-jar"><div class="mini-jar-label" data-i18n="miniLosses">Total loss</div><div id="miniTotalLoss" class="mini-jar-value">0.00 USD</div></div>
+  </section>
 
-<!-- Backdrop musi być POZA <aside> -->
-<div id="mfkBackdrop" class="mfk-backdrop" hidden></div>
+  <!-- ===== od TEGO miejsca zostawiasz swój kod ===== -->
+  <main class="container">
 
-  <!-- Sticky mini jars (below top buttons) -->
-<section id="stickyMiniJars" class="mini-jars sticky" aria-label="Quick jars totals">
-  <!-- Cash -->
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="miniCash">Available cash</div>
-    <div id="miniCash" class="mini-jar-value">0.00 USD</div>
-  </div>
-
-  <!-- Savings / Earnings / Gifts -->
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="jarSavings">Savings</div>
-    <div id="miniSave" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="jarSpending">Earnings</div>
-    <div id="miniSpend" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="jarGiving">Gifts</div>
-    <div id="miniGive" class="mini-jar-value">0.00 USD</div>
-  </div>
-
-  <!-- Mini: Investments (osobny klucz tylko dla mini) -->
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="miniInv">Investments</div>
-    <div id="miniInvest" class="mini-jar-value">0.00 USD</div>
-  </div>
-
-  <!-- INV. Value FX / Stocks / Total -->
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="miniInvFx">INV. value FX</div>
-    <div id="miniInvFx" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="miniInvStocks">INV. value Stocks</div>
-    <div id="miniInvStocks" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="miniInvTotal">INV. value Total</div>
-    <div id="miniInvTotal" class="mini-jar-value">0.00 USD</div>
-  </div>
-
-  <!-- Profits / Losses -->
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="miniProfits">Total earned</div>
-    <div id="miniTotalEarned" class="mini-jar-value">0.00 USD</div>
-  </div>
-  <div class="mini-jar">
-    <div class="mini-jar-label" data-i18n="miniLosses">Total loss</div>
-    <div id="miniTotalLoss" class="mini-jar-value">0.00 USD</div>
-  </div>
-</section>
 
 
     <main class="container">

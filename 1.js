@@ -49,6 +49,29 @@ const AUTH_KEY = window.AUTH_KEY || 'mfk-auth-v1';// { role: 'guest'|'parent'|'c
 const LANG_KEY = "pf_lang";
 // --- local backend proxy ---
 const PROXY = "http://localhost:3001";
+// self-test
+const proxyUrl = `${PROXY}/yahoo/quote?symbols=${encodeURIComponent("AAPL,MSFT")}`;
+const fxUrl    = `${PROXY}/fx/latest?base=USD&places=6`;
+
+
+// prosty "sanitizer" nazw tickerów na format Yahoo (jeśli już masz tę funkcję, zostaw jedną)
+function mapToYahooSafe(sym) {
+  return String(sym || "").trim().toUpperCase().replace(/\s+/g, "").replace(/\./g, "-");
+}
+
+// lekki wrapper na /yahoo/quote przez nasz proxy
+async function yahooQuote(symbolsOrCsv) {
+  const csv = Array.isArray(symbolsOrCsv) ? symbolsOrCsv.join(",") : String(symbolsOrCsv || "");
+  const url = `${PROXY}/yahoo/quote?symbols=${encodeURIComponent(csv)}`;
+  const r = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+  if (!r.ok) throw new Error("Yahoo quote HTTP " + r.status);
+  const j = await r.json();
+  // zunifikowany kształt odpowiedzi + helper do brania ceny
+  const result = (j?.quoteResponse?.result || []).map(x => x || {});
+  result._pickPrice = (q) =>
+    (q?.regularMarketPrice ?? q?.postMarketPrice ?? q?.preMarketPrice ?? q?.price ?? NaN);
+  return result;
+}
 
 // ===== Display currency per language (EN->USD, PL->PLN) =====
 const CURRENCY_KEY = "pf_display_currency";
