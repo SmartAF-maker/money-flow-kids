@@ -2577,38 +2577,33 @@ function setLiveTimers(on) {
   liveStTimer = null;
 
   if (on) {
-    // ⏱️ natychmiastowy pierwszy tick po włączeniu Live
+    // ⏱️ pierwszy tick
     refreshStocksFromApi();
     refreshFxFromApi();
-
-    // ⏲️ potem cyklicznie (wolniej – łagodniej dla limitów)
-    liveStTimer = setInterval(() => refreshStocksFromApi(), 45_000); // 45s
-liveFxTimer = setInterval(() => refreshFxFromApi(),    70_000);  // 70s
+    // ⏲️ cyklicznie (łagodnie dla limitów)
+    liveStTimer = setInterval(() => refreshStocksFromApi(), 45_000);
+    liveFxTimer = setInterval(() => refreshFxFromApi(),    70_000);
   }
 }
 
-// ==== OFFLINE FX SIMULATION (tylko offline) ====
+// ==== OFFLINE FX SIMULATION ====
 function simulateFxOfflineTick() {
-  if (app.liveMode) return;               // tylko offline
-  const next = { ...baseFx, PLN: 1 };     // PLN zawsze 1
- ISO.forEach(code => {
-  if (code === "PLN" || code === "USD") return; // ⬅️ nie zmieniamy USD/PLN w offline
-
+  if (app.liveMode) return;
+  const next = { ...baseFx, PLN: 1 };
+  ISO.forEach(code => {
+    if (code === "PLN" || code === "USD") return;
     const v = Number(next[code]);
     if (!Number.isFinite(v) || v <= 0) return;
     const drift = 1 + (Math.random() - 0.5) * 0.005; // ±0.25%
-    const nv = Math.max(0.00001, v * drift);
-    next[code] = Number(nv.toFixed(5));
+    next[code] = Number((v * drift).toFixed(5));
   });
   baseFx = next;
-
-  
   const fxSearchEl = document.getElementById("fxSearch");
   renderFxList((fxSearchEl && fxSearchEl.value) || "");
   renderPortfolioFx(); renderJars(); renderProfits();
   renderGlobalTrends(currentTrendsMode);
 }
-setInterval(simulateFxOfflineTick, 3000); // co 3 sekundy
+setInterval(simulateFxOfflineTick, 3000);
 
 function syncLiveToggleUI() {
   const t = document.getElementById('liveModeToggle');
@@ -2619,7 +2614,7 @@ function syncLiveToggleUI() {
   if (s) s.textContent = app.liveMode ? TT().apiConn : TT().apiNot;
 }
 
-// --- Self-test łączności: proxy (Yahoo) + FX host (bez direct, żeby nie było CORS) ---
+// --- Self-test łączności ---
 async function liveSelfTest() {
   const s = document.getElementById('liveStatus');
   const q = "AAPL,MSFT";
@@ -2642,11 +2637,10 @@ async function liveSelfTest() {
 
   if (s) s.textContent = `API self-test: ${proxy.ok ? "✅" : "❌"} Proxy(${proxy.code}) • ${fx.ok ? "✅" : "❌"} FXhost(${fx.code})`;
   window.__lastSelfTest = { proxy, fx, ok, route: proxy.ok ? 'proxy' : 'offline' };
-  console.log("[LIVE SELF-TEST]", window.__lastSelfTest);
   return window.__lastSelfTest;
 }
 
-// --- Jednorazowy refresh (FX + akcje) z self-testem + sufiks „via …” i „rate-limited” ---
+// --- Force refresh ---
 async function forceLiveRefresh() {
   if (liveFetchLock) return false;
   liveFetchLock = true;
@@ -2655,48 +2649,25 @@ async function forceLiveRefresh() {
   if (s) s.textContent = TT().apiConn;
 
   try {
-    // self-test łączności (proxy + FX host)
     let st = null, okNet = false;
-    try {
-      st = await liveSelfTest();
-      okNet = !!st.ok;
-    } catch {
-      okNet = false;
-    }
+    try { st = await liveSelfTest(); okNet = !!st.ok; } catch { okNet = false; }
 
-    if (!okNet) {
-      if (s) s.textContent = "API: trying via proxy…";
-      console.warn("[forceLiveRefresh] self-test failed; trying fetchers anyway.");
-    }
-
-    // równoległy refresh FX i akcji
-    const [fxRes, stRes] = await Promise.allSettled([
-      refreshFxFromApi(),
-      refreshStocksFromApi()
-    ]);
-
+    const [fxRes, stRes] = await Promise.allSettled([ refreshFxFromApi(), refreshStocksFromApi() ]);
     const fxOk = (fxRes.status === 'fulfilled' && fxRes.value === true);
     const stOk = (stRes.status === 'fulfilled' && stRes.value === true);
 
-    // ustal trasę (route) na podstawie self-testu
-   // ustal trasę: direct / proxy / offline
-let route = 'offline';
-if (st) {
-  const directOk = (st.d1?.ok || st.d2?.ok);
-  const proxyOk  = !!st.proxy?.ok;
-  route = directOk ? 'direct' : (proxyOk ? 'proxy' : 'offline');
-}
+    let route = 'offline';
+    if (st) {
+      const proxyOk  = !!st.proxy?.ok;
+      route = proxyOk ? 'proxy' : 'offline';
+    }
 
-// NEW: sprawdź cooldown ustawiony po 429
-const rateLimited = window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil;
-const suffix = rateLimited ? ' • rate-limited – slowing down' : '';
+    const rateLimited = window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil;
+    const suffix = rateLimited ? ' • rate-limited – slowing down' : '';
 
-if (s) {
-  s.textContent =
-    `API: ${fxOk ? TT().fxOk : TT().fxFail} • ${stOk ? TT().stOk : TT().stFail}${suffix} (via ${route})`;
-}
-
-
+    if (s) {
+      s.textContent = `API: ${fxOk ? TT().fxOk : TT().fxFail} • ${stOk ? TT().stOk : TT().stFail}${suffix} (via ${route})`;
+    }
     return (fxOk || stOk);
   } finally {
     liveFetchLock = false;
@@ -2704,8 +2675,7 @@ if (s) {
   }
 }
 
-
-// --- Odświeżenie UI + timery
+// --- Update UI + timery ---
 function updateLiveUI(forceFetch = false) {
   const l = document.getElementById('liveModeLabel');
   const s = document.getElementById('liveStatus');
@@ -2716,26 +2686,33 @@ function updateLiveUI(forceFetch = false) {
   renderFxList(document.getElementById('fxSearch')?.value || "");
   renderPortfolioStocks();
   renderPortfolioFx();
-  renderJars();
-  renderProfits();
+  renderJars(); renderProfits();
   renderGlobalTrends(currentTrendsMode);
 
   setLiveTimers(app.liveMode);
   if (app.liveMode && forceFetch) forceLiveRefresh();
 }
 
-// --- Solidne podpięcie przełącznika (input + label) + watchdog
+// --- Toggle + watchdog ---
 function wireLiveToggleOnce() {
   const node  = document.getElementById('liveModeToggle');
   const label = document.getElementById('liveModeLabel');
 
   function applyToggle(nextVal) {
-    app.liveMode = !!nextVal;
-    save(app);
+    app.liveMode = !!nextVal; save(app);
 
     if (typeof clearTrendsAll === 'function') clearTrendsAll();
-    lastFxUiPrice = null;
-    lastStockUiPrice = null;
+    lastFxUiPrice = null; lastStockUiPrice = null;
+
+    // zasiej PRICE_HUB przy starcie
+    (function seedHubFromLocal(){
+      const ch = activeChild();
+      if (!ch || !window.PRICE_HUB || typeof PRICE_HUB.set !== 'function') return;
+      (ch.stocks || []).forEach(s => {
+        const v = Number(s?.p);
+        if (Number.isFinite(v) && v > 0) PRICE_HUB.set(s.t, v);
+      });
+    })();
 
     updateLiveUI(true);
     toast(app.liveMode ? 'Live ON' : 'Live OFF');
@@ -2756,320 +2733,197 @@ function wireLiveToggleOnce() {
   }
 }
 
-// init + dwustopniowy watchdog (gdy DOM doszedł później)
 (function initLive(){
-  syncLiveToggleUI();
-  wireLiveToggleOnce();
+  syncLiveToggleUI(); wireLiveToggleOnce();
   setTimeout(wireLiveToggleOnce, 0);
-  setTimeout(wireLiveToggleOnce, 1000); // ostatnia próba dopięcia
-
+  setTimeout(wireLiveToggleOnce, 1000);
   updateLiveUI(false);
   if (app.liveMode) forceLiveRefresh();
 })();
 
-// 🔇 Pauza odświeżania, gdy zakładka niewidoczna (oszczędza limity)
 document.addEventListener('visibilitychange', () => {
   if (!app.liveMode) return;
   const s = document.getElementById('liveStatus');
   if (document.hidden) {
-    setLiveTimers(false); // stop
+    setLiveTimers(false);
     if (s) s.textContent = 'API: paused (tab hidden)';
   } else {
-    setLiveTimers(true);  // start
+    setLiveTimers(true);
     if (s) s.textContent = TT().apiConn;
     forceLiveRefresh();
   }
 });
 // ====== LIVE MODE (END)
 
-// ====== Tutorial (skrócone) ======
-let TUTORIAL_STEPS = makeSteps();
-function refreshTutorialTexts() { TUTORIAL_STEPS = makeSteps(); if (tutorialTitle) tutShowStep(tutorialIndex); }
-let tutorialIndex = 0;
-
-function tutShowStep(i) {
-  const s = TUTORIAL_STEPS[i]; if (!s) return;
-  tutorialIcon && (tutorialIcon.textContent = s.icon || "📘");
-  tutorialTitle && (tutorialTitle.textContent = s.title);
-  tutorialText && (tutorialText.textContent = s.text);
-  tutorialImage && (tutorialImage.src = s.img || "");
-  tutorialImage && (tutorialImage.alt = s.caption || s.title);
-  tutCaption && (tutCaption.textContent = s.caption || "");
-}
-function openTutorial(force = false) {
-  const done = localStorage.getItem("pf_tutorial_done") === "1";
-  if (done && !force) return;
-  tutorialIndex = 0;
-  tutShowStep(tutorialIndex);
-  tutorialModal && tutorialModal.classList.remove("hidden");
-}
-function closeTutorial() { tutorialModal && tutorialModal.classList.add("hidden"); }
-
-document.getElementById("tutorialBtn")?.addEventListener("click", () => openTutorial(true));
-document.getElementById("prevStep")?.addEventListener('click', () => {
-  if (tutorialIndex > 0) { tutorialIndex--; tutShowStep(tutorialIndex); }
-});
-document.getElementById("nextStep")?.addEventListener('click', () => {
-  if (tutorialIndex < TUTORIAL_STEPS.length - 1) {
-    tutorialIndex++; tutShowStep(tutorialIndex);
-  } else {
-    localStorage.setItem("pf_tutorial_done", "1");
-    if (localStorage.getItem("pf_tutorial_reward_given") !== "1") {
-      const ch = activeChild();
-      if (ch) {
-        ch.jars.save += 10; save(app); renderJars();
-        toast("Great! +10 USD for finishing the tutorial 🎉");
-      }
-      localStorage.setItem("pf_tutorial_reward_given", "1");
-    }
-    closeTutorial();
-  }
-});
-document.getElementById("closeTutorial")?.addEventListener("click", closeTutorial);
-window.addEventListener("load", () => openTutorial(false));
-// Mapowanie tickerów do formatu Yahoo (tylko nietypowe przypadki)
-function mapToYahoo(sym) {
-  const map = {
-    BRKB: 'BRK-B',   // było
-    BRK_B: 'BRK-B',  // ✅ dopisz to, jeśli używasz BRK_B w STOCK_UNIVERSE
-  };
-  return map[sym] || sym;
-}
-
 
 // ====== LIVE DATA FETCHERS (BEGIN)
 
-// --- YAHOO (proxy-first) + cooldown + bezpieczny parser ---
+// --- YAHOO (proxy-first) + cooldown ---
 async function yahooQuote(symbolsArr) {
- const CHUNK = 3;
+  const CHUNK = 1;
+  const SLEEP_MS = 2300;
+  const MAX_CD_MS = 10 * 60 * 1000;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   function pickPrice(q) {
     const cand = [q?.regularMarketPrice, q?.postMarketPrice, q?.preMarketPrice, q?.bid, q?.ask];
-    for (let i = 0; i < cand.length; i++) {
-      const v = cand[i];
-      if (typeof v === "number" && isFinite(v)) return Number(v);
-    }
+    for (const v of cand) if (typeof v === "number" && isFinite(v)) return Number(v);
     return null;
   }
 
-  // cooldown – pomiń zapytania, ale zwróć flagę
-  const now = Date.now();
-  if (window.__yahooCooldownUntil && now < window.__yahooCooldownUntil) {
-    console.warn("[yahooQuote] cooldown in effect, skipping fetch");
-    const arr = [];
-    arr._pickPrice = pickPrice;
-    arr._rateLimited = true;
-    return arr;
+  if (window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil) {
+    const arr = []; arr._pickPrice = pickPrice; arr._rateLimited = true; return arr;
   }
 
   async function safeJson(r) {
-    let j;
-    try { j = await r.json(); }
-    catch { j = JSON.parse(await r.text()); }
-    if (j && j.data) {
-      try { j = (typeof j.data === 'string') ? JSON.parse(j.data) : j.data; } catch {}
-    }
-    return j;
+    try { return await r.json(); } catch { return JSON.parse(await r.text()); }
   }
 
-  async function fetchList(symbolsCsv) {
+  async function fetchList(csv) {
     const url = "https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols="
-                + encodeURIComponent(symbolsCsv) + "&nocache=" + Date.now();
-    try {
-      const r = await fetch(url, { headers: { "Accept": "application/json" } });
-      if (r.status === 429) {
-  const now = Date.now();
-  const prev = window.__yahooCooldownSecs || 60;
-  const next = Math.min(prev * 2, 300); // 60 -> 120 -> 240 -> 300s
-  window.__yahooCooldownSecs = next;
-  window.__yahooCooldownUntil = now + next * 1000;
-  console.warn(`[yahooQuote] 429 rate-limited – cooldown ${next}s`);
-  return { list: [], rateLimited: true };
-}
-
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const j = await safeJson(r);
-      const list = j?.quoteResponse?.result || [];
-      return { list, rateLimited: false };
-    } catch (e) {
-      console.warn("[yahooQuote] fetch fail", e);
-      return { list: [], rateLimited: false };
+              + encodeURIComponent(csv) + "&nocache=" + Date.now();
+    const r = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+    if (r.status === 429) {
+      const prev = window.__yahooCooldownSecs || 90;
+      const next = Math.min(prev * 2, Math.floor(MAX_CD_MS / 1000));
+      window.__yahooCooldownSecs = next;
+      window.__yahooCooldownUntil = Date.now() + next * 1000;
+      return { list: [], rateLimited: true };
     }
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await safeJson(r);
+    return { list: j?.quoteResponse?.result || [], rateLimited: false };
   }
 
-  const chunks = [];
-  for (let i = 0; i < symbolsArr.length; i += CHUNK) {
-    chunks.push(symbolsArr.slice(i, i + CHUNK));
+  const uniq = [...new Set((symbolsArr || []).map(s => String(s).trim()).filter(Boolean))];
+  const chunks = []; for (let i = 0; i < uniq.length; i += CHUNK) chunks.push(uniq.slice(i, i + CHUNK));
+  const out = []; let anyRL = false;
+  for (const c of chunks) {
+    const { list, rateLimited } = await fetchList(c.join(","));
+    if (rateLimited) { anyRL = true; break; }
+    if (list?.length) out.push(...list);
+    await sleep(SLEEP_MS);
   }
-
-  const out = [];
-  let anyRateLimited = false;
-
-  for (let c = 0; c < chunks.length; c++) {
-    const { list, rateLimited } = await fetchList(chunks[c].join(","));
-    if (rateLimited) { anyRateLimited = true; break; }
-   if (list && list.length) out.push(...list);
-    await sleep(1500 + Math.random() * 800); // jitter
-  }
-
   out._pickPrice = pickPrice;
-  out._rateLimited = anyRateLimited;
+  out._rateLimited = anyRL;
   return out;
 }
-// ===== LIVE FX FETCHER (robust) =====
-// Buduje pełną mapę: baseFx[CODE] = PLN za 1 CODE
-// Źródła: 1) exchangerate.host (PRIMARY, base=USD), 2) Yahoo (uzupełnia braki), 3) fallbacki
+
+// --- SAFE MAP (na wypadek braku globalnej mapToYahoo) ---
+function mapToYahooSafe(sym) {
+  const map = { BRKB: 'BRK-B', BRK_B: 'BRK-B' };
+  if (typeof mapToYahoo === 'function') {
+    try { return mapToYahoo(sym); } catch {}
+  }
+  return map[sym] || sym;
+}
+
+// --- FX FETCHER ---
 async function refreshFxFromApi() {
   try {
     const next = { PLN: 1 };
 
-    // 1) exchangerate.host — PRIMARY (base=USD)
-  async function fetchFxBaseUsd() {
-  const symbols = ISO.join(',');
-  const url = `https://api.exchangerate.host/latest?base=USD&places=6&symbols=${encodeURIComponent(symbols)}`;
-  try {
-    const r = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    try { return await r.json(); } catch { return JSON.parse(await r.text()); }
-  } catch (e) {
-    console.warn("[FXhost] fail (direct)", e);
-    return null;
-  }
-}
+    // zbuduj bezpieczną listę symboli i usuń ewentualne „:1”
+    const isoList = Array.isArray(ISO) && ISO.length ? ISO : ['USD','EUR','PLN','GBP','JPY','CHF','AUD','CAD','NZD'];
+    const symbolsCsv = isoList.join(',');
+    const symbolsParam = encodeURIComponent(symbolsCsv).replace(/%3A1/gi, '');
+
+    async function fetchFxBaseUsd() {
+      const url = `https://api.exchangerate.host/latest?base=USD&places=6&symbols=${symbolsParam}`;
+      const r = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json().catch(async () => JSON.parse(await r.text()));
+    }
 
     const fx = await fetchFxBaseUsd();
     const rates = fx?.rates || null;
     const pln_per_usd = Number(rates?.PLN);
     if (Number.isFinite(pln_per_usd) && pln_per_usd > 0) {
-      // PLN per 1 USD
       next.USD = +pln_per_usd.toFixed(5);
-      // PLN per 1 CODE = (PLN/USD) / (CODE/USD)
-      ISO.forEach(code => {
+      isoList.forEach(code => {
         if (code === "PLN") return;
-        const code_per_usd = Number(rates?.[code]);
-        if (Number.isFinite(code_per_usd) && code_per_usd > 0) {
-          next[code] = +((pln_per_usd / code_per_usd).toFixed(5));
-        }
+        const val = Number(rates?.[code]);
+        if (Number.isFinite(val) && val > 0) next[code] = +((pln_per_usd / val).toFixed(5));
       });
     }
 
-    // 2) Yahoo — SECONDARY, uzupełnia tylko braki (CODEPLN=X)
-    const missingForYahoo = ISO.filter(c => c !== "PLN" && !Number.isFinite(next[c]));
-    if (missingForYahoo.length) {
-      const symbolsArr = missingForYahoo.map(c => `${c}PLN=X`);
-      const items = await yahooQuote(symbolsArr);
-      const pickPrice = items._pickPrice || (q => q?.regularMarketPrice ?? null);
-      for (let i = 0; i < items.length; i++) {
-        const q = items[i];
-        const sym = String(q?.symbol || "").toUpperCase(); // np. EURPLN=X
-        const m = sym.match(/^([A-Z]{3})PLN=X$/);
-        const px = Number(pickPrice(q));
-        if (m && Number.isFinite(px) && px > 0) {
-          next[m[1]] = +px.toFixed(5); // PLN per 1 CODE
-        }
+    // uzupełnij braki z Yahoo (EURPLN=X itp.)
+    const missing = isoList.filter(c => c !== "PLN" && !Number.isFinite(next[c]));
+    if (missing.length) {
+      const items = await yahooQuote(missing.map(c => `${c}PLN=X`));
+      const pick = items._pickPrice;
+      items.forEach(q => {
+        const m = String(q?.symbol||"").match(/^([A-Z]{3})PLN=X$/);
+        const px = Number(pick(q));
+        if (m && Number.isFinite(px) && px > 0) next[m[1]] = +px.toFixed(5);
+      });
+    }
+
+    // fallback dla USD przez base=PLN
+    if (!Number.isFinite(next.USD) || next.USD <= 0) {
+      const urls = [
+        "https://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD",
+        "https://r.jina.ai/http://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD"
+      ];
+      for (const u of urls) {
+        try {
+          const r = await fetch(u, { headers: { "Accept": "application/json" }, cache: "no-store" });
+          if (!r.ok) continue;
+          const j = await r.json().catch(async () => JSON.parse(await r.text()));
+          const usd_per_pln = Number(j?.rates?.USD);
+          if (usd_per_pln > 0) { next.USD = +(1/usd_per_pln).toFixed(5); break; }
+        } catch {}
       }
     }
 
-    // 3) Fallback: jeśli nadal brak USD, próbuj base=PLN (odwrotność)
-    if (!Number.isFinite(next.USD) || next.USD <= 0) {
-      try {
-        const urls = [
-          "https://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD",
-          "https://r.jina.ai/http://api.exchangerate.host/latest?base=PLN&places=6&symbols=USD"
-        ];
-        for (let k = 0; k < urls.length; k++) {
-          try {
-            const r = await fetch(urls[k], { headers: { "Accept": "application/json" } });
-            if (!r.ok) throw new Error("HTTP " + r.status);
-            const j = await r.json().catch(async () => JSON.parse(await r.text()));
-            const usd_per_pln = Number(j?.rates?.USD); // USD per 1 PLN
-            if (Number.isFinite(usd_per_pln) && usd_per_pln > 0) {
-              next.USD = +(1 / usd_per_pln).toFixed(5); // PLN per 1 USD
-              break;
-            }
-          } catch (e) { /* continue */ }
-        }
-      } catch { /* ignore */ }
-    }
-
-    // Domknij brakujące waluty poprzednią mapą
-    ISO.forEach(code => {
-      if (code === "PLN") return;
-      if (!Number.isFinite(next[code]) || next[code] <= 0) {
-        const prev = baseFx?.[code];
-        if (Number.isFinite(prev) && prev > 0) next[code] = prev;
+    // domknięcie luk poprzednią mapą
+    isoList.forEach(c => {
+      if (c !== "PLN" && (!Number.isFinite(next[c]) || next[c] <= 0)) {
+        const prev = baseFx?.[c];
+        if (Number.isFinite(prev) && prev > 0) next[c] = prev;
       }
     });
 
-    // Ostateczny bezpiecznik dla USD
-    if (!Number.isFinite(next.USD) || next.USD <= 0) {
-      next.USD = Number.isFinite(baseFx?.USD) && baseFx.USD > 0 ? baseFx.USD : 4.00;
-    }
+    // bezpiecznik USD
+    if (!Number.isFinite(next.USD) || next.USD <= 0) next.USD = baseFx?.USD > 0 ? baseFx.USD : 4.00;
 
-    // Podmiana mapy + odświeżenie UI
     baseFx = next;
-    const fxSearchEl = document.getElementById("fxSearch");
-    renderFxList((fxSearchEl && fxSearchEl.value) || "");
+    renderFxList(document.getElementById("fxSearch")?.value||"");
     renderPortfolioFx(); renderJars(); renderProfits();
     renderGlobalTrends(currentTrendsMode);
-
-    console.log("[FX MAP READY] USD:", baseFx.USD, baseFx);
     return true;
   } catch (e) {
     console.warn("[refreshFxFromApi] fatal", e);
     return false;
   }
 }
-// --- STOCKS (miękkie traktowanie cooldownu) ---
+
+// --- STOCKS FETCHER ---
 async function refreshStocksFromApi() {
   try {
     const ch = activeChild(); if (!ch) return false;
-    const symbolsArr = (ch.stocks || []).map(s => mapToYahoo(s.t));
-    if (!symbolsArr.length) return false;
 
-    const list = await yahooQuote(symbolsArr);
-    const pickPrice = list._pickPrice || (q => q?.regularMarketPrice ?? null);
+    const list = await yahooQuote((ch.stocks||[]).map(s => mapToYahooSafe(s.t)));
+    const pick = list._pickPrice;
 
-    // jeśli pusto: sprawdź cooldown i potraktuj jako „ok, tylko zwolnione”
-    const onCooldown = !!(window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil);
-    const rateLimitedFlag = !!list._rateLimited;
+    const onCD = window.__yahooCooldownUntil && Date.now() < window.__yahooCooldownUntil;
+    if (!list?.length) return (onCD || list._rateLimited) ? true : false;
 
-    if (!Array.isArray(list) || !list.length) {
-      if (onCooldown || rateLimitedFlag) {
-        console.warn("Stocks: rate-limited – keeping previous prices");
-        return true; // miękko OK (bez „failed”)
-      }
-      console.warn("Stocks: empty response – keeping previous prices");
-      return false;
-    }
-
-    const bySym = Object.create(null);
-    for (let i = 0; i < list.length; i++) {
-      const q = list[i];
-      if (!q || !q.symbol) continue;
-      bySym[String(q.symbol).toUpperCase()] = q;
-    }
+    const bySym = {};
+    list.forEach(q => { bySym[String(q.symbol).toUpperCase()] = q; });
 
     ch.stocks = ch.stocks.map(s => {
-  const ySym = String(mapToYahoo(s.t)).toUpperCase();
-  const q = bySym[ySym];
-  const px = pickPrice(q);
-  if (px != null) {
-    const v = Number(px);
-    const next = Object.assign({}, s, { p: v });
-    if (window.PRICE_HUB && typeof PRICE_HUB.set === 'function') {
-      PRICE_HUB.set(s.t, v); // ► klucz = Twój ticker (np. AAPL)
-    }
-    return next;
-  }
-  return s;
-});
-
+      const q = bySym[String(mapToYahooSafe(s.t)).toUpperCase()];
+      const v = Number(pick(q));
+      if (Number.isFinite(v)) {
+        if (window.PRICE_HUB && typeof PRICE_HUB.set === 'function') PRICE_HUB.set(s.t, v);
+        return { ...s, p: v };
+      }
+      return s;
+    });
 
     save(app);
-    const stSearchEl = document.getElementById("stockSearch");
-    renderStocks((stSearchEl && stSearchEl.value) || "");
+    renderStocks(document.getElementById("stockSearch")?.value||"");
     renderPortfolioStocks(); renderJars(); renderProfits();
     renderGlobalTrends(currentTrendsMode);
     return true;
@@ -3079,14 +2933,9 @@ async function refreshStocksFromApi() {
   }
 }
 
-
-// (Timery uruchamiamy/wyłączamy w LIVE MODE wg app.liveMode)
-clearInterval(window.__liveStocksTimer);
-clearInterval(window.__liveFxTimer);
-window.__liveStocksTimer = null;
-window.__liveFxTimer = null;
-
 // ====== LIVE DATA FETCHERS (END)
+
+
 
 
 
