@@ -21,7 +21,9 @@ function makeKey(req) {
   p.delete("nocache");
 
   const normList = (val) =>
-    [...new Set(val.split(",").map(s => s.trim().toUpperCase()).filter(Boolean))].sort().join(",");
+    [...new Set(val.split(",").map(s => s.trim().toUpperCase()).filter(Boolean))]
+      .sort()
+      .join(",");
 
   if (u.pathname === "/yahoo/quote" && p.has("symbols")) {
     p.set("symbols", normList(p.get("symbols")));
@@ -60,36 +62,23 @@ async function passthrough(res, r) {
 }
 
 /* ------------- Pomocniki ------------- */
-// r.jina.ai zwraca obiekt-wrappper z pola „content” (string z właściwym JSON-em)
 function unwrapJinaLike(objOrText) {
   try {
     const obj = typeof objOrText === "string" ? JSON.parse(objOrText) : objOrText;
-    // Najczęstszy format: { title, url, content: "<json-string>", ... }
     if (obj && typeof obj.content === "string") {
-      try {
-        const inner = JSON.parse(obj.content);
-        return inner;
-      } catch {
-        // content nie jest JSON-em → zwróć jak jest
-        return obj;
-      }
+      try { return JSON.parse(obj.content); } catch { return obj; }
     }
-    // Czasem bywa { data: {...} }
-    if (obj && obj.data && (obj.data.quoteResponse || obj.data.chart)) {
-      return obj.data;
-    }
+    if (obj && obj.data && (obj.data.quoteResponse || obj.data.chart)) return obj.data;
     return obj;
   } catch {
-    // nie-daisy JSON → spróbuj surowo
     return objOrText;
   }
 }
 
-// Uznamy że „payload z Yahoo jest OK” tylko gdy zawiera dane (a nie błąd logiczny 401)
 function yahooPayloadLooksOk(j) {
   if (!j || typeof j !== "object") return false;
   if (j.quoteResponse) {
-    const err = j.finance?.error; // czasem Yahoo wkłada błędy pod finance.error
+    const err = j.finance?.error;
     return !err && Array.isArray(j.quoteResponse.result);
   }
   if (j.chart) {
@@ -105,7 +94,7 @@ app.get("/yahoo/quote", async (req, res) => {
     const symbols = (req.query.symbols || "").toString().trim();
     if (!symbols) return res.status(400).json({ error: "missing symbols" });
 
-    const direct = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
+    const direct  = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
     const viaJina = `https://r.jina.ai/http://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
 
     const key = makeKey(req);
@@ -113,33 +102,33 @@ app.get("/yahoo/quote", async (req, res) => {
     if (fresh) return res.json(fresh);
     const stale = getStale(key);
 
-    // 1) próba bezpośrednia
+    // 1) bezpośrednio
     let r = await fetch(direct, { headers: { Accept: "application/json" } });
     let j = null;
-    try { j = await r.json(); } catch { /* noop */ }
+    try { j = await r.json(); } catch {}
 
     if (r.ok && yahooPayloadLooksOk(j)) {
       put(key, j, 60_000);
       return res.json(j);
     }
 
-    // 2) fallback (również gdy 200, ale payload zawiera finance.error)
+    // 2) fallback (UWAGA: najpierw sprawdzamy r2.ok, dopiero potem .text())
     if (!r.ok || !yahooPayloadLooksOk(j) || [401, 403, 429, 503].includes(r.status)) {
       if (r.status === 429 && stale) return res.json(stale);
-      const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
-      const txt2 = await r2.text();
-      if (!r2.ok) return passthrough(res, r2);
 
+      const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
+      if (!r2.ok) return passthrough(res, r2);   // <-- nie czytamy body wcześniej!
+
+      const txt2 = await r2.text();              // <-- dopiero tu
       const unwrapped = unwrapJinaLike(txt2);
+
       if (yahooPayloadLooksOk(unwrapped)) {
         put(key, unwrapped, 60_000);
         return res.json(unwrapped);
       }
-      // ostatnia szansa – odeślij co mamy (zobaczysz ostrzeżenie zamiast zawieszki)
       return res.json(unwrapped);
     }
 
-    // 3) inne błędy → passthrough
     return passthrough(res, r);
   } catch (e) {
     res.status(502).json({ error: String(e) });
@@ -154,7 +143,7 @@ app.get("/yahoo/chart", async (req, res) => {
     const interval = (req.query.interval || "5m").toString();
     if (!s) return res.status(400).json({ error: "missing symbol" });
 
-    const direct = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
+    const direct  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
     const viaJina = `https://r.jina.ai/http://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
 
     const key = makeKey(req);
@@ -167,17 +156,19 @@ app.get("/yahoo/chart", async (req, res) => {
     try { j = await r.json(); } catch {}
 
     if (r.ok && yahooPayloadLooksOk(j)) {
-      put(key, j, 300_000); // 5 min
+      put(key, j, 300_000);
       return res.json(j);
     }
 
     if (!r.ok || !yahooPayloadLooksOk(j) || [401, 403, 429, 503].includes(r.status)) {
       if (r.status === 429 && stale) return res.json(stale);
-      const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
-      const txt2 = await r2.text();
-      if (!r2.ok) return passthrough(res, r2);
 
+      const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
+      if (!r2.ok) return passthrough(res, r2);   // <-- najpierw sprawdź
+
+      const txt2 = await r2.text();              // <-- potem czytaj
       const unwrapped = unwrapJinaLike(txt2);
+
       if (yahooPayloadLooksOk(unwrapped)) {
         put(key, unwrapped, 300_000);
         return res.json(unwrapped);
