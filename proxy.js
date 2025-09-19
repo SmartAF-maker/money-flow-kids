@@ -1,81 +1,49 @@
- // proxy.js
+// proxy.js
 import express from "express";
 import fetch from "node-fetch";
 
-const app = express();
+const app  = express();
 const PORT = 3001;
 
-/* ------------- CORS ------------- */
+/* ---------- CORS ---------- */
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   next();
 });
 
-/* ------------- Cache ------------- */
+/* ---------- proste cache ---------- */
 const cache = new Map(); // key -> { t, ttl, v }
-
 function makeKey(req) {
   const u = new URL("http://x" + req.originalUrl);
   const p = u.searchParams;
   p.delete("nocache");
-
   const normList = (val) =>
-    [...new Set(val.split(",").map(s => s.trim().toUpperCase()).filter(Boolean))]
-      .sort()
-      .join(",");
-
-  if (u.pathname === "/yahoo/quote" && p.has("symbols")) {
-    p.set("symbols", normList(p.get("symbols")));
-  }
-  if (u.pathname === "/fx/latest" && p.has("symbols")) {
-    p.set("symbols", normList(p.get("symbols")));
-  }
+    [...new Set(String(val || "").split(",").map(s => s.trim().toUpperCase()).filter(Boolean))].sort().join(",");
+  if (u.pathname === "/yahoo/quote" && p.has("symbols")) p.set("symbols", normList(p.get("symbols")));
+  if (u.pathname === "/fx/latest"   && p.has("symbols")) p.set("symbols", normList(p.get("symbols")));
   return u.pathname + (p.toString() ? "?" + p.toString() : "");
 }
-
-function getFresh(key) {
-  const e = cache.get(key);
+const getFresh = k => {
+  const e = cache.get(k);
   if (!e) return null;
-  if (Date.now() - e.t > e.ttl) return null;
-  return e.v;
-}
-function getStale(key) {
-  const e = cache.get(key);
-  return e ? e.v : null;
-}
-function put(key, value, ttlMs = 60_000) {
-  cache.set(key, { t: Date.now(), ttl: ttlMs, v: value });
-}
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, e] of cache) {
-    if (now - e.t > e.ttl * 2) cache.delete(k);
-  }
-}, 300_000);
+  return (Date.now() - e.t <= e.ttl) ? e.v : null;
+};
+const getStale = k => (cache.get(k)?.v ?? null);
+const put = (k,v,ttl=60_000) => cache.set(k,{t:Date.now(),ttl,v});
 
-async function passthrough(res, r) {
-  const txt = await r.text();
-  res.status(r.status);
-  res.set("Content-Type", r.headers.get("content-type") || "application/json");
-  res.send(txt);
-}
-
-/* ------------- Pomocniki ------------- */
+/* ---------- pomoc ---------- */
 function unwrapJinaLike(objOrText) {
   try {
-    const obj = typeof objOrText === "string" ? JSON.parse(objOrText) : objOrText;
-    if (obj && typeof obj.content === "string") {
-      try { return JSON.parse(obj.content); } catch { return obj; }
+    const o = typeof objOrText === "string" ? JSON.parse(objOrText) : objOrText;
+    if (o && typeof o.content === "string") {
+      try { return JSON.parse(o.content); } catch { return o; }
     }
-    if (obj && obj.data && (obj.data.quoteResponse || obj.data.chart)) return obj.data;
-    return obj;
-  } catch {
-    return objOrText;
-  }
+    if (o && o.data && (o.data.quoteResponse || o.data.chart)) return o.data;
+    return o;
+  } catch { return objOrText; }
 }
-
-function yahooPayloadLooksOk(j) {
+function yahooPayloadOK(j) {
   if (!j || typeof j !== "object") return false;
   if (j.quoteResponse) {
     const err = j.finance?.error;
@@ -88,10 +56,18 @@ function yahooPayloadLooksOk(j) {
   return false;
 }
 
-/* ------------- /yahoo/quote ------------- */
+/* ---------- passthrough (nie czytamy body wcześniej!) ---------- */
+async function passthrough(res, r) {
+  const text = await r.text();               // <– czytamy TYLKO tu
+  res.status(r.status);
+  res.set("Content-Type", r.headers.get("content-type") || "application/json");
+  res.send(text);
+}
+
+/* ---------- /yahoo/quote ---------- */
 app.get("/yahoo/quote", async (req, res) => {
   try {
-    const symbols = (req.query.symbols || "").toString().trim();
+    const symbols = String(req.query.symbols || "").trim();
     if (!symbols) return res.status(400).json({ error: "missing symbols" });
 
     const direct  = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
@@ -102,45 +78,38 @@ app.get("/yahoo/quote", async (req, res) => {
     if (fresh) return res.json(fresh);
     const stale = getStale(key);
 
-    // 1) bezpośrednio
-    let r = await fetch(direct, { headers: { Accept: "application/json" } });
-    let j = null;
-    try { j = await r.json(); } catch {}
+    let r1 = await fetch(direct, { headers: { Accept: "application/json" } });
+    let j1 = null;
+    try { j1 = await r1.json(); } catch {}
 
-    if (r.ok && yahooPayloadLooksOk(j)) {
-      put(key, j, 60_000);
-      return res.json(j);
+    if (r1.ok && yahooPayloadOK(j1)) {
+      put(key, j1, 60_000);
+      return res.json(j1);
     }
 
-    // 2) fallback (UWAGA: najpierw sprawdzamy r2.ok, dopiero potem .text())
-    if (!r.ok || !yahooPayloadLooksOk(j) || [401, 403, 429, 503].includes(r.status)) {
-      if (r.status === 429 && stale) return res.json(stale);
+    if (r1.status === 429 && stale) return res.json(stale);
 
-      const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
-      if (!r2.ok) return passthrough(res, r2);   // <-- nie czytamy body wcześniej!
+    const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
+    if (!r2.ok) return passthrough(res, r2);  // ← nie zużywamy wcześniej body
 
-      const txt2 = await r2.text();              // <-- dopiero tu
-      const unwrapped = unwrapJinaLike(txt2);
-
-      if (yahooPayloadLooksOk(unwrapped)) {
-        put(key, unwrapped, 60_000);
-        return res.json(unwrapped);
-      }
+    const txt2 = await r2.text();
+    const unwrapped = unwrapJinaLike(txt2);
+    if (yahooPayloadOK(unwrapped)) {
+      put(key, unwrapped, 60_000);
       return res.json(unwrapped);
     }
-
-    return passthrough(res, r);
+    return res.json(unwrapped);
   } catch (e) {
-    res.status(502).json({ error: String(e) });
+    return res.status(502).json({ error: String(e) });
   }
 });
 
-/* ------------- /yahoo/chart ------------- */
+/* ---------- /yahoo/chart ---------- */
 app.get("/yahoo/chart", async (req, res) => {
   try {
-    const s = (req.query.symbol || "").toString().trim();
-    const range = (req.query.range || "1d").toString();
-    const interval = (req.query.interval || "5m").toString();
+    const s = String(req.query.symbol || "").trim();
+    const range = String(req.query.range || "1d");
+    const interval = String(req.query.interval || "5m");
     if (!s) return res.status(400).json({ error: "missing symbol" });
 
     const direct  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
@@ -151,43 +120,39 @@ app.get("/yahoo/chart", async (req, res) => {
     if (fresh) return res.json(fresh);
     const stale = getStale(key);
 
-    let r = await fetch(direct, { headers: { Accept: "application/json" } });
-    let j = null;
-    try { j = await r.json(); } catch {}
+    let r1 = await fetch(direct, { headers: { Accept: "application/json" } });
+    let j1 = null;
+    try { j1 = await r1.json(); } catch {}
 
-    if (r.ok && yahooPayloadLooksOk(j)) {
-      put(key, j, 300_000);
-      return res.json(j);
+    if (r1.ok && yahooPayloadOK(j1)) {
+      put(key, j1, 300_000);
+      return res.json(j1);
     }
 
-    if (!r.ok || !yahooPayloadLooksOk(j) || [401, 403, 429, 503].includes(r.status)) {
-      if (r.status === 429 && stale) return res.json(stale);
+    if (r1.status === 429 && stale) return res.json(stale);
 
-      const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
-      if (!r2.ok) return passthrough(res, r2);   // <-- najpierw sprawdź
+    const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
+    if (!r2.ok) return passthrough(res, r2);
 
-      const txt2 = await r2.text();              // <-- potem czytaj
-      const unwrapped = unwrapJinaLike(txt2);
-
-      if (yahooPayloadLooksOk(unwrapped)) {
-        put(key, unwrapped, 300_000);
-        return res.json(unwrapped);
-      }
+    const txt2 = await r2.text();
+    const unwrapped = unwrapJinaLike(txt2);
+    if (yahooPayloadOK(unwrapped)) {
+      put(key, unwrapped, 300_000);
       return res.json(unwrapped);
     }
-
-    return passthrough(res, r);
+    return res.json(unwrapped);
   } catch (e) {
-    res.status(502).json({ error: String(e) });
+    return res.status(502).json({ error: String(e) });
   }
 });
 
-/* ------------- /fx/latest ------------- */
+/* ---------- /fx/latest ---------- */
 app.get("/fx/latest", async (req, res) => {
   try {
-    const base = (req.query.base || "USD").toString().toUpperCase();
-    const symbolsRaw = (req.query.symbols || "").toString().replace(/:.*$/g, "");
-    const params = new URLSearchParams({ base, places: "6" });
+    const base = String(req.query.base || "USD").toUpperCase();
+    const symbolsRaw = String(req.query.symbols || "").replace(/:.*$/g, "");
+    const places = String(req.query.places || "6");
+    const params = new URLSearchParams({ base, places });
     if (symbolsRaw) params.set("symbols", symbolsRaw);
 
     const key = makeKey(req);
@@ -195,6 +160,7 @@ app.get("/fx/latest", async (req, res) => {
     if (fresh) return res.json(fresh);
 
     const url1 = `https://api.exchangerate.host/latest?${params.toString()}`;
+
     let r1, j1;
     try {
       r1 = await fetch(url1, { headers: { Accept: "application/json" } });
@@ -227,8 +193,8 @@ app.get("/fx/latest", async (req, res) => {
     put(key, shaped, 60_000);
     return res.json(shaped);
   } catch (e) {
-    res.status(502).json({ error: String(e) });
+    return res.status(502).json({ error: String(e) });
   }
 });
 
-app.listen(PORT, () => console.log(`Proxy on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`[proxy] Proxy on http://localhost:${PORT}`));
