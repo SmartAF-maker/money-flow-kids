@@ -64,6 +64,51 @@ async function passthrough(res, r) {
   res.send(text);
 }
 
+/* ---------- fallback z chart → minimalny quote ---------- */
+async function fetchChartJSON(symbol, range="1d", interval="1m") {
+  const direct  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
+  const viaJina = `https://r.jina.ai/http://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
+
+  try {
+    const r = await fetch(direct, { headers: { Accept: "application/json" } });
+    const j = await r.json().catch(async () => JSON.parse(await r.text()));
+    if (r.ok && j?.chart?.result) return j;
+  } catch {}
+
+  try {
+    const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
+    const t2 = await r2.text();
+    const unwrapped = unwrapJinaLike(t2);
+    if (unwrapped?.chart?.result) return unwrapped;
+  } catch {}
+
+  return null;
+}
+function quoteFromChartPayload(symbol, chartJson) {
+  try {
+    const res = chartJson?.chart?.result?.[0];
+    const meta = res?.meta || {};
+    const price = meta.regularMarketPrice ?? meta.chartPreviousClose ?? null;
+    const prev  = meta.previousClose ?? meta.chartPreviousClose ?? null;
+    const currency = meta.currency || meta.currencyCode || null;
+
+    return {
+      language: "en-US",
+      region: "US",
+      quoteType: "EQUITY",
+      symbol,
+      shortName: meta?.symbol || symbol,
+      regularMarketPrice: price,
+      regularMarketPreviousClose: prev,
+      currency,
+      exchangeName: meta.exchangeName || meta.exchange || null,
+      marketState: meta.marketState || "REGULAR"
+    };
+  } catch {
+    return null;
+  }
+}
+
 /* ---------- /yahoo/quote ---------- */
 app.get("/yahoo/quote", async (req, res) => {
   try {
@@ -78,27 +123,48 @@ app.get("/yahoo/quote", async (req, res) => {
     if (fresh) return res.json(fresh);
     const stale = getStale(key);
 
-    let r1 = await fetch(direct, { headers: { Accept: "application/json" } });
-    let j1 = null;
-    try { j1 = await r1.json(); } catch {}
+    // 1) spróbuj zwykły quote
+    let r1, j1 = null;
+    try {
+      r1 = await fetch(direct, { headers: { Accept: "application/json" } });
+      j1 = await r1.json().catch(async () => JSON.parse(await r1.text()));
+    } catch {}
 
-    if (r1.ok && yahooPayloadOK(j1)) {
+    if (r1?.ok && yahooPayloadOK(j1)) {
       put(key, j1, 60_000);
       return res.json(j1);
     }
+    if (r1?.status === 429 && stale) return res.json(stale);
 
-    if (r1.status === 429 && stale) return res.json(stale);
+    // 2) próbuj przez r.jina.ai
+    try {
+      const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
+      const txt2 = await r2.text();
+      const unwrapped = unwrapJinaLike(txt2);
+      if (yahooPayloadOK(unwrapped)) {
+        put(key, unwrapped, 60_000);
+        return res.json(unwrapped);
+      }
+      // jeśli to np. 401 Unauthorized w polu finance.error → lecimy do fallbacku
+    } catch {}
 
-    const r2 = await fetch(viaJina, { headers: { Accept: "application/json" } });
-    if (!r2.ok) return passthrough(res, r2);  // ← nie zużywamy wcześniej body
-
-    const txt2 = await r2.text();
-    const unwrapped = unwrapJinaLike(txt2);
-    if (yahooPayloadOK(unwrapped)) {
-      put(key, unwrapped, 60_000);
-      return res.json(unwrapped);
+    // 3) FALLBACK: chart → minimalny quote (dla każdego symbolu)
+    const arr = symbols.split(",").map(s => s.trim()).filter(Boolean);
+    const built = [];
+    for (const s of arr) {
+      const cj = await fetchChartJSON(s, "1d", "1m");
+      const q  = cj ? quoteFromChartPayload(s, cj) : null;
+      if (q) built.push(q);
     }
-    return res.json(unwrapped);
+    if (built.length) {
+      const shaped = { quoteResponse: { result: built, error: null } };
+      put(key, shaped, 60_000);
+      return res.json(shaped);
+    }
+
+    // 4) ostatecznie oddaj stare dane lub błąd
+    if (stale) return res.json(stale);
+    return res.status(502).json({ error: "quote failed (direct, jina, chart fallback)" });
   } catch (e) {
     return res.status(502).json({ error: String(e) });
   }
