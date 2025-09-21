@@ -4692,14 +4692,3 @@ window.dispatchEvent(new Event('fx:universe-changed'));
   document.addEventListener('pointerup', (e)=>{ const t=e.target; if (t && (t.id==='ai-fab' || t.closest?.('#ai-fab'))) { e.preventDefault(); ensurePanel(); } }, true);
   onReady(() => { removeOldRobots(); ensureFab(); $('#langSelect')?.addEventListener('change', refreshPanelLang); });
 })();
-(function(){
-  const mql = window.matchMedia('(max-width:640px)');
-  const input = document.getElementById('sm-max');
-  if(!input) return;
-  const orig = input.getAttribute('placeholder') || '';
-  function apply(){
-    input.setAttribute('placeholder', mql.matches ? '' : orig);
-  }
-  apply();
-  mql.addEventListener('change', apply);
-})();
