@@ -1003,12 +1003,13 @@
     root.querySelectorAll('[class*="arrow-"]').forEach(el => el.remove());
 
     // 2) usuń pseudo-ikonki dorabiane contentem ::before/::after (zabij je font-size:0)
-    root.querySelectorAll("*").forEach(el => {
-      // tekst węzłów
-      el.childNodes.forEach(stripArrowsInText);
-      // ukryj ewentualne ::before/::after
-      el.style.setProperty("--_no-arrows", "1");
-    });
+  root.querySelectorAll("*").forEach(el => {
+  el.childNodes.forEach(stripArrowsInText);
+  // NIE wyłączaj ikon wewnątrz elementów, które proszą o zachowanie
+  if (!el.closest('[data-keep-arrows="1"]')) {
+    el.style.setProperty("--_no-arrows", "1");
+  }
+});
   }
 
   // start
