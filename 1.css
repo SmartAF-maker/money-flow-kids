@@ -4217,5 +4217,64 @@ width: 110px;
 
 /* odrobinę odstępu od inputa i przycisku X */
 .maxprice-filter .sort { margin-left: .25rem; }
+/* sort button w filtrze Max */
+#stockControls .maxprice-filter .sort,
+#fxControls    .maxprice-filter .sort{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:36px;               /* widoczny hit-area */
+  height:var(--ctl-h,44px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;
+  background:transparent;
+  cursor:pointer;
+}
+#stockControls .maxprice-filter .sort svg,
+#fxControls    .maxprice-filter .sort svg{
+  transition: transform .2s ease;
+}
+#stockControls .maxprice-filter .sort.desc svg,
+#fxControls    .maxprice-filter .sort.desc svg{
+  transform: rotate(180deg);
+}
+
+/* na mobile zachowuj się jak reszta kontrolek */
+@media (max-width:640px){
+  #stockControls .maxprice-filter .sort,
+  #fxControls    .maxprice-filter .sort{
+    width:44px;
+  }
+}
+/* sort button look + obrót */
+#stockControls .maxprice-filter .sort,
+#fxControls    .maxprice-filter .sort{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:var(--ctl-h,44px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; background:transparent; cursor:pointer;
+}
+#stockControls .maxprice-filter .sort svg,
+#fxControls    .maxprice-filter .sort svg{ transition:transform .2s ease; }
+#stockControls .maxprice-filter .sort.desc svg,
+#fxControls    .maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
+@media (max-width:640px){
+  #stockControls .maxprice-filter .sort,
+  #fxControls    .maxprice-filter .sort{ width:44px; }
+}
+@media (max-width:640px){
+  #stockControls, #fxControls{
+    display:grid; grid-template-columns:1fr 1fr; gap:8px;
+    grid-auto-rows: var(--ctl-h,44px);
+  }
+  #stockRegion{ grid-column:1 / -1; }
+  #stockSearch{ grid-column:1 / -1; }
+  #stockAddPopular{ grid-column:1 / 2; }         /* left */
+  #stockControls .maxprice-filter{ grid-column:2 / 3; } /* right */
+
+  #fxSearch{ grid-column:1 / -1; }
+  #fxMoreBtn{ grid-column:1 / 2; }
+  #fxControls .maxprice-filter{ grid-column:2 / 3; }
+}
 
 
