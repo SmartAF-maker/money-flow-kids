@@ -1160,6 +1160,113 @@
   <div id="aiAgentOut" class="ai-agent-output" data-i18n="agent.out.ready">Ready? Pick an action above or type a command.</div>
 </div>
 <!-- === /AI Agent === -->
+<script>
+/* == MAX sort toggle for Stocks & FX — FIXED == */
+(function () {
+  const setups = [
+    { filterSel: '#stockControls .maxprice-filter', listSel: '#stockList' },
+    { filterSel: '#fxControls .maxprice-filter',    listSel: '#fxList'    },
+  ];
+
+  const toNum = (t) => {
+    if (!t) return NaN;
+    const v = parseFloat(String(t).replace(/[^\d.,-]/g,'').replace(',', '.'));
+    return Number.isFinite(v) ? v : NaN;
+  };
+
+  function getCardPrice(card){
+    // 1) atrybut na karcie
+    const ds = card.getAttribute?.('data-price');
+    if (ds && Number.isFinite(+ds)) return +ds;
+
+    // 2) typowe selektory ceny
+    const el = card.querySelector?.('[data-price], .price, .row-price, .wl-price');
+    if (el){
+      const v = toNum(el.getAttribute?.('data-price') || el.textContent);
+      if (Number.isFinite(v)) return v;
+    }
+
+    // 3) fallback – ostatnia liczba w tekście (najczęściej cena po prawej)
+    const txt = card.textContent || '';
+    const matches = [...txt.matchAll(/-?\d+(?:[.,]\d+)?/g)];
+    if (matches.length){
+      const v = toNum(matches[matches.length - 1][0]);
+      if (Number.isFinite(v)) return v;
+    }
+    return NaN;
+  }
+
+  setups.forEach(({filterSel, listSel}) => {
+    const filter = document.querySelector(filterSel);
+    const list   = document.querySelector(listSel);
+    if (!filter || !list) return;
+
+    // przycisk sortu
+    let btn = filter.querySelector('.sort');
+    if (!btn){
+      btn = document.createElement('button');
+      btn.type  = 'button';
+      btn.className = 'sort';
+      btn.title = 'Sort by price (asc/desc)';
+      const x = filter.querySelector('.clear');
+      x ? filter.insertBefore(btn, x) : filter.appendChild(btn);
+    }
+
+    // stan
+    let state = 'none'; // 'none' | 'asc' | 'desc'
+
+    function sortList(dir){
+      // snapshot dzieci (nie używamy live HTMLCollection)
+      const cards = Array.from(list.children).filter(n => n.nodeType === 1);
+      if (!cards.length) return;
+
+      cards.sort((a,b)=>{
+        const av = getCardPrice(a), bv = getCardPrice(b);
+        if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
+        if (!Number.isFinite(av)) return 1;
+        if (!Number.isFinite(bv)) return -1;
+        return dir === 'asc' ? av - bv : bv - av;
+      });
+
+      const frag = document.createDocumentFragment();
+      cards.forEach(c => frag.appendChild(c));
+      list.appendChild(frag);
+    }
+
+    function applyState(){
+      if (state === 'asc'){ btn.classList.remove('desc'); btn.title='Sorted: lowest → highest'; sortList('asc'); }
+      else if (state === 'desc'){ btn.classList.add('desc'); btn.title='Sorted: highest → lowest'; sortList('desc'); }
+      else { btn.classList.remove('desc'); btn.title='Sort by price (asc/desc)'; }
+    }
+
+    btn.addEventListener('click', (e) => {
+      // klik w labelu – nie pozwalaj bąblować/submitować/focusować inputa
+      e.preventDefault();
+      e.stopPropagation();
+
+      // bezpiecznie w rAF i z blokadą przycisku
+      if (btn.disabled) return;
+      btn.disabled = true;
+
+      state = state === 'none' ? 'asc' : state === 'asc' ? 'desc' : 'none';
+
+      requestAnimationFrame(() => {
+        try { applyState(); } finally { btn.disabled = false; }
+      });
+    }, { passive: false });
+
+    // jeśli lista się przebuduje (np. dołożysz karty) – utrzymaj sort
+    const mo = new MutationObserver(() => {
+      if (state !== 'none'){
+        // odłóż minimalnie, żeby uniknąć kaskad
+        requestAnimationFrame(applyState);
+      }
+    });
+    mo.observe(list, { childList: true });
+  });
+})();
+</script>
+
 
 </body>
 </html>

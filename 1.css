@@ -4150,5 +4150,72 @@ width: 110px;
     min-width:0; max-width:100%; width:auto;
   }
 }
+/* === MOBILE FIX: Add more + Max obok siebie i widoczny input === */
+@media (max-width:640px){
+  /* kontenery */
+  #stockControls, #fxControls{ display:flex; flex-wrap:wrap; gap:8px; }
+
+  /* region/search pełna szerokość w 1–2 wierszu */
+  #stockRegion, #stockSearch, #fxSearch{ flex:1 1 100%; min-width:0; }
+
+  /* 3. wiersz: lewa połowa Add more, prawa połowa Max */
+  #stockAddPopular, #fxMoreBtn{
+    order:3; flex:1 1 calc(50% - 8px); min-width:140px;
+  }
+  #stockControls .maxprice-filter,
+  #fxControls    .maxprice-filter{
+    order:4; flex:1 1 calc(50% - 8px); min-width:140px;
+    display:flex !important; align-items:center; justify-content:space-between;
+    margin:0;
+  }
+
+  /* ukryj napis "Max" – ma zostać pole + X */
+  #stockControls .maxprice-filter > span,
+  #fxControls    .maxprice-filter > span{ display:none; }
+
+  /* KLUCZ: nie pozwól, by input się złożył do 0 */
+  #stockControls .maxprice-filter input,
+  #fxControls    .maxprice-filter input{
+    display:block;
+    box-sizing:border-box;
+    flex:0 0 120px;          /* stała szerokość na tel. */
+    width:120px !important;  /* nadpisuje kolidujące style */
+    min-width:100px;
+    max-width:160px;
+  }
+
+  /* X bez dziedziczenia dziwnych styli */
+  .maxprice-filter .clear{
+    all:unset; cursor:pointer; line-height:1; font-size:1rem; opacity:.85;
+  }
+  .maxprice-filter .clear:hover{ opacity:1; }
+}
+/* --- Sort toggle in Max pill --- */
+.maxprice-filter .sort {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  position: relative;
+  opacity: .85;
+}
+.maxprice-filter .sort:hover { opacity: 1; }
+
+/* caret made with borders (no text arrows) */
+.maxprice-filter .sort::before {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-55%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 8px solid currentColor;   /* up caret default */
+}
+.maxprice-filter .sort.desc::before {
+  transform: translate(-50%,-45%) rotate(180deg);  /* down caret */
+}
+
+/* odrobinę odstępu od inputa i przycisku X */
+.maxprice-filter .sort { margin-left: .25rem; }
 
 
