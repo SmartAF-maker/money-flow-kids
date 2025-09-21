@@ -3991,3 +3991,65 @@ width: 110px;
 }
 .maxprice-filter .clear:hover{opacity:1}
 @media (max-width:640px){.maxprice-filter input{width:6.2rem}}
+/* === STOCK CONTROLS LAYOUT FIX === */
+#stockControls{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;            /* <-- pozwól zawijanie na mobile */
+}
+
+/* przyciskowo wyglądający filtr */
+#stockControls .maxprice-filter{
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  height:var(--ctl-h, 36px); /* wyrównanie wysokości do input/btn */
+  padding:0 .75rem;
+  border-radius:10px;
+  background:var(--card-bg, rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.08);
+}
+
+/* input w środku jak przycisk */
+#stockControls .maxprice-filter input{
+  height:100%;
+  line-height:var(--ctl-h, 36px);
+  border:none;
+  outline:none;
+  background:transparent;
+  color:inherit;
+  width:6.5rem;              /* jak przycisk – stała szerokość */
+  text-align:right;
+}
+
+/* iks jak mały przycisk */
+#stockControls .maxprice-filter .clear{
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  line-height:1;
+  font-size:1rem;
+  opacity:.7;
+}
+#stockControls .maxprice-filter .clear:hover{ opacity:1; }
+
+/* --- MOBILE --- */
+@media (max-width: 640px){
+  #stockControls{
+    gap:8px;
+  }
+  /* każdy element w wierszu niech ma taki sam „blokowy” rozmiar */
+  #stockControls > *{
+    flex:1 1 calc(50% - 8px);    /* dwa w rzędzie jak inne przyciski */
+    min-width:140px;
+  }
+  /* a filtr „Max” dokładnie jak pozostałe */
+  #stockControls .maxprice-filter{
+    width:100%;
+    justify-content:space-between;
+  }
+  #stockControls .maxprice-filter input{
+    width:5.5rem; /* trzyma wymiar jak przyciski */
+  }
+}
