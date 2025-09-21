@@ -602,9 +602,16 @@
         <div class="title" data-i18n="fxMarket">Currency Market (FX)</div>
       </div>
 
-      <div class="row" style="margin: 6px 0">
+<div class="row" style="margin: 6px 0" id="fxControls">
         <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
         <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
+
+        <label class="maxprice-filter">
+    <span>Max</span>
+    <input id="cm-max" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="Max rate">
+    <button type="button" class="clear" aria-label="Clear" title="Clear">×</button>
+  </label>
+</div>
       </div>
 
       <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>

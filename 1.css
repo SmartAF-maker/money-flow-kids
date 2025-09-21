@@ -4095,106 +4095,59 @@ width: 110px;
   /* na wszelki wypadek: żadna .row w tej karcie nie przycina zawartości */
   #tab-invest .card .row{ overflow:visible !important; }
 }
-/* === MOBILE: Add more + Max obok siebie (tylko ≤640px) === */
-@media (max-width:640px){
-  #stockControls{
-    display:flex; flex-wrap:wrap; gap:8px; overflow:visible;
-  }
-  /* region i search pełna szerokość w 1. i 2. wierszu */
-  #stockRegion, #stockSearch{
-    flex:1 1 100%;
-  }
-  /* 3. wiersz: Add more (lewo) + Max (prawo), po 50% */
-  #stockAddPopular{
-    order:3;
-    flex:1 1 calc(50% - 8px);
-  }
-  #stockControls .maxprice-filter{
-    order:4;
-    flex:1 1 calc(50% - 8px);
-    display:flex !important;
-    align-items:center;
-    justify-content:space-between;
-    margin:0;                 /* żadnych dodatkowych odstępów */
-    min-width:0;              /* pozwól się zwężać */
-  }
-  /* schowaj napis "Max" przy polu — zostaw samo pole i 'x' */
-  #stockControls .maxprice-filter > span{
-    display:none;
-  }
-  /* pole niech wypełnia dostępne miejsce */
-  #stockControls .maxprice-filter input{
-    flex:1 1 auto;
-    min-width:0;
-    width:auto;
-    text-align:right;
-  }
-  #stockControls .maxprice-filter .clear{
-    margin-left:.25rem;
-  }
+/* === BASE: wspólny układ i wygląd "Max" === */
+#stockControls, #fxControls{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap; overflow:visible;
 }
-/* === MOBILE FIX: "Add more" + "Max" w jednym wierszu === */
+
+.maxprice-filter{
+  display:inline-flex; align-items:center; gap:.5rem;
+  height:40px; padding:0 .75rem; border-radius:10px;
+  background:var(--card-bg, rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.08);
+}
+.maxprice-filter input{
+  flex:1 1 auto; min-width:4.5rem; max-width:8rem;
+  height:100%; background:transparent; border:0; outline:0;
+  text-align:right; color:inherit; font:inherit;
+}
+/* wyczyść globalne style pigułki na "×" */
+.maxprice-filter .clear{
+  all:unset; cursor:pointer; line-height:1; font-size:1rem; opacity:.75;
+  margin-left:.35rem;
+}
+.maxprice-filter .clear:hover{ opacity:1; }
+
+/* === DESKTOP (≥641px): stała szerokość pola === */
+@media (min-width:641px){
+  #stockControls .maxprice-filter input,
+  #fxControls    .maxprice-filter input{ width:6.5rem; }
+}
+
+/* === MOBILE (≤640px): "Add more" + "Max" po 50% w 1 rzędzie === */
 @media (max-width:640px){
-  /* pasek z kontrolkami musi się zawijać */
-  #stockControls{
-    display:flex !important;
-    flex-wrap:wrap !important;
-    gap:8px;
-    overflow:visible;
+  /* region/search pełna szerokość w poprzednich wierszach */
+  #stockRegion, #stockSearch, #fxSearch{ flex:1 1 100%; min-width:0; }
+
+  /* lewa połowa: Add more; prawa: Max */
+  #stockAddPopular, #fxMoreBtn{
+    order:3; flex:1 1 calc(50% - 8px); min-width:140px;
+  }
+  #stockControls .maxprice-filter,
+  #fxControls    .maxprice-filter{
+    order:4; flex:1 1 calc(50% - 8px); min-width:140px;
+    display:flex; align-items:center; justify-content:space-between;
+    margin:0;
   }
 
-  /* 1. wiersz: region 100% */
-  #stockRegion{ flex:1 1 100% !important; min-width:0; }
+  /* schowaj label "Max" na telefonie */
+  #stockControls .maxprice-filter > span,
+  #fxControls    .maxprice-filter > span{ display:none; }
 
-  /* 2. wiersz: search 100% */
-  #stockSearch{ flex:1 1 100% !important; min-width:0; }
-
-  /* 3. wiersz: lewa połowa = Add more */
-  #stockAddPopular{
-    order:3;
-    flex:1 1 calc(50% - 8px) !important;
-    width:auto !important;          /* gdy .btn ma width:100% na mobile */
-    min-width:140px;
-  }
-
-  /* 3. wiersz: prawa połowa = Max */
-  #stockControls label.maxprice-filter{
-    order:4;
-    flex:1 1 calc(50% - 8px) !important;
-    display:flex !important;
-    align-items:center;
-    justify-content:space-between;
-    height:40px;
-    padding:0 .75rem;
-    border-radius:10px;
-    background:var(--card-bg, rgba(255,255,255,.03));
-    border:1px solid rgba(255,255,255,.08);
-    min-width:140px;
-  }
-
-  /* ukryj napis "Max" obok pola (zostawiamy samo pole + x) */
-  #stockControls label.maxprice-filter > span{ display:none !important; }
-
-  /* pole liczbowe niech wypełnia prawą połowę */
-  #stockControls label.maxprice-filter input{
-    flex:1 1 auto;
-    min-width:0;
-    width:auto;
-    text-align:right;
-    background:transparent;
-    border:0;
-    color:inherit;
-    height:100%;
-  }
-
-  /* przycisk „x” normalnie w środku, bez osobnego „pilla” */
-  #stockControls label.maxprice-filter .clear{
-    border:0;
-    background:transparent;
-    cursor:pointer;
-    line-height:1;
-    font-size:1rem;
-    margin-left:.25rem;
+  /* pole może się swobodnie kurczyć */
+  #stockControls .maxprice-filter input,
+  #fxControls    .maxprice-filter input{
+    min-width:0; max-width:100%; width:auto;
   }
 }
 
