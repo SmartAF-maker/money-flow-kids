@@ -3991,65 +3991,88 @@ width: 110px;
 }
 .maxprice-filter .clear:hover{opacity:1}
 @media (max-width:640px){.maxprice-filter input{width:6.2rem}}
-/* === STOCK CONTROLS LAYOUT FIX === */
-#stockControls{
+
+
+/* === CONTROLS LAYOUT FIX (Stocks/FX) === */
+#stockControls, #fxControls{
+  --ctl-h: 40px;
   display:flex;
   align-items:center;
   gap:8px;
-  flex-wrap:wrap;            /* <-- pozwól zawijanie na mobile */
+  flex-wrap:wrap;            /* zawijanie na mobile */
+  overflow:visible;          /* nie przycinaj niczego */
 }
 
-/* przyciskowo wyglądający filtr */
-#stockControls .maxprice-filter{
+/* ujednolicenie wysokości elementów w pasku */
+#stockControls > *, #fxControls > *{
+  height:var(--ctl-h);
+  display:flex;
+  align-items:center;
+}
+
+/* === MAX (jako "przycisk") === */
+#stockControls .maxprice-filter,
+#fxControls  .maxprice-filter{
   display:inline-flex;
   align-items:center;
   gap:.5rem;
-  height:var(--ctl-h, 36px); /* wyrównanie wysokości do input/btn */
+  height:var(--ctl-h);
   padding:0 .75rem;
   border-radius:10px;
   background:var(--card-bg, rgba(255,255,255,.03));
   border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 0 0 0 transparent;
 }
 
-/* input w środku jak przycisk */
-#stockControls .maxprice-filter input{
+/* input w środku */
+#stockControls .maxprice-filter input,
+#fxControls  .maxprice-filter input{
   height:100%;
-  line-height:var(--ctl-h, 36px);
-  border:none;
-  outline:none;
-  background:transparent;
-  color:inherit;
-  width:6.5rem;              /* jak przycisk – stała szerokość */
+  line-height:var(--ctl-h);
+  border:none; outline:none;
+  background:transparent; color:inherit;
+  width:6.5rem;                 /* stała szerokość jak "pill" */
   text-align:right;
+  font:inherit;                  /* dziedzicz krój/rozmiar */
+  -moz-appearance:textfield;     /* bez strzałek */
+}
+#stockControls .maxprice-filter input::-webkit-outer-spin-button,
+#stockControls .maxprice-filter input::-webkit-inner-spin-button,
+#fxControls  .maxprice-filter input::-webkit-outer-spin-button,
+#fxControls  .maxprice-filter input::-webkit-inner-spin-button{
+  -webkit-appearance: none; margin:0;
 }
 
-/* iks jak mały przycisk */
-#stockControls .maxprice-filter .clear{
-  border:none;
-  background:transparent;
-  cursor:pointer;
-  line-height:1;
-  font-size:1rem;
-  opacity:.7;
+/* przycisk "x" */
+#stockControls .maxprice-filter .clear,
+#fxControls  .maxprice-filter .clear{
+  border:none; background:transparent; cursor:pointer;
+  line-height:1; font-size:1rem; opacity:.7;
 }
-#stockControls .maxprice-filter .clear:hover{ opacity:1; }
+#stockControls .maxprice-filter .clear:hover,
+#fxControls  .maxprice-filter .clear:hover{ opacity:1; }
 
 /* --- MOBILE --- */
-@media (max-width: 640px){
-  #stockControls{
-    gap:8px;
-  }
-  /* każdy element w wierszu niech ma taki sam „blokowy” rozmiar */
-  #stockControls > *{
-    flex:1 1 calc(50% - 8px);    /* dwa w rzędzie jak inne przyciski */
+@media (max-width:640px){
+  /* dwa elementy w rzędzie */
+  #stockControls > *, #fxControls > *{
+    flex:1 1 calc(50% - 8px);
     min-width:140px;
   }
-  /* a filtr „Max” dokładnie jak pozostałe */
-  #stockControls .maxprice-filter{
-    width:100%;
+  /* Max na całą szerokość i z równym rozkładem */
+  #stockControls .maxprice-filter,
+  #fxControls  .maxprice-filter{
+    flex:1 1 100%;
     justify-content:space-between;
   }
-  #stockControls .maxprice-filter input{
-    width:5.5rem; /* trzyma wymiar jak przyciski */
+  #stockControls .maxprice-filter input,
+  #fxControls  .maxprice-filter input{
+    width:5.5rem;               /* odrobinę węższe na tel */
   }
+
+  /* (opcjonalnie) ustaw kolejność na mobile
+     #stockRegion{ order:1; }
+     #stockSearch{ order:2; }
+     #stockAddPopular{ order:3; }
+     #stockControls .maxprice-filter{ order:4; } */
 }
