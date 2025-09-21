@@ -435,8 +435,29 @@
         <div id="globalTrendsSub" class="muted">World stock indices</div>
         <div id="globalTrendsList" class="trend-list"></div>
       </section>
+<!-- ===== WATCHLIST (stocks + FX, shared) ===== -->
+<section id="watchlist" class="panel watchlist">
+  <div class="panel-head">
+    <h2>Watchlist</h2>
 
-      <!-- Karty watchlisty generuje JS -->
+    <!-- Formularz dodawania pozycji -->
+<form id="wl-form" class="wl-form" autocomplete="off">
+  <select id="wl-pick" aria-label="Pick instrument"></select>
+  <button type="submit" class="btn-add">+ Add</button>
+</form>
+
+
+    <!-- Filtr listy (zsynchronizujemy z top-barem w JS) -->
+    <div class="wl-tabs">
+      <button data-filter="all" class="is-active">All</button>
+      <button data-filter="stock">Stocks</button>
+      <button data-filter="fx">Currencies</button>
+      <!-- szybkie linki do Twoich koszyków -->
+         </div>
+  </div>
+
+   
+  <!-- Karty watchlisty generuje JS -->
   <div id="wl-list" class="wl-list" role="list"></div>
 </section>
 
@@ -581,16 +602,9 @@
         <div class="title" data-i18n="fxMarket">Currency Market (FX)</div>
       </div>
 
-  <div class="row" style="margin: 6px 0" id="fxControls">
+      <div class="row" style="margin: 6px 0">
         <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
         <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
-          <!-- MAX PRICE (FX) -->
-  <label class="maxprice-filter">
-    <span>Max</span>
-    <input id="cm-max" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="Max rate">
-    <button type="button" class="clear" aria-label="Clear" title="Clear">×</button>
-  </label>
-
       </div>
 
       <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
