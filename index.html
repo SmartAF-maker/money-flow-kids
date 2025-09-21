@@ -1169,122 +1169,88 @@
     { filterSel: '#fxControls .maxprice-filter',    listSel: '#fxList'    },
   ];
 
-  const toNum = (t) => {
-    if (t == null) return NaN;
-    const v = parseFloat(String(t)
-      .replace(/[^\d.,-]/g,'')
-      .replace(/(\d)[ ,](?=\d{3}\b)/g,'$1')   // usuń separatory tys.
-      .replace(',', '.'));
+  const toNum = t => {
+    const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
     return Number.isFinite(v) ? v : NaN;
   };
-
-  function getCardPrice(card){
-    // 1) data-price na karcie
-    const dp = card.getAttribute && card.getAttribute('data-price');
-    if (dp != null) {
-      const v = toNum(dp);
-      if (Number.isFinite(v)) return v;
-    }
-    // 2) data-price/prices wewnątrz
-    const el = card.querySelector?.('[data-price], .price, .row-price, .wl-price');
+  const getCardPrice = card => {
+    const ds = card.getAttribute && card.getAttribute('data-price');
+    if (ds && Number.isFinite(+ds)) return +ds;
+    const el = card.querySelector && card.querySelector('[data-price], .price, .row-price, .wl-price');
     if (el){
-      const v = toNum(el.getAttribute?.('data-price') ?? el.textContent);
+      const v = toNum(el.getAttribute && el.getAttribute('data-price') || el.textContent);
       if (Number.isFinite(v)) return v;
     }
-    // 3) fallback: ostatnia liczba w tekście
     const txt = card.textContent || '';
-    const matches = [...txt.matchAll(/-?\d+(?:[.,]\d+)?/g)];
-    if (matches.length){
-      const v = toNum(matches[matches.length - 1][0]);
-      if (Number.isFinite(v)) return v;
-    }
-    return NaN;
-  }
+    const m = txt.match(/-?\d+(?:[.,]\d+)?(?!(?:.*-?\d))/g); // ostatnia liczba
+    return m ? toNum(m[m.length-1]) : NaN;
+  };
 
-  setups.forEach(({filterSel, listSel}) => {
-    const filter = document.querySelector(filterSel);
-    const list   = document.querySelector(listSel);
+  function initOne(filter, list){
     if (!filter || !list) return;
 
-    // przycisk sortu (1x)
     let btn = filter.querySelector('.sort');
     if (!btn){
       btn = document.createElement('button');
-      btn.type  = 'button';
-      btn.className = 'sort';
-      btn.title = 'Sort by price (asc/desc)';
-      btn.setAttribute('data-keep-arrows','1'); // ⚠️ nie wycinaj ikon na mobile
-      // ikonka (chevron) – obracamy klasą .desc
+      btn.type='button';
+      btn.className='sort';
+      btn.title='Sort by price (asc/desc)';
+      btn.setAttribute('data-keep-arrows','1'); // NIE usuwaj ikony na mobile
+      // ikona (jeżeli CSS fallback nie zadziała)
       btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       const x = filter.querySelector('.clear');
       x ? filter.insertBefore(btn, x) : filter.appendChild(btn);
     }
 
-    let state = 'none'; // 'none' | 'asc' | 'desc'
-
-    function sortList(dir){
-      // tylko widoczne karty; zapisz index do stabilnego sortu
-      const cards = Array.from(list.children)
-        .filter(el => el.nodeType === 1 && getComputedStyle(el).display !== 'none')
-        .map((el, i) => ({ el, i, val: getCardPrice(el) }));
-
-      if (!cards.length) return;
-
-      cards.sort((A, B) => {
-        const av = A.val, bv = B.val;
-        if (!Number.isFinite(av) && !Number.isFinite(bv)) return A.i - B.i; // stabilnie
+    let state = 'none';
+    const sortList = dir => {
+      const cards = Array.from(list.children).filter(n => n.nodeType===1);
+      cards.sort((a,b)=>{
+        const av = getCardPrice(a), bv = getCardPrice(b);
+        if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
         if (!Number.isFinite(av)) return 1;
         if (!Number.isFinite(bv)) return -1;
-        const diff = dir === 'asc' ? av - bv : bv - av;
-        return diff === 0 ? A.i - B.i : diff; // stabilnie przy równych
+        return dir==='asc' ? av-bv : bv-av;
       });
-
       const frag = document.createDocumentFragment();
-      cards.forEach(({el}) => frag.appendChild(el));
+      cards.forEach(c=>frag.appendChild(c));
       list.appendChild(frag);
-    }
+    };
+    const applyState = () => {
+      if (state==='asc'){ btn.classList.remove('desc'); btn.title='Sorted: lowest → highest'; sortList('asc'); }
+      else if (state==='desc'){ btn.classList.add('desc'); btn.title='Sorted: highest → lowest'; sortList('desc'); }
+      else { btn.classList.remove('desc'); btn.title='Sort by price (asc/desc)'; }
+    };
 
-    function applyState(){
-      if (state === 'asc'){
-        btn.classList.remove('desc');
-        btn.title='Sorted: lowest → highest';
-        sortList('asc');
-      } else if (state === 'desc'){
-        btn.classList.add('desc');
-        btn.title='Sorted: highest → lowest';
-        sortList('desc');
-      } else {
-        btn.classList.remove('desc');
-        btn.title='Sort by price (asc/desc)';
-        // brak sortu – zostaw kolejność renderu
-      }
-    }
-
-    const onClick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    btn.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
       if (btn.disabled) return;
       btn.disabled = true;
-      state = state === 'none' ? 'asc' : state === 'asc' ? 'desc' : 'none';
-      requestAnimationFrame(() => { try { applyState(); } finally { btn.disabled = false; } });
-    };
-    btn.addEventListener('click', onClick, { passive: false });
-    btn.addEventListener('touchend', onClick, { passive: false }); // lepszy feel na mobile
+      state = state==='none' ? 'asc' : state==='asc' ? 'desc' : 'none';
+      requestAnimationFrame(()=>{ try{ applyState(); } finally{ btn.disabled=false; }});
+    }, {passive:false});
 
-    // zachowaj sort po przebudowie listy (np. filtr Max, doładowanie pozycji)
-    const mo = new MutationObserver(() => {
-      if (state !== 'none') requestAnimationFrame(applyState);
+    // Gdy lista się przebuduje – utrzymaj sort
+    const mo = new MutationObserver(()=>{ if (state!=='none') requestAnimationFrame(applyState); });
+    mo.observe(list, {childList:true, subtree:false});
+  }
+
+  // start po załadowaniu DOM (+ retry po 300ms na wszelki wypadek)
+  function boot(){
+    setups.forEach(({filterSel, listSel})=>{
+      initOne(document.querySelector(filterSel), document.querySelector(listSel));
     });
-    mo.observe(list, { childList: true, subtree: false });
-  });
+    setTimeout(bootOnceMore, 300);
+  }
+  function bootOnceMore(){
+    setups.forEach(({filterSel, listSel})=>{
+      const f=document.querySelector(filterSel), l=document.querySelector(listSel);
+      if (f && l && !f.querySelector('.sort')) initOne(f,l);
+    });
+  }
 
-  /* Upewnij się, że w Twoim skrypcie „KILL ALL ARROWS”
-     ustawiasz --_no-arrows TYLKO gdy element NIE jest wewnątrz
-     [data-keep-arrows="1"]:
-     if (!el.closest('[data-keep-arrows="1"]')) {
-       el.style.setProperty('--_no-arrows','1');
-     }
-  */
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
 </script>
 
