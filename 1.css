@@ -4055,3 +4055,45 @@ width: 110px;
     width:5.5rem; /* trzyma wymiar jak przyciski */
   }
 }
+/* --- FIX: pokaż "Max" w Stock Market na telefonie --- */
+@media (max-width:640px){
+  /* pasek kontrolek ma się zawijać i nic nie ucinać */
+  #stockControls{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    overflow:visible !important;
+    gap:8px;
+  }
+  /* sam "Max" jako pełny wiersz pod przyciskami */
+  #stockControls .maxprice-filter{
+    display:flex !important;
+    flex:1 1 100% !important;
+    order:99;                 /* przenieś na dół paska */
+    justify-content:space-between;
+    margin-top:6px;
+  }
+  /* na wszelki wypadek: żadna .row w tej karcie nie przycina zawartości */
+  #tab-invest .card .row{ overflow:visible !important; }
+}
+/* --- FIX: pokaż "Max" w Stock Market na telefonie --- */
+@media (max-width:640px){
+  /* pasek kontrolek ma się zawijać i nic nie ucinać */
+  #stockControls{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    overflow:visible !important;
+    gap:8px;
+  }
+  /* sam "Max" jako pełny wiersz pod przyciskami */
+  #stockControls .maxprice-filter{
+    display:flex !important;
+    flex:1 1 100% !important;
+    order:99;                 /* przenieś na dół paska */
+    justify-content:space-between;
+    margin-top:6px;
+  }
+  /* na wszelki wypadek: żadna .row w tej karcie nie przycina zawartości */
+  #tab-invest .card .row{ overflow:visible !important; }
+}
+
+
