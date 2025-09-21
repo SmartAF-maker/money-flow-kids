@@ -456,6 +456,14 @@
          </div>
   </div>
 
+      <!-- MAX PRICE (Watchlist) -->
+    <label class="maxprice-filter" style="margin-top:8px">
+      <span>Max</span>
+      <input id="wl-max" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Max price">
+      <button type="button" class="clear" aria-label="Clear" title="Clear">×</button>
+    </label>
+
+
   <!-- Karty watchlisty generuje JS -->
   <div id="wl-list" class="wl-list" role="list"></div>
 </section>
@@ -508,6 +516,13 @@
 
         <input id="stockSearch" class="input" placeholder="AAPL, Microsoft…" />
         <button id="stockAddPopular" class="btn">Add more</button>
+          <!-- MAX PRICE (Stocks) -->
+  <label class="maxprice-filter">
+    <span>Max</span>
+    <input id="sm-max" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Max price">
+    <button type="button" class="clear" aria-label="Clear" title="Clear">×</button>
+  </label>
+
       </div>
 
       <div id="stockList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
@@ -597,6 +612,13 @@
       <div class="row" style="margin: 6px 0">
         <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
         <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
+          <!-- MAX PRICE (FX) -->
+  <label class="maxprice-filter">
+    <span>Max</span>
+    <input id="cm-max" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="Max rate">
+    <button type="button" class="clear" aria-label="Clear" title="Clear">×</button>
+  </label>
+
       </div>
 
       <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>

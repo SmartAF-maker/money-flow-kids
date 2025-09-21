@@ -4212,8 +4212,72 @@ window.dispatchEvent(new Event('fx:universe-changed'));
   })();
 })();
 
+(() => {
+  const CONFIG = [
+    { input:'#wl-max', list:'#wl-list' },
+    { input:'#sm-max', list:'#stockList' },
+    { input:'#cm-max', list:'#fxList' }
+  ];
+  const ROW_SEL = '[data-row="asset"], .wl-row, .stock-row, .fx-row, [data-asset]';
+  const PRICE_SEL = '.price, .wl-price, .row-price, [data-price]';
 
+  const debounce=(fn,ms=120)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}};
+  const toNum=(x)=>{ if(x==null) return NaN; const v=parseFloat(String(x).replace(/[^\d.,-]/g,'').replace(',', '.')); return Number.isFinite(v)?v:NaN; };
 
+  function getRowPrice(row){
+    if (row.dataset && row.dataset.price){
+      const v = parseFloat(row.dataset.price);
+      if (Number.isFinite(v)) return v;
+    }
+    const el = row.matches(PRICE_SEL) ? row : row.querySelector(PRICE_SEL);
+    if (el){
+      const v = toNum(el.textContent ?? el.getAttribute('data-price'));
+      if (Number.isFinite(v)) return v;
+    }
+    return NaN;
+  }
+
+  function applyFilter(listEl, maxVal){
+    if (!listEl) return;
+    const rows = Array.from(listEl.querySelectorAll(ROW_SEL));
+    for (const row of rows){
+      const p = getRowPrice(row);
+      const show = (!Number.isFinite(maxVal) || maxVal<=0) || (!Number.isFinite(p)) || (p<=maxVal+1e-10);
+      row.style.display = show ? '' : 'none';
+    }
+  }
+
+  function wireOne(cfg){
+    const $in = document.querySelector(cfg.input);
+    const $list = document.querySelector(cfg.list);
+    if(!$in || !$list) return;
+    const $clr = $in.parentElement?.querySelector('.clear');
+
+    const run = ()=> {
+      const v = toNum($in.value);
+      applyFilter($list, Number.isFinite(v)?v:NaN);
+    };
+    const runDeb = debounce(run, 80);
+
+    $in.addEventListener('input', runDeb);
+    $clr && $clr.addEventListener('click', ()=>{ $in.value=''; run(); });
+
+    const mo = new MutationObserver(run);
+    mo.observe($list, { childList:true, subtree:true });
+
+    ['prices:updated','ui:currency-changed','watchlist:rendered','stocks:rendered','fx:rendered']
+      .forEach(ev => window.addEventListener(ev, run));
+
+    const LS_KEY = 'mfk_max_'+cfg.input.replace('#','');
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved!=null) $in.value = saved;
+    $in.addEventListener('change', ()=> localStorage.setItem(LS_KEY, $in.value||''));
+
+    run();
+  }
+
+  CONFIG.forEach(wireOne);
+})();
 
 /* ============================================================================
  * Money Flow Kids — AI Agent v7.1 (no‑conflict)
