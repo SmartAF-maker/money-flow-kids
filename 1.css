@@ -4095,5 +4095,43 @@ width: 110px;
   /* na wszelki wypadek: żadna .row w tej karcie nie przycina zawartości */
   #tab-invest .card .row{ overflow:visible !important; }
 }
+/* === MOBILE: Add more + Max obok siebie (tylko ≤640px) === */
+@media (max-width:640px){
+  #stockControls{
+    display:flex; flex-wrap:wrap; gap:8px; overflow:visible;
+  }
+  /* region i search pełna szerokość w 1. i 2. wierszu */
+  #stockRegion, #stockSearch{
+    flex:1 1 100%;
+  }
+  /* 3. wiersz: Add more (lewo) + Max (prawo), po 50% */
+  #stockAddPopular{
+    order:3;
+    flex:1 1 calc(50% - 8px);
+  }
+  #stockControls .maxprice-filter{
+    order:4;
+    flex:1 1 calc(50% - 8px);
+    display:flex !important;
+    align-items:center;
+    justify-content:space-between;
+    margin:0;                 /* żadnych dodatkowych odstępów */
+    min-width:0;              /* pozwól się zwężać */
+  }
+  /* schowaj napis "Max" przy polu — zostaw samo pole i 'x' */
+  #stockControls .maxprice-filter > span{
+    display:none;
+  }
+  /* pole niech wypełnia dostępne miejsce */
+  #stockControls .maxprice-filter input{
+    flex:1 1 auto;
+    min-width:0;
+    width:auto;
+    text-align:right;
+  }
+  #stockControls .maxprice-filter .clear{
+    margin-left:.25rem;
+  }
+}
 
 
