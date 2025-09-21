@@ -435,36 +435,8 @@
         <div id="globalTrendsSub" class="muted">World stock indices</div>
         <div id="globalTrendsList" class="trend-list"></div>
       </section>
-<!-- ===== WATCHLIST (stocks + FX, shared) ===== -->
-<section id="watchlist" class="panel watchlist">
-  <div class="panel-head">
-    <h2>Watchlist</h2>
 
-    <!-- Formularz dodawania pozycji -->
-<form id="wl-form" class="wl-form" autocomplete="off">
-  <select id="wl-pick" aria-label="Pick instrument"></select>
-  <button type="submit" class="btn-add">+ Add</button>
-</form>
-
-
-    <!-- Filtr listy (zsynchronizujemy z top-barem w JS) -->
-    <div class="wl-tabs">
-      <button data-filter="all" class="is-active">All</button>
-      <button data-filter="stock">Stocks</button>
-      <button data-filter="fx">Currencies</button>
-      <!-- szybkie linki do Twoich koszyków -->
-         </div>
-  </div>
-
-      <!-- MAX PRICE (Watchlist) -->
-    <label class="maxprice-filter" style="margin-top:8px">
-      <span>Max</span>
-      <input id="wl-max" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Max price">
-      <button type="button" class="clear" aria-label="Clear" title="Clear">×</button>
-    </label>
-
-
-  <!-- Karty watchlisty generuje JS -->
+      <!-- Karty watchlisty generuje JS -->
   <div id="wl-list" class="wl-list" role="list"></div>
 </section>
 

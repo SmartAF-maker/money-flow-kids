@@ -4212,44 +4212,58 @@ window.dispatchEvent(new Event('fx:universe-changed'));
   })();
 })();
 
+// === MAX PRICE FILTERS: Watchlist / Stock Market / Currency Market (robust) ===
 (() => {
   const CONFIG = [
-    { input:'#wl-max', list:'#wl-list' },
-    { input:'#sm-max', list:'#stockList' },
-    { input:'#cm-max', list:'#fxList' }
+    { input:'#wl-max', list:'#wl-list' },    // Watchlist
+    { input:'#sm-max', list:'#stockList' },  // Stock Market
+    { input:'#cm-max', list:'#fxList' }      // Currency Market
   ];
-  const ROW_SEL = '[data-row="asset"], .wl-row, .stock-row, .fx-row, [data-asset]';
-  const PRICE_SEL = '.price, .wl-price, .row-price, [data-price]';
 
   const debounce=(fn,ms=120)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}};
   const toNum=(x)=>{ if(x==null) return NaN; const v=parseFloat(String(x).replace(/[^\d.,-]/g,'').replace(',', '.')); return Number.isFinite(v)?v:NaN; };
 
+  // spróbuj many-ways: data-* -> element z klasą price -> pierwszy numer w treści
   function getRowPrice(row){
-    if (row.dataset && row.dataset.price){
-      const v = parseFloat(row.dataset.price);
+    // 1) dataset
+    let v = row.dataset?.price ?? row.getAttribute?.('data-price') ?? row.getAttribute?.('data-last');
+    if (v!=null && Number.isFinite(parseFloat(v))) return parseFloat(v);
+
+    // 2) elementy typowo-cenowe
+    const priceEl =
+      row.querySelector('[data-price]') ||
+      row.querySelector('[data-last]') ||
+      row.querySelector('.price') ||
+      row.querySelector('[class*="price"]') || // np. .price-pill, .last-price
+      row.querySelector('.wl-price') ||
+      row.querySelector('.row-price');
+
+    if (priceEl){
+      v = toNum(priceEl.getAttribute?.('data-price') ?? priceEl.textContent);
       if (Number.isFinite(v)) return v;
     }
-    const el = row.matches(PRICE_SEL) ? row : row.querySelector(PRICE_SEL);
-    if (el){
-      const v = toNum(el.textContent ?? el.getAttribute('data-price'));
-      if (Number.isFinite(v)) return v;
-    }
-    return NaN;
+
+    // 3) fallback: pierwszy numer w całej karcie (np. "$151.71")
+    const m = (row.textContent || '').match(/[-+]?\d{1,3}(?:[ \u00A0,]\d{3})*(?:[.,]\d+)?/);
+    if (m){ v = toNum(m[0]); if (Number.isFinite(v)) return v; }
+
+    return NaN; // brak ceny -> nie ukrywamy
   }
 
   function applyFilter(listEl, maxVal){
     if (!listEl) return;
-    const rows = Array.from(listEl.querySelectorAll(ROW_SEL));
+    // bierzemy każde bezpośrednie dziecko listy jako „wiersz/kartę”
+    const rows = Array.from(listEl.children);
     for (const row of rows){
       const p = getRowPrice(row);
-      const show = (!Number.isFinite(maxVal) || maxVal<=0) || (!Number.isFinite(p)) || (p<=maxVal+1e-10);
+      const show = (!Number.isFinite(maxVal) || maxVal<=0) || (!Number.isFinite(p)) || (p <= maxVal + 1e-10);
       row.style.display = show ? '' : 'none';
     }
   }
 
-  function wireOne(cfg){
-    const $in = document.querySelector(cfg.input);
-    const $list = document.querySelector(cfg.list);
+  function wireOne({input, list}){
+    const $in = document.querySelector(input);
+    const $list = document.querySelector(list);
     if(!$in || !$list) return;
     const $clr = $in.parentElement?.querySelector('.clear');
 
@@ -4262,22 +4276,26 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     $in.addEventListener('input', runDeb);
     $clr && $clr.addEventListener('click', ()=>{ $in.value=''; run(); });
 
-    const mo = new MutationObserver(run);
-    mo.observe($list, { childList:true, subtree:true });
+    // Reaplikuj po przebudowie list (JS doda/zmieni karty)
+    new MutationObserver(run).observe($list, { childList:true, subtree:true });
 
+    // Reaplikuj po globalnych eventach cen/waluty
     ['prices:updated','ui:currency-changed','watchlist:rendered','stocks:rendered','fx:rendered']
       .forEach(ev => window.addEventListener(ev, run));
 
-    const LS_KEY = 'mfk_max_'+cfg.input.replace('#','');
+    // LS
+    const LS_KEY = 'mfk_max_'+input.slice(1);
     const saved = localStorage.getItem(LS_KEY);
     if (saved!=null) $in.value = saved;
-    $in.addEventListener('change', ()=> localStorage.setItem(LS_KEY, $in.value||''));
+    $in.addEventListener('change', ()=> localStorage.setItem(LS_KEY, $in.value || ''));
 
-    run();
+    run(); // start
   }
 
   CONFIG.forEach(wireOne);
 })();
+
+
 
 /* ============================================================================
  * Money Flow Kids — AI Agent v7.1 (no‑conflict)
