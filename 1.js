@@ -4738,3 +4738,45 @@ document.addEventListener('click', (e) => {
   cards.forEach(c => frag.appendChild(c));
   list.appendChild(frag);
 });
+
+(function () {
+  if (!matchMedia('(max-width:640px)').matches) return;
+
+  function ensureSort(filter){
+    if (!filter) return;
+
+    // znajdź/utwórz przycisk
+    let btn = filter.querySelector('.sort');
+    if (!btn){
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sort';
+      // wstawiamy przed "×" jeśli jest
+      const x = filter.querySelector('.clear');
+      x ? filter.insertBefore(btn, x) : filter.appendChild(btn);
+    }
+
+    // ochrona przed killerem
+    btn.setAttribute('data-keep-arrows','1');
+
+    // wymuś strzałkę jako tło (inline, żeby nic jej nie nadpisało)
+    const svgBG = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\")";
+    Object.assign(btn.style, {
+      backgroundImage: svgBG,
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      backgroundSize: '16px 16px'
+    });
+  }
+
+  ensureSort(document.querySelector('#stockControls .maxprice-filter'));
+  ensureSort(document.querySelector('#fxControls .maxprice-filter'));
+
+  // prosty toggle kierunku (jeśli nie masz swojego)
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.maxprice-filter .sort');
+    if (!b) return;
+    b.classList.toggle('desc');
+  });
+})();
+ 

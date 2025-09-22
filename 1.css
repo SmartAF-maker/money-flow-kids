@@ -4237,10 +4237,8 @@ width: 110px;
   #stockControls .maxprice-filter .sort,
   #fxControls    .maxprice-filter .sort{ width:44px; }
 }
-/* === MOBILE: strzałka w przycisku sort (TYLKO telefon) === */
+/* === MOBILE: strzałka w .sort (nie rusza desktopu) === */
 @media (max-width:640px){
-
-  /* nic nie zmieniamy na desktopie – tylko mobile */
   #stockControls .maxprice-filter .sort,
   #fxControls    .maxprice-filter .sort{
     width:44px; height:44px;
@@ -4248,20 +4246,20 @@ width: 110px;
     border-radius:10px;
     background-color:rgba(255,255,255,.06);
 
-    /* strzałka jako TŁO (nie do usunięcia przez killer) */
+    /* strzałka jako TŁO SVG (killer jej nie wytnie) */
     background-image:url("data:image/svg+xml;utf8,\
 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>\
 <path d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>\
 </svg>");
     background-repeat:no-repeat;
-    background-position:center;   /* <-- poprawna deklaracja (nie 'backgrosnipund-...') */
-    background-size:18px 18px;
+    background-position:center;
+    background-size:16px 16px;
 
-    /* ochrona przed skryptem, który wycina strzałki */
-    --_no-arrows: 0 !important;
+    /* ochrona przed skryptem wycinającym strzałki */
+    --_no-arrows:0 !important;
   }
 
-  /* po kliknięciu Twoim JS dodaje .desc – obracamy strzałkę */
+  /* klik = obrót (gdy JS doda .desc) */
   #stockControls .maxprice-filter .sort.desc,
   #fxControls    .maxprice-filter .sort.desc{
     transform:rotate(180deg);
