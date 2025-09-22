@@ -4300,16 +4300,29 @@ width: 110px;
 #fxControls    .maxprice-filter .sort.desc{
   transform: rotate(180deg);
 }
-/* sort: niech zawsze będzie klikalny i nad sąsiadami */
-#stockControls .maxprice-filter .sort,
-#fxControls    .maxprice-filter .sort{
-  pointer-events:auto;
-  position:relative;
-  z-index:5;
+/* Mobile tap-fix: pewność, że przycisk jest „nad” i klikalny */
+@media (max-width:640px){
+  .maxprice-filter{ position:relative; }
+  #stockControls .maxprice-filter .sort,
+  #fxControls    .maxprice-filter .sort{
+    position:relative;
+    z-index:5;
+    pointer-events:auto;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .maxprice-filter .sort::before{ pointer-events:none; }
 }
-
-/* obrót całego przycisku – działa też gdy strzałka jest tłem */
-#stockControls .maxprice-filter .sort.desc,
-#fxControls    .maxprice-filter .sort.desc{
-  transform:rotate(180deg);
+/* Mobile tap-fix: pewność, że przycisk jest „nad” i klikalny */
+@media (max-width:640px){
+  .maxprice-filter{ position:relative; }
+  #stockControls .maxprice-filter .sort,
+  #fxControls    .maxprice-filter .sort{
+    position:relative;
+    z-index:5;
+    pointer-events:auto;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .maxprice-filter .sort::before{ pointer-events:none; }
 }
