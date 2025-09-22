@@ -4295,3 +4295,8 @@ width: 110px;
   border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:8px solid currentColor;
 }
 #fxControls .maxprice-filter .sort.desc::before{ transform:translate(-50%,-45%) rotate(180deg); }
+/* Obrót całego przycisku – działa też dla background-image */
+#stockControls .maxprice-filter .sort.desc,
+#fxControls    .maxprice-filter .sort.desc{
+  transform: rotate(180deg);
+}

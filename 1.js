@@ -4779,4 +4779,128 @@ document.addEventListener('click', (e) => {
     b.classList.toggle('desc');
   });
 })();
-  
+  (function () {
+  function onMaxSort(e){
+    const btn = e.target.closest?.('.maxprice-filter .sort');
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    // obrót ↑/↓
+    btn.classList.toggle('desc');
+
+    // wybór listy obok której jest przycisk
+    const list = btn.closest('#stockControls') ? document.querySelector('#stockList')
+              : btn.closest('#fxControls')    ? document.querySelector('#fxList')
+              : null;
+    if (!list) return;
+
+    // wyciąganie ceny z karty
+    const toNum = (t) => {
+      const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
+      return Number.isFinite(v) ? v : NaN;
+    };
+    const getPrice = (card) => {
+      const ds = card.getAttribute('data-price');
+      if (ds && Number.isFinite(+ds)) return +ds;
+      const el = card.querySelector('[data-price], .price, .row-price, .wl-price');
+      if (el) {
+        const v = toNum(el.getAttribute('data-price') || el.textContent);
+        if (Number.isFinite(v)) return v;
+      }
+      const m = (card.textContent||'').match(/-?\d+(?:[.,]\d+)?/g);
+      return m ? toNum(m[m.length-1]) : NaN;
+    };
+
+    const dir = btn.classList.contains('desc') ? -1 : 1;
+    const items = Array.from(list.children);
+    items.sort((a,b) => (getPrice(a) - getPrice(b)) * dir);
+    list.append(...items);
+  }
+
+  // działa i na desktopie, i na telefonie
+  ['pointerup','click'].forEach(ev =>
+    document.addEventListener(ev, onMaxSort, { passive:false })
+  );
+})();
+// === Mobile-safe sort for MAX pills (Stocks & FX) ===
+(function () {
+  // 1) jeśli w danej pigułce nie ma przycisku .sort, dołóż go (np. w FX)
+  function ensureSortBtn(filter) {
+    if (!filter) return;
+    let btn = filter.querySelector('.sort');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sort';
+      btn.setAttribute('aria-label', 'Sort asc/desc');
+      // wstaw przed "×" (clear), a jak nie ma – na koniec
+      const x = filter.querySelector('.clear');
+      x ? filter.insertBefore(btn, x) : filter.appendChild(btn);
+    }
+    // tło SVG (widoczne na mobile nawet z „killerem” strzałek)
+    if (!btn.style.backgroundImage) {
+      btn.style.backgroundImage =
+        "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\")";
+      btn.style.backgroundRepeat = 'no-repeat';
+      btn.style.backgroundPosition = 'center';
+      btn.style.backgroundSize = '16px 16px';
+    }
+    btn.setAttribute('data-keep-arrows','1');
+  }
+
+  // dołóż przyciski, jeśli trzeba
+  ensureSortBtn(document.querySelector('#stockControls .maxprice-filter'));
+  ensureSortBtn(document.querySelector('#fxControls    .maxprice-filter'));
+
+  // 2) delegowany handler – działa na mobile (touch/pointer) i desktop
+  function handle(e) {
+    const btn = e.target.closest && e.target.closest('.maxprice-filter .sort');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    // toggle kierunku (obrót robi CSS .desc)
+    btn.classList.toggle('desc');
+    const desc = btn.classList.contains('desc');
+
+    // która lista pod spodem?
+    const list = btn.closest('#stockControls') ? document.querySelector('#stockList')
+              : btn.closest('#fxControls')    ? document.querySelector('#fxList')
+              : null;
+    if (!list) return;
+
+    // wyciąganie ceny z kart
+    const toNum = t => {
+      const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
+      return Number.isFinite(v) ? v : NaN;
+    };
+    const getPrice = card => {
+      const ds = card.getAttribute && card.getAttribute('data-price');
+      if (ds && Number.isFinite(+ds)) return +ds;
+      const el = card.querySelector && card.querySelector('[data-price], .price, .row-price, .wl-price');
+      if (el) {
+        const v = toNum(el.getAttribute && el.getAttribute('data-price') || el.textContent);
+        if (Number.isFinite(v)) return v;
+      }
+      const m = (card.textContent || '').match(/-?\d+(?:[.,]\d+)?/g);
+      return m ? toNum(m[m.length-1]) : NaN;
+    };
+
+    const items = Array.from(list.children).filter(n => n.nodeType === 1);
+    items.sort((a,b) => {
+      const av = getPrice(a), bv = getPrice(b);
+      if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
+      if (!Number.isFinite(av)) return 1;
+      if (!Number.isFinite(bv)) return -1;
+      return desc ? (bv - av) : (av - bv);
+    });
+    list.append(...items);
+  }
+
+  // SŁUCHAJ wielu typów zdarzeń (nie wszędzie „click” dochodzi)
+  document.addEventListener('pointerdown', handle, { passive:false, capture:true });
+  document.addEventListener('touchend',    handle, { passive:false, capture:true });
+  document.addEventListener('click',       handle, { passive:false, capture:true });
+})();
