@@ -4300,3 +4300,16 @@ width: 110px;
 #fxControls    .maxprice-filter .sort.desc{
   transform: rotate(180deg);
 }
+/* sort: niech zawsze będzie klikalny i nad sąsiadami */
+#stockControls .maxprice-filter .sort,
+#fxControls    .maxprice-filter .sort{
+  pointer-events:auto;
+  position:relative;
+  z-index:5;
+}
+
+/* obrót całego przycisku – działa też gdy strzałka jest tłem */
+#stockControls .maxprice-filter .sort.desc,
+#fxControls    .maxprice-filter .sort.desc{
+  transform:rotate(180deg);
+}
