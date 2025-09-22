@@ -4153,7 +4153,7 @@ width: 110px;
 /* ====== MAX input – dark, widoczna ramka, placeholder ====== */
 #stockControls .maxprice-filter,
 #fxControls    .maxprice-filter{
-  display:flex; align-items:center; gap:8px; /* układ w jednej linii */
+  display:flex; align-items:center; gap:8px;
 }
 
 #stockControls .maxprice-filter input,
@@ -4162,7 +4162,7 @@ width: 110px;
   height:var(--ctl-h,44px);
   padding:0 .8rem;
   background:#0f1a2a !important;                /* wyraźne tło */
-  border:2px solid #9fc1ff !important;          /* GRUBA, jasna ramka */
+  border:2px solid #9fc1ff !important;          /* gruba, jasna ramka */
   border-radius:12px !important;
   color:#fff;
   outline:none;
@@ -4186,39 +4186,13 @@ width: 110px;
 }
 .maxprice-filter .clear:hover{ opacity:1; }
 
-/* ====== Sort button (strzałka) – zawsze widoczny ====== */
+/* Domyślnie (desktop): ukryj przycisk sort */
 #stockControls .maxprice-filter .sort,
 #fxControls    .maxprice-filter .sort{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:38px; height:var(--ctl-h,44px);
-  border:2px solid rgba(255,255,255,.45);
-  border-radius:12px; cursor:pointer;
-  background:rgba(255,255,255,.07);
-  position:relative; z-index:1;
-
-  /* strzałka jako TŁO SVG – killer jej nie usunie */
-  background-image:url('data:image/svg+xml;utf8,\
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\
-<path d="M7 10l5 5 5-5" fill="none" stroke="%23ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-  background-repeat:no-repeat;
-  backgrosnipund-position:center;
-  background-size:18px 18px;
-  transition:transform .2s ease, opacity .15s;
-}
-#stockControls .maxprice-filter .sort.desc,
-#fxControls    .maxprice-filter .sort.desc{
-  transform:rotate(180deg); /* dół */
+  display:none;
 }
 
-/* UODPORNIENIE na „KILL ALL ARROWS” w tej pigułce */
-#stockControls .maxprice-filter,
-#fxControls    .maxprice-filter,
-#stockControls .maxprice-filter * ,
-#fxControls    .maxprice-filter * { --_no-arrows:0 !important; }
-[data-keep-arrows]::before,[data-keep-arrows]::after{ font-size:inherit !important; display:inline-block !important; }
-[data-keep-arrows] svg{ display:inline-block !important; }
-
-/* ====== Mobile layout: Add more + Max obok siebie ====== */
+/* ====== TYLKO TELEFON (≤640px): strzałka w przycisku ====== */
 @media (max-width:640px){
   #stockControls, #fxControls{
     display:grid; grid-template-columns:1fr 1fr; gap:8px;
@@ -4230,7 +4204,7 @@ width: 110px;
   #fxMoreBtn{ grid-column:1 / 2; }
   #fxControls .maxprice-filter{ grid-column:2 / 3; }
 
-  /* w pigułce Max ukryj etykietę „Max” – zostaje pole + sort + X */
+  /* ukryj etykietę „Max” – zostaje pole + sort + X */
   #stockControls .maxprice-filter > span,
   #fxControls    .maxprice-filter > span{ display:none; }
 
@@ -4240,26 +4214,34 @@ width: 110px;
     flex:0 0 130px; width:130px !important; min-width:110px; max-width:175px;
   }
 
-  /* większy hit area na dot */
-  #stockControls .maxprice-filter .sort,
-  #fxControls    .maxprice-filter .sort{ width:46px; }
-}
-/* === MOBILE: pokaż strzałkę w przycisku .sort (nie rusza desktopu) === */
-@media (max-width:640px){
+  /* przycisk sort ze strzałką jako TŁO SVG (URL-encoded) */
   #stockControls .maxprice-filter .sort,
   #fxControls    .maxprice-filter .sort{
-    /* nic nie zmieniamy w układzie – tylko tło z chevronem */
-    background-image:url('data:image/svg+xml;utf8,\
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\
-<path d="M7 10l5 5 5-5" fill="none" stroke="%23ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-    background-repeat:no-repeat;
-    background-position:center;
-    background-size:18px 18px;
+    display:inline-flex; align-items:center; justify-content:center;
+    width:46px; height:var(--ctl-h,44px);
+    border:2px solid rgba(255,255,255,.45);
+    border-radius:12px; cursor:pointer;
+    background:rgba(255,255,255,.07);
+    position:relative; z-index:1;
+
+    /* Biała strzałka (down/up) – killer jej nie usunie */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;          /* ← tu była literówka */
+    background-size: 18px 18px;
+    transition: transform .2s ease, opacity .15s;
   }
 
-  /* jeśli Twój skrypt dopina klasę .desc – obróć ikonę */
+  /* obrót (kierunek w dół) po kliknięciu – klasa .desc nadaje JS */
   #stockControls .maxprice-filter .sort.desc,
   #fxControls    .maxprice-filter .sort.desc{
     transform: rotate(180deg);
   }
+
+  /* odporność na "KILL ALL ARROWS" w pigułce Max */
+  #stockControls .maxprice-filter,
+  #fxControls    .maxprice-filter,
+  #stockControls .maxprice-filter * ,
+  #fxControls    .maxprice-filter * { --_no-arrows:0 !important; }
 }
+
