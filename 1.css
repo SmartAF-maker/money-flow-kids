@@ -4237,31 +4237,61 @@ width: 110px;
   #stockControls .maxprice-filter .sort,
   #fxControls    .maxprice-filter .sort{ width:44px; }
 }
-/* === MOBILE: strzałka w .sort (nie rusza desktopu) === */
+/* === MOBILE-ONLY PATCH (≤640px) – nie rusza desktopu === */
 @media (max-width:640px){
-  #stockControls .maxprice-filter .sort,
-  #fxControls    .maxprice-filter .sort{
-    width:44px; height:44px;
-    border:1px solid rgba(255,255,255,.22);
-    border-radius:10px;
-    background-color:rgba(255,255,255,.06);
-
-    /* strzałka jako TŁO SVG (killer jej nie wytnie) */
-    background-image:url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>\
-<path d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>\
-</svg>");
-    background-repeat:no-repeat;
-    background-position:center;
-    background-size:16px 16px;
-
-    /* ochrona przed skryptem wycinającym strzałki */
-    --_no-arrows:0 !important;
+  /* Pasek FX jak na stocks: flex + zawijanie */
+  #fxControls{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    gap:8px !important;
+    overflow:visible !important;
   }
 
-  /* klik = obrót (gdy JS doda .desc) */
-  #stockControls .maxprice-filter .sort.desc,
-  #fxControls    .maxprice-filter .sort.desc{
-    transform:rotate(180deg);
+  /* Add more i Max po 50% szerokości */
+  #fxMoreBtn{
+    order:3; 
+    flex:1 1 calc(50% - 8px) !important;
+    min-width:140px;
+  }
+  #fxControls .maxprice-filter{
+    order:4;
+    flex:1 1 calc(50% - 8px) !important;
+    min-width:140px;
+    display:flex !important;
+    align-items:center;
+    justify-content:space-between;
+    gap:.5rem;
+    margin:0;
+  }
+
+  /* Na telefonie nie pokazuj labela "Max" – zostaje input + strzałka + X */
+  #fxControls .maxprice-filter > span{ display:none !important; }
+
+  /* Input może się kurczyć, nie wypychać układu */
+  #fxControls .maxprice-filter input{
+    min-width:0; max-width:100%; width:auto;
+  }
+
+  /* Sam przycisk sortu (strzałka) – większy hit-area */
+  #fxControls .maxprice-filter .sort{
+    width:44px !important; height:var(--ctl-h,44px);
   }
 }
+
+/* Baza przycisku sortu (jeśli jeszcze nie masz) */
+#fxControls .maxprice-filter .sort{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:var(--ctl-h,44px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; background:transparent; cursor:pointer; position:relative; z-index:1;
+}
+/* Obrót ikonki przy .desc (JS tylko dodaje klasę) */
+#fxControls .maxprice-filter .sort svg{ transition:transform .2s ease; }
+#fxControls .maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
+
+/* Fallback gdyby SVG ktoś „zabił”: trójkąt z borderów */
+#fxControls .maxprice-filter .sort::before{
+  content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-55%);
+  border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:8px solid currentColor;
+}
+#fxControls .maxprice-filter .sort.desc::before{ transform:translate(-50%,-45%) rotate(180deg); }
