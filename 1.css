@@ -4151,18 +4151,24 @@ width: 110px;
   }
 }
 /* ====== MAX input – dark, widoczna ramka, placeholder ====== */
+#stockControls .maxprice-filter,
+#fxControls    .maxprice-filter{
+  display:flex; align-items:center; gap:8px; /* układ w jednej linii */
+}
+
 #stockControls .maxprice-filter input,
 #fxControls    .maxprice-filter input{
   box-sizing:border-box;
   height:var(--ctl-h,44px);
   padding:0 .8rem;
-  background:#0f1a2a !important;                            /* wyraźne tło */
-  border:2px solid #9fc1ff !important;                      /* GRUBA, jasna ramka */
+  background:#0f1a2a !important;                /* wyraźne tło */
+  border:2px solid #9fc1ff !important;          /* GRUBA, jasna ramka */
   border-radius:12px !important;
   color:#fff;
   outline:none;
   appearance:textfield;
-  box-shadow:0 0 0 2px rgba(159,193,255,.18);               /* delikatny glow */
+  -webkit-appearance:textfield;
+  box-shadow:0 0 0 2px rgba(159,193,255,.18);   /* delikatny glow */
 }
 #stockControls .maxprice-filter input:focus,
 #fxControls    .maxprice-filter input:focus{
@@ -4195,7 +4201,7 @@ width: 110px;
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\
 <path d="M7 10l5 5 5-5" fill="none" stroke="%23ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
   background-repeat:no-repeat;
-  background-position:center;
+  backgrosnipund-position:center;
   background-size:18px 18px;
   transition:transform .2s ease, opacity .15s;
 }
@@ -4237,4 +4243,23 @@ width: 110px;
   /* większy hit area na dot */
   #stockControls .maxprice-filter .sort,
   #fxControls    .maxprice-filter .sort{ width:46px; }
+}
+/* === MOBILE: pokaż strzałkę w przycisku .sort (nie rusza desktopu) === */
+@media (max-width:640px){
+  #stockControls .maxprice-filter .sort,
+  #fxControls    .maxprice-filter .sort{
+    /* nic nie zmieniamy w układzie – tylko tło z chevronem */
+    background-image:url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\
+<path d="M7 10l5 5 5-5" fill="none" stroke="%23ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:18px 18px;
+  }
+
+  /* jeśli Twój skrypt dopina klasę .desc – obróć ikonę */
+  #stockControls .maxprice-filter .sort.desc,
+  #fxControls    .maxprice-filter .sort.desc{
+    transform: rotate(180deg);
+  }
 }
