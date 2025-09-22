@@ -4692,3 +4692,49 @@ window.dispatchEvent(new Event('fx:universe-changed'));
   document.addEventListener('pointerup', (e)=>{ const t=e.target; if (t && (t.id==='ai-fab' || t.closest?.('#ai-fab'))) { e.preventDefault(); ensurePanel(); } }, true);
   onReady(() => { removeOldRobots(); ensureFab(); $('#langSelect')?.addEventListener('change', refreshPanelLang); });
 })();
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.maxprice-filter .sort');
+  if (!btn) return;
+
+  e.preventDefault();
+  btn.classList.toggle('desc'); // obrót ikonki ↑/↓
+
+  // Jeśli chcesz od razu sortować listę:
+  const list =
+    btn.closest('#stockControls') ? document.querySelector('#stockList')
+    : btn.closest('#fxControls')  ? document.querySelector('#fxList')
+    : null;
+
+  if (!list) return;
+
+  const dir = btn.classList.contains('desc') ? 'desc' : 'asc';
+
+  const toNum = (t) => {
+    const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
+    return Number.isFinite(v) ? v : NaN;
+  };
+  const getPrice = (card) => {
+    const ds = card.getAttribute('data-price');
+    if (ds && Number.isFinite(+ds)) return +ds;
+    const el = card.querySelector('[data-price], .price, .row-price, .wl-price');
+    if (el) {
+      const v = toNum(el.getAttribute('data-price') || el.textContent);
+      if (Number.isFinite(v)) return v;
+    }
+    const txt = card.textContent || '';
+    const m = txt.match(/-?\d+(?:[.,]\d+)?/g);
+    return m ? toNum(m[m.length-1]) : NaN;
+  };
+
+  const cards = Array.from(list.children).filter(n => n.nodeType === 1);
+  cards.sort((a,b) => {
+    const av = getPrice(a), bv = getPrice(b);
+    if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
+    if (!Number.isFinite(av)) return 1;
+    if (!Number.isFinite(bv)) return -1;
+    return dir === 'asc' ? av - bv : bv - av;
+  });
+  const frag = document.createDocumentFragment();
+  cards.forEach(c => frag.appendChild(c));
+  list.appendChild(frag);
+});
