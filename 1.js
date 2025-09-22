@@ -4779,16 +4779,11 @@ document.addEventListener('click', (e) => {
     b.classList.toggle('desc');
   });
 })();
-// ==== MAX Sort (Stocks + FX) — 1 handler, mobile + desktop ====
+// ==== MAX Sort — mobile-proof (auto-detect list + order fix) ====
 (() => {
- const MAP = new Map([
-    ['#stockControls', '#stockList'],
-    ['#fxControls',    '#fxList']
-  ]);
-
-  // Upewnij się, że istnieje przycisk .sort (na mobile czasem go nie ma)
-  function ensureSortButton(containerSel) {
-    const ctl = document.querySelector(containerSel);
+  // 1) Przyciski sortu – upewnij się, że istnieją
+  ['#stockControls', '#fxControls'].forEach(sel => {
+    const ctl = document.querySelector(sel);
     if (!ctl) return;
     const filter = ctl.querySelector('.maxprice-filter');
     if (!filter) return;
@@ -4800,64 +4795,110 @@ document.addEventListener('click', (e) => {
       btn.className = 'sort';
       btn.setAttribute('aria-label', 'Sort by price');
       btn.setAttribute('data-keep-arrows', '1');
-      const clear = filter.querySelector('.clear');
-      clear ? filter.insertBefore(btn, clear) : filter.appendChild(btn);
-
-      // awaryjna ikonka – gdyby SVG zostało gdzieś ukryte
+      (filter.querySelector('.clear'))
+        ? filter.insertBefore(btn, filter.querySelector('.clear'))
+        : filter.appendChild(btn);
+      // awaryjna ikonka
       const svgBG = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\")";
       Object.assign(btn.style, {
-        backgroundImage: svgBG,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center',
-        backgroundSize: '16px 16px',
-        touchAction: 'manipulation',
-        WebkitTapHighlightColor: 'transparent'
+        backgroundImage: svgBG, backgroundRepeat:'no-repeat',
+        backgroundPosition:'center', backgroundSize:'16px 16px',
+        touchAction:'manipulation', WebkitTapHighlightColor:'transparent'
       });
     }
-    return btn;
-  }
-  MAP.forEach((_, ctlSel) => ensureSortButton(ctlSel));
+  });
 
-  // Pomocnicze: parsowanie ceny
+  // 2) Pomocnicze
   const toNum = (t) => {
     const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
     return Number.isFinite(v) ? v : NaN;
   };
   const getPrice = (card) => {
+    // atrybut data-price
     const ds = card.getAttribute('data-price');
     if (ds && Number.isFinite(+ds)) return +ds;
+    // znane miejsca z ceną
     const el = card.querySelector('[data-price], .price, .row-price, .wl-price');
     if (el) {
       const v = toNum(el.getAttribute('data-price') || el.textContent);
       if (Number.isFinite(v)) return v;
     }
+    // fallback – ostatnia liczba
     const m = (card.textContent||'').match(/-?\d+(?:[.,]\d+)?/g);
     return m ? toNum(m[m.length-1]) : NaN;
   };
 
-  // Znajdź listę dla danego przycisku
-  function pickList(btn) {
-    for (const [ctlSel, listSel] of MAP) {
-      if (btn.closest(ctlSel)) return document.querySelector(listSel);
+  // 3) Znajdowanie listy i „kart” obok przycisku (działa na różnych DOM-ach)
+  function findListAndItems(btn){
+    // najbliższy „root” sekcji rynku
+    const root = btn.closest('#stockControls, #fxControls')?.parentElement || btn.closest('section, .panel, .market, .cards, .list') || document;
+    const candidates = [
+      // najczęstsze
+      '#stockList', '#fxList', '.stock-list', '.fx-list', '[data-list="stocks"]', '[data-list="fx"]',
+      '.cards', '.list', '.items', '.rows', '.grid'
+    ];
+
+    // 1) szukaj kandydata wewnątrz root
+    for (const sel of candidates) {
+      const list = root.querySelector(sel);
+      if (!list) continue;
+      const items = guessItems(list);
+      if (items.length >= 2) return { list, items };
     }
-    return null;
+
+    // 2) fallback – idź po rodzeństwie za kontrolkami
+    let sib = root.querySelector('.cards, .list, .items, .rows, .grid');
+    if (sib) {
+      const items = guessItems(sib);
+      if (items.length >= 2) return { list: sib, items };
+    }
+
+    // 3) ostatni fallback – element z największą liczbą dzieci w root
+    let maxKids = 0, best = null;
+    root.querySelectorAll('*').forEach(n => {
+      const kids = n.children?.length || 0;
+      if (kids > maxKids) { maxKids = kids; best = n; }
+    });
+    if (best) {
+      const items = guessItems(best);
+      if (items.length >= 2) return { list: best, items };
+    }
+    return { list: null, items: [] };
   }
 
-  // KLUCZ DLA MOBILE: po sortowaniu nadajemy kolejny order,
-  // żeby flex/grid faktycznie zmienił kolejność wizualną.
-  function applyVisualOrder(list) {
-    const kids = Array.from(list.children).filter(n => n.nodeType === 1);
-    kids.forEach((el, i) => { el.style.order = String(i); });
+  function guessItems(list){
+    // preferuj bezpośrednie dzieci typowych kart
+    let items = Array.from(list.children).filter(el =>
+      el.matches('.card, .row, .item, li, a, div')
+    );
+    // jeśli wygląda pusto – poszukaj „kart” głębiej i weź ich wspólnego rodzica
+    if (items.length < 2) {
+      const deep = Array.from(list.querySelectorAll('.card, .row, .item, li, a'));
+      if (deep.length >= 2) {
+        const parent = deep[0].parentElement;
+        if (parent && parent !== list) {
+          items = Array.from(parent.children);
+          list = parent;
+        } else {
+          items = deep;
+        }
+      }
+    }
+    // odfiltruj elementy bez ceny, żeby nie mieszać
+    if (items.length) {
+      items = items.filter(el => Number.isFinite(getPrice(el)));
+    }
+    return items;
   }
 
-  function sortFor(btn) {
-    const list = pickList(btn);
-    if (!list) return;
+  // 4) Sort i porządek wizualny (order)
+  function sortFor(btn){
+    const { list, items } = findListAndItems(btn);
+    if (!list || items.length < 2) return;
 
     const desc = btn.classList.toggle('desc'); // .desc = malejąco
-    const items = Array.from(list.children).filter(n => n.nodeType === 1);
 
-    items.sort((a, b) => {
+    const sorted = [...items].sort((a,b) => {
       const av = getPrice(a), bv = getPrice(b);
       if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
       if (!Number.isFinite(av)) return 1;
@@ -4865,31 +4906,26 @@ document.addEventListener('click', (e) => {
       return desc ? (bv - av) : (av - bv);
     });
 
-    // szybka podmiana DOM
+    // przestaw DOM
     const frag = document.createDocumentFragment();
-    items.forEach(el => frag.appendChild(el));
-    list.appendChild(frag);
+    sorted.forEach(el => frag.appendChild(el));
+    (sorted[0].parentElement || list).appendChild(frag);
 
-    // wymuś porządek wizualny dla układu flex/grid na mobile
-    applyVisualOrder(list);
+    // WYMUS order dla układów flex/grid (kritczne na mobile)
+    sorted.forEach((el, i) => { el.style.order = String(i); });
   }
 
-  // Jeden handler – pointerup (dotyk + mysz)
+  // 5) Jeden handler (dotyk + mysz) + klawiatura
   document.addEventListener('pointerup', (e) => {
     const btn = e.target.closest?.('.maxprice-filter .sort');
     if (!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     sortFor(btn);
   }, { passive:false, capture:true });
 
-  // Dostępność
   document.addEventListener('keydown', (e) => {
     const btn = e.target.closest?.('.maxprice-filter .sort');
     if (!btn) return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      sortFor(btn);
-    }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortFor(btn); }
   });
 })();
