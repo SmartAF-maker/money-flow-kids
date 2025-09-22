@@ -4326,7 +4326,13 @@ width: 110px;
   }
   .maxprice-filter .sort::before{ pointer-events:none; }
 }
-@media (max-width:640px){
+ @media (max-width:640px){
   .maxprice-filter{ position:relative; }
-  .maxprice-filter .sort{ position:relative; z-index:5; pointer-events:auto; }
+  .maxprice-filter .sort{
+    position:relative;
+    z-index:5;
+    pointer-events:auto;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
 }

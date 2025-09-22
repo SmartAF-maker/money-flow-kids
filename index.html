@@ -1255,6 +1255,38 @@
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
+/* === MOBILE TAP → CLICK PATCH (bez zmian w desktopie) === */
+(function () {
+  // Jeśli brak dotyku – nic nie rób (desktop unchanged)
+  var hasTouch = 'ontouchend' in window || (navigator && navigator.maxTouchPoints > 0);
+  if (!hasTouch) return;
+
+  // prosty debounce, żeby po tapie nie poszło 2×
+  function forwardToClick(e) {
+    var btn = e.target && e.target.closest && e.target.closest('.maxprice-filter .sort');
+    if (!btn) return;
+
+    // jeśli to mysz – zostaw desktop
+    if (e.type === 'pointerup' && e.pointerType === 'mouse') return;
+
+    // zablokuj domyślny „syntetyczny click” i wywołaj nasz
+    e.preventDefault();
+    e.stopPropagation();
+
+    // uniknij dubla: jeśli klik za chwilę wyleci z systemu – zignoruje
+    var now = Date.now();
+    if (btn.__touchLock && (now - btn.__touchLock) < 280) return;
+    btn.__touchLock = now;
+
+    // uruchom dokładnie ten sam handler, co na desktopie
+    btn.click();
+  }
+
+  // działa na iOS/Android; nie zmienia zachowania desktopu
+  document.addEventListener('touchend',  forwardToClick, { passive: false });
+  document.addEventListener('pointerup', forwardToClick, { passive: false });
+})();
+
 </script>
 
 
