@@ -4151,48 +4151,67 @@ width: 110px;
   }
 }
 /* ====== MAX input – dark, widoczna ramka, placeholder ====== */
-#stockControls .maxprice-filter,
-#fxControls    .maxprice-filter{
-  display:flex; align-items:center; gap:8px;
-}
-
 #stockControls .maxprice-filter input,
 #fxControls    .maxprice-filter input{
   box-sizing:border-box;
   height:var(--ctl-h,44px);
-  padding:0 .8rem;
-  background:#0f1a2a !important;                /* wyraźne tło */
-  border:2px solid #9fc1ff !important;          /* gruba, jasna ramka */
-  border-radius:12px !important;
-  color:#fff;
+  padding:0 .75rem;
+  background:rgba(255,255,255,.06) !important;
+  border:1px solid rgba(255,255,255,.22) !important; /* WYMUSZONA RAMKA */
+  border-radius:10px !important;
+  color:inherit;
   outline:none;
   appearance:textfield;
-  -webkit-appearance:textfield;
-  box-shadow:0 0 0 2px rgba(159,193,255,.18);   /* delikatny glow */
 }
 #stockControls .maxprice-filter input:focus,
 #fxControls    .maxprice-filter input:focus{
-  border-color:#aedaff !important;
-  box-shadow:0 0 0 4px rgba(174,218,255,.28);
+  border-color:rgba(99,102,241,.6) !important;
+  box-shadow:0 0 0 2px rgba(99,102,241,.35);
 }
 #stockControls .maxprice-filter input::placeholder,
 #fxControls    .maxprice-filter input::placeholder{
-  color:rgba(255,255,255,.9);
+  color:rgba(255,255,255,.6);
 }
 
 /* X/clear bez dziedziczeń */
-.maxprice-filter .clear{
-  all:unset; cursor:pointer; line-height:1; font-size:1.25rem; opacity:.95;
-}
+.maxprice-filter .clear{ all:unset; cursor:pointer; line-height:1; font-size:1rem; opacity:.85; }
 .maxprice-filter .clear:hover{ opacity:1; }
 
-/* Domyślnie (desktop): ukryj przycisk sort */
+/* ====== Sort button (strzałka) – zawsze widoczny ====== */
 #stockControls .maxprice-filter .sort,
 #fxControls    .maxprice-filter .sort{
-  display:none;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:var(--ctl-h,44px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; background:transparent; cursor:pointer;
+  position:relative; z-index:1;
 }
 
-/* ====== TYLKO TELEFON (≤640px): strzałka w przycisku ====== */
+/* jeśli przycisk ma SVG – obracamy SVG */
+#stockControls .maxprice-filter .sort svg,
+#fxControls    .maxprice-filter .sort svg{ transition:transform .2s ease; }
+#stockControls .maxprice-filter .sort.desc svg,
+#fxControls    .maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
+
+/* fallback: trójkąt z borderów (gdyby SVG nie było) */
+#stockControls .maxprice-filter .sort::before,
+#fxControls    .maxprice-filter .sort::before{
+  content:"";
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-55%);
+  border-left:6px solid transparent;
+  border-right:6px solid transparent;
+  border-bottom:8px solid currentColor; /* caret up */
+}
+#stockControls .maxprice-filter .sort.desc::before,
+#fxControls    .maxprice-filter .sort.desc::before{
+  transform:translate(-50%,-45%) rotate(180deg); /* caret down */
+}
+
+/* UODPORNIENIE na Twój skrypt „KILL ALL ARROWS” */
+[data-keep-arrows]::before,[data-keep-arrows]::after{ font-size:inherit !important; display:inline-block !important; }
+[data-keep-arrows] svg{ display:inline-block !important; }
+
+/* ====== Mobile layout: Add more + Max obok siebie ====== */
 @media (max-width:640px){
   #stockControls, #fxControls{
     display:grid; grid-template-columns:1fr 1fr; gap:8px;
@@ -4204,44 +4223,47 @@ width: 110px;
   #fxMoreBtn{ grid-column:1 / 2; }
   #fxControls .maxprice-filter{ grid-column:2 / 3; }
 
-  /* ukryj etykietę „Max” – zostaje pole + sort + X */
+  /* w pigułce Max ukryj etykietę „Max” – zostaje pole + sort + X */
   #stockControls .maxprice-filter > span,
   #fxControls    .maxprice-filter > span{ display:none; }
 
   /* nie pozwól, by input się zwinął */
   #stockControls .maxprice-filter input,
   #fxControls    .maxprice-filter input{
-    flex:0 0 130px; width:130px !important; min-width:110px; max-width:175px;
+    flex:0 0 120px; width:120px !important; min-width:100px; max-width:160px;
   }
 
-  /* przycisk sort ze strzałką jako TŁO SVG (URL-encoded) */
+  /* większy hit area na dot */
+  #stockControls .maxprice-filter .sort,
+  #fxControls    .maxprice-filter .sort{ width:44px; }
+}
+/* === MOBILE: strzałka w przycisku sort (TYLKO telefon) === */
+@media (max-width:640px){
+
+  /* nic nie zmieniamy na desktopie – tylko mobile */
   #stockControls .maxprice-filter .sort,
   #fxControls    .maxprice-filter .sort{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:46px; height:var(--ctl-h,44px);
-    border:2px solid rgba(255,255,255,.45);
-    border-radius:12px; cursor:pointer;
-    background:rgba(255,255,255,.07);
-    position:relative; z-index:1;
+    width:44px; height:44px;
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:10px;
+    background-color:rgba(255,255,255,.06);
 
-    /* Biała strzałka (down/up) – killer jej nie usunie */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: center;          /* ← tu była literówka */
-    background-size: 18px 18px;
-    transition: transform .2s ease, opacity .15s;
+    /* strzałka jako TŁO (nie do usunięcia przez killer) */
+    background-image:url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>\
+<path d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>\
+</svg>");
+    background-repeat:no-repeat;
+    background-position:center;   /* <-- poprawna deklaracja (nie 'backgrosnipund-...') */
+    background-size:18px 18px;
+
+    /* ochrona przed skryptem, który wycina strzałki */
+    --_no-arrows: 0 !important;
   }
 
-  /* obrót (kierunek w dół) po kliknięciu – klasa .desc nadaje JS */
+  /* po kliknięciu Twoim JS dodaje .desc – obracamy strzałkę */
   #stockControls .maxprice-filter .sort.desc,
   #fxControls    .maxprice-filter .sort.desc{
-    transform: rotate(180deg);
+    transform:rotate(180deg);
   }
-
-  /* odporność na "KILL ALL ARROWS" w pigułce Max */
-  #stockControls .maxprice-filter,
-  #fxControls    .maxprice-filter,
-  #stockControls .maxprice-filter * ,
-  #fxControls    .maxprice-filter * { --_no-arrows:0 !important; }
 }
-
