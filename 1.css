@@ -4336,3 +4336,73 @@ width: 110px;
     touch-action:manipulation;
   }
 }
+/* ==== FX Controls — visual cohesion (only FX) ==== */
+#fxControls{
+  --fx-h: 40px;            /* wspólna wysokość */
+  --fx-r: 12px;            /* wspólny radius */
+  --fx-bg: rgba(255,255,255,.06);
+  --fx-brd: rgba(255,255,255,.16);
+  --fx-pad: .9rem;
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:8px !important;
+  align-items:center;
+}
+
+/* Wyrównanie wysokości + radius wszystkich “pigułek” */
+#fxMoreBtn,
+#fxControls .maxprice-filter,
+#fxControls .maxprice-filter input,
+#fxControls .maxprice-filter .sort,
+#fxControls .maxprice-filter .clear{
+  height:var(--fx-h) !important;
+  border-radius:var(--fx-r) !important;
+}
+
+/* Spójne tło i ramka dla neutralnych elementów (input, strzałka, X) */
+#fxControls .maxprice-filter input,
+#fxControls .maxprice-filter .sort,
+#fxControls .maxprice-filter .clear{
+  background:var(--fx-bg) !important;
+  border:1px solid var(--fx-brd) !important;
+}
+
+/* Input: padding, czcionka i rozsądna szerokość (desktop) */
+#fxControls .maxprice-filter{ 
+  display:flex !important; align-items:center; gap:8px; margin:0 !important;
+}
+#fxControls .maxprice-filter input{
+  padding:0 var(--fx-pad) !important;
+  font:inherit; color:inherit; box-sizing:border-box;
+  width:6.25rem; /* ~100px */
+}
+
+/* Strzałka – obracamy TYLKO SVG, bez rotacji całego przycisku */
+#fxControls .maxprice-filter .sort{ 
+  width:36px; position:relative; z-index:1; cursor:pointer;
+}
+#fxControls .maxprice-filter .sort svg{ transition:transform .2s ease; }
+#fxControls .maxprice-filter .sort.desc{ transform:none !important; }
+#fxControls .maxprice-filter .sort.desc svg{ transform:rotate(180deg) !important; }
+
+/* Clear (x) – stała szerokość jak strzałka */
+#fxControls .maxprice-filter .clear{
+  all:unset; display:inline-flex; align-items:center; justify-content:center;
+  width:36px; line-height:1; cursor:pointer; opacity:.85;
+}
+#fxControls .maxprice-filter .clear:hover{ opacity:1; }
+
+/* Mobile only: upewnij się, że strzałka jest klikalna i nad innymi */
+@media (max-width:640px){
+  #stockControls .maxprice-filter .sort,
+  #fxControls .maxprice-filter .sort{
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 5;
+    min-width: 34px;  /* wygodny tap */
+    min-height: 34px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+

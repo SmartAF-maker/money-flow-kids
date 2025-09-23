@@ -4929,3 +4929,53 @@ document.addEventListener('click', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortFor(btn); }
   });
 })();
+/* === Mobile tap shim for .sort (desktop untouched) === */
+(function () {
+  // Tylko na urządzeniach dotykowych
+  const isCoarse = (('matchMedia' in window) && window.matchMedia('(pointer:coarse)').matches) ||
+                   ('ontouchstart' in window);
+
+  if (!isCoarse) return;
+
+  const SELECTOR = '#stockControls .maxprice-filter .sort, #fxControls .maxprice-filter .sort';
+
+  function wire(btn){
+    if (!btn || btn._tapShim) return;
+    btn._tapShim = true;
+
+    let lockUntil = 0;
+    const fire = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      lockUntil = performance.now() + 350;   // zablokuj „ghost click” po tapie
+      btn.click();                            // użyj istniejącej obsługi click z Twojego kodu
+    };
+
+    btn.addEventListener('pointerup', fire, {passive:false});
+    btn.addEventListener('touchend',  fire, {passive:false});
+
+    // gasi ewentualny „ghost click” wywołany przez mobilną przeglądarkę
+    btn.addEventListener('click', (e) => {
+      if (performance.now() < lockUntil){
+        e.preventDefault(); e.stopPropagation();
+      }
+    }, {capture:true, passive:false});
+  }
+
+  function boot(){
+    document.querySelectorAll(SELECTOR).forEach(wire);
+  }
+
+  // re-wire jeśli mobilny layout przebuduje pasek filtrów
+  function watch(rootSel){
+    const root = document.querySelector(rootSel);
+    if (!root) return;
+    const mo = new MutationObserver(boot);
+    mo.observe(root, {childList:true, subtree:true});
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+  watch('#stockControls');
+  watch('#fxControls');
+})();
