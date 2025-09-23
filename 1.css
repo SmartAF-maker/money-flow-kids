@@ -4405,4 +4405,12 @@ width: 110px;
     touch-action: manipulation;
   }
 }
-
+@media (max-width:640px){
+  #stockControls .maxprice-filter .sort,
+  #fxControls    .maxprice-filter .sort{
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 3;
+  }
+}
