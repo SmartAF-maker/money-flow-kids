@@ -4827,3 +4827,61 @@ document.addEventListener('click', (e) => {
     new MutationObserver(boot).observe(root, {childList:true, subtree:true});
   });
 })();
+/* === Mobile tap→click proxy for .sort (desktop 100% nietknięty) === */
+(() => {
+  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (!isTouch) return;
+
+  let lockUntil = 0;
+  const within = (x, y, r, pad=12) =>
+    x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
+
+  function fireClick(btn){
+    // użyj dokładnie tej samej ścieżki co desktop
+    btn.dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true}));
+  }
+
+  function handleTouchEnd(e){
+    const t = (e.changedTouches && e.changedTouches[0]) || null;
+    if (!t) return;
+    const x = t.clientX, y = t.clientY;
+
+    // Element pod palcem (może to być overlay)
+    const hit = document.elementFromPoint(x, y);
+    if (!hit) return;
+
+    // Najbliższy kontener z filtrem
+    const root = hit.closest?.('#stockControls .maxprice-filter, #fxControls .maxprice-filter');
+    if (!root) return;
+
+    const btn = root.querySelector('.sort');
+    if (!btn) return;
+
+    // Wywołuj tylko gdy tap faktycznie był na ikonie (z tolerancją)
+    const r = btn.getBoundingClientRect();
+    if (!within(x, y, r, 12)) return;
+
+    e.preventDefault(); e.stopPropagation();
+    lockUntil = performance.now() + 400;  // zgaś „ghost click”
+    fireClick(btn);
+  }
+
+  // Proxy dla tapów
+  document.addEventListener('touchend', handleTouchEnd, {capture:true, passive:false});
+  document.addEventListener('pointerup', (e) => {
+    if (e.pointerType === 'touch') {
+      // prześlij do tego samego handlera (użyj współrzędnych pointera)
+      const fakeTouchEvent = { 
+        changedTouches: [{ clientX: e.clientX, clientY: e.clientY }],
+        preventDefault: () => e.preventDefault(),
+        stopPropagation: () => e.stopPropagation()
+      };
+      handleTouchEnd(fakeTouchEvent);
+    }
+  }, {capture:true, passive:false});
+
+  // Zgaś ewentualny ghost-click po tapie
+  document.addEventListener('click', (e) => {
+    if (performance.now() < lockUntil) { e.preventDefault(); e.stopPropagation(); }
+  }, {capture:true, passive:false});
+})();
