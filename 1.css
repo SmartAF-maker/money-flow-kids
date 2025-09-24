@@ -4414,3 +4414,10 @@ width: 110px;
     z-index: 3;
   }
 }
+/* iOS/Android: label niech nie przechwytuje tapów – klikalne są dzieci */
+@media (max-width:640px){
+  label.maxprice-filter { pointer-events: none; }
+  label.maxprice-filter input,
+  label.maxprice-filter .sort,
+  label.maxprice-filter .clear { pointer-events: auto; }
+}
