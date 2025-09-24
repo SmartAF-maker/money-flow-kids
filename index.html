@@ -1256,6 +1256,59 @@
   else boot();
 })();
 </script>
+<script>
+/* === Mobile-only fix: wynieś .sort i .clear z <label> (iOS label swallow) === */
+(function () {
+  const mql = window.matchMedia('(max-width:640px)');
+
+  function moveActionsOut(controlsSel){
+    const controls = document.querySelector(controlsSel);
+    if (!controls) return;
+    const label = controls.querySelector('.maxprice-filter');
+    if (!label) return;
+
+    // upewnij się, że mamy .sort (FX czasem nie ma w HTML – Twój kod i tak go tworzy)
+    let sortBtn = label.querySelector('.sort');
+    if (!sortBtn) {
+      sortBtn = document.createElement('button');
+      sortBtn.type = 'button';
+      sortBtn.className = 'sort';
+      sortBtn.setAttribute('aria-label', 'Sort asc/desc');
+      label.appendChild(sortBtn);
+    }
+    // ochrona przed killerem strzałek
+    sortBtn.setAttribute('data-keep-arrows','1');
+
+    const clearBtn = label.querySelector('.clear');
+
+    // kontener na przyciski poza <label>
+    let actions = label.nextElementSibling;
+    if (!actions || !actions.classList || !actions.classList.contains('maxprice-actions')) {
+      actions = document.createElement('div');
+      actions.className = 'maxprice-actions';
+      label.insertAdjacentElement('afterend', actions);
+    }
+
+    function toMobile(){
+      // przenieś przyciski poza label (klik na iOS zacznie działać)
+      if (sortBtn && sortBtn.parentElement !== actions) actions.appendChild(sortBtn);
+      if (clearBtn && clearBtn.parentElement !== actions) actions.appendChild(clearBtn);
+    }
+    function toDesktop(){
+      // odwrót: wróć do oryginalnego DOM-u
+      if (sortBtn && sortBtn.parentElement !== label) label.appendChild(sortBtn);
+      if (clearBtn && clearBtn.parentElement !== label) label.appendChild(clearBtn);
+    }
+
+    // pierwszy raz + reaguj na zmianę szerokości
+    mql.matches ? toMobile() : toDesktop();
+    mql.addEventListener('change', e => e.matches ? toMobile() : toDesktop());
+  }
+
+  moveActionsOut('#stockControls');
+  moveActionsOut('#fxControls');
+})();
+</script>
 
 
 </body>
