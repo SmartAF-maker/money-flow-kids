@@ -4425,15 +4425,8 @@ width: 110px;
   -webkit-tap-highlight-color:transparent;
   touch-action: manipulation;
 }
-/* jeśli chcesz obrócić SVG tłem przy 'desc' */
-[data-sort-btn].is-desc { transform: rotate(180deg); }
-/* iOS/Android: elementy interaktywne wewnątrz <label> bywają „nieklikalne” */
-@media (max-width:640px){
-  label.maxprice-filter { pointer-events: none; }
-  label.maxprice-filter > * { pointer-events: auto; } /* przywróć dzieciom */
-}
-.sort .ic { transition: transform .15s; pointer-events: none; }
-.sort.is-desc .ic { transform: rotate(180deg); }
+
+
 /* === Auth modal (MFK_AUTH) === */
 .auth-modal{
   position: fixed; inset: 0;

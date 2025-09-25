@@ -825,117 +825,166 @@
     <script>
       
   // Callbacki wołane przez moduł auth po (re)logowaniu
-  window.MFK_APP = {
-    onLoggedIn(user){
-      const badge = document.getElementById('authBadge');
-      if (badge) {
-        if (user.role === 'parent') badge.textContent = (TT?.().badgeParent || "Parent");
-        else badge.textContent = (TT?.().badgeChild ? TT().badgeChild(user.name || "") : `Child: ${user.name || user.email || ""}`);
-      }
-      document.getElementById('loginBtn')?.classList.add('hidden');
-      document.getElementById('logoutBtn')?.classList.remove('hidden');
-      try { if (typeof applyAuthUI === 'function') applyAuthUI(); } catch {}
-      try { if (typeof renderAll   === 'function') renderAll();   } catch {}
-    },
-    onLoggedOut(){
-      const badge = document.getElementById('authBadge');
-      if (badge) badge.textContent = (TT?.().badgeGuest || "Guest");
-      document.getElementById('loginBtn')?.classList.remove('hidden');
-      document.getElementById('logoutBtn')?.classList.add('hidden');
-      try { if (typeof applyAuthUI === 'function') applyAuthUI(); } catch {}
+// + ustawianie roli na <body data-role="..."> i spinanie przycisków w drawerze
+function _clearChildSessionArtifacts(){
+  try {
+    const keys = [];
+    for (let i = 0; i < sessionStorage.length; i++){
+      const k = sessionStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith('mfk_child') || k.startsWith('kid_') || k.indexOf('child') > -1) keys.push(k);
     }
-  };
+    keys.forEach(k => sessionStorage.removeItem(k));
+  } catch {}
+}
 
-  // Dorysuj modal i zsynchronizuj topbar wg aktualnej sesji
-  MFK_AUTH.ensureAuthUI();
+window.MFK_APP = {
+  onLoggedIn(user){
+    const role = (user && user.role) || 'guest';
+    document.body.dataset.role = role;      // <-- KLUCZOWE
 
-  // (opcjonalnie) ustaw badge od razu po odświeżeniu
-  (function(){
-    const u = MFK_AUTH.getCurrentUser?.();
-    if (u) window.MFK_APP.onLoggedIn(u);
-    else   window.MFK_APP.onLoggedOut?.();
-  })();
-</script>
+    if (role === 'parent') _clearChildSessionArtifacts();
 
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+    const badge = document.getElementById('authBadge');
+    if (badge) {
+      if (role === 'parent') {
+        badge.textContent = (typeof TT === 'function' && TT() && TT().badgeParent) || "Parent";
+      } else if (role === 'child') {
+        const labelChild = (typeof TT === 'function' && TT() && TT().badgeChild) || "Child";
+        badge.textContent = user?.name ? `${labelChild}: ${user.name}` : labelChild;
+      } else {
+        badge.textContent = (typeof TT === 'function' && TT() && TT().badgeGuest) || "Guest";
       }
+    }
 
-      // 4a) Otwieranie / zamykanie drawer (hamburger menu)
-      (function(){
-        const btn = document.getElementById('mfkNavToggle');
-        const drawer = document.getElementById('mfkMobileDrawer');
-        const backdrop = document.getElementById('mfkBackdrop');
-        if(!btn || !drawer || !backdrop) return;
+    document.getElementById('loginBtn')?.classList.add('hidden');
+    document.getElementById('logoutBtn')?.classList.remove('hidden');
+    document.getElementById('drawerLogin')?.classList.add('hidden');
+    document.getElementById('drawerLogout')?.classList.remove('hidden');
 
-        function open(){
-          drawer.classList.add('open');
-          backdrop.hidden = false;
-          btn.setAttribute('aria-expanded','true');
-          document.body.style.overflow = 'hidden';
-        }
-        function close(){
-          drawer.classList.remove('open');
-          backdrop.hidden = true;
-          btn.setAttribute('aria-expanded','false');
-          document.body.style.overflow = '';
-        }
+    try { if (typeof applyAuthUI === 'function') applyAuthUI(); } catch {}
+    try { if (typeof renderAll   === 'function') renderAll();   } catch {}
+  },
 
-        btn.addEventListener('click', () =>
-          drawer.classList.contains('open') ? close() : open()
-        );
-        backdrop.addEventListener('click', close);
-        document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
-      })();
+  onLoggedOut(){
+    document.body.dataset.role = 'guest';
 
-      // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
-      (function(){
-        const drawer = document.getElementById('mfkMobileDrawer');
-        const backdrop = document.getElementById('mfkBackdrop');
-        const btn = document.getElementById('mfkNavToggle');
-        if(!drawer || !backdrop || !btn) return;
+    const badge = document.getElementById('authBadge');
+    if (badge) badge.textContent = (typeof TT === 'function' && TT() && TT().badgeGuest) || "Guest";
 
-        function close(){
-          drawer.classList.remove('open');
-          backdrop.hidden = true;
-          btn.setAttribute('aria-expanded','false');
-          document.body.style.overflow = '';
-        }
+    document.getElementById('loginBtn')?.classList.remove('hidden');
+    document.getElementById('logoutBtn')?.classList.add('hidden');
+    document.getElementById('drawerLogin')?.classList.remove('hidden');
+    document.getElementById('drawerLogout')?.classList.add('hidden');
 
-        drawer.addEventListener('click', (e) => {
-          if (e.target.closest('.tab')) close();
-        });
-      })();
-
-           
-      /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
-(function () {
-  const drawerTut = document.getElementById('drawerTutorial');
-  if (!drawerTut) return;
-
-  const drawer   = document.getElementById('mfkMobileDrawer');
-  const backdrop = document.getElementById('mfkBackdrop');
-  const navBtn   = document.getElementById('mfkNavToggle');
-  const ytMini   = document.getElementById('ytMini');
-
-  function closeDrawer() {
-    if (drawer)   drawer.classList.remove('open');
-    if (backdrop) backdrop.hidden = true;
-    if (navBtn)   navBtn.setAttribute('aria-expanded', 'false');
-    document.body.style.overflow = '';
+    try { if (typeof applyAuthUI === 'function') applyAuthUI(); } catch {}
   }
+};
 
-  function openYT() {
-    if (ytMini) ytMini.classList.remove('hidden');
-  }
+// Dorysuj modal i zsynchronizuj topbar wg aktualnej sesji
+MFK_AUTH.ensureAuthUI();
 
-  drawerTut.addEventListener('click', function () {
-    closeDrawer();
-    setTimeout(openYT, 150);
+// Hooki drawer: otwórz modal logowania / wyloguj
+(function(){
+  const dl   = document.getElementById('drawerLogin');
+  const doff = document.getElementById('drawerLogout');
+
+  dl && dl.addEventListener('click', () => {
+    const modal = document.getElementById('authModal');
+    modal && modal.classList.remove('hidden');
+  });
+
+  doff && doff.addEventListener('click', () => {
+    MFK_AUTH.logoutUser();
+    window.MFK_APP.onLoggedOut();
   });
 })();
 
+// (opcjonalnie) ustaw badge od razu po odświeżeniu
+(function(){
+  const u = MFK_AUTH.getCurrentUser && MFK_AUTH.getCurrentUser();
+  if (u) window.MFK_APP.onLoggedIn(u);
+  else   window.MFK_APP.onLoggedOut && window.MFK_APP.onLoggedOut();
+})();
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+  // 4a) Otwieranie / zamykanie drawer (hamburger menu)
+  (function(){
+    const btn = document.getElementById('mfkNavToggle');
+    const drawer = document.getElementById('mfkMobileDrawer');
+    const backdrop = document.getElementById('mfkBackdrop');
+    if(!btn || !drawer || !backdrop) return;
+
+    function open(){
+      drawer.classList.add('open');
+      backdrop.hidden = false;
+      btn.setAttribute('aria-expanded','true');
+      document.body.style.overflow = 'hidden';
+    }
+    function close(){
+      drawer.classList.remove('open');
+      backdrop.hidden = true;
+      btn.setAttribute('aria-expanded','false');
+      document.body.style.overflow = '';
+    }
+
+    btn.addEventListener('click', () =>
+      drawer.classList.contains('open') ? close() : open()
+    );
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  })();
+
+  // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
+  (function(){
+    const drawer = document.getElementById('mfkMobileDrawer');
+    const backdrop = document.getElementById('mfkBackdrop');
+    const btn = document.getElementById('mfkNavToggle');
+    if(!drawer || !backdrop || !btn) return;
+
+    function close(){
+      drawer.classList.remove('open');
+      backdrop.hidden = true;
+      btn.setAttribute('aria-expanded','false');
+      document.body.style.overflow = '';
+    }
+
+    drawer.addEventListener('click', (e) => {
+      if (e.target.closest('.tab')) close();
+    });
+  })();
+
+  /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
+  (function () {
+    const drawerTut = document.getElementById('drawerTutorial');
+    if (!drawerTut) return;
+
+    const drawer   = document.getElementById('mfkMobileDrawer');
+    const backdrop = document.getElementById('mfkBackdrop');
+    const navBtn   = document.getElementById('mfkNavToggle');
+    const ytMini   = document.getElementById('ytMini');
+
+    function closeDrawer() {
+      if (drawer)   drawer.classList.remove('open');
+      if (backdrop) backdrop.hidden = true;
+      if (navBtn)   navBtn.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    }
+
+    function openYT() {
+      if (ytMini) ytMini.classList.remove('hidden');
+    }
+
+    drawerTut.addEventListener('click', function () {
+      closeDrawer();
+      setTimeout(openYT, 150);
+    });
+  })();
 /* === Mini-YT: powiększ / zamknij === */
 (function () {
   const mini   = document.getElementById('ytMini');
