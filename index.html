@@ -509,88 +509,93 @@
 
         <input id="stockSearch" class="input" placeholder="AAPL, Microsoft…" />
         <button id="stockAddPopular" class="btn">Add more</button>
-          <!-- MAX PRICE (Stocks) -->
- <label class="maxprice-filter">
+<!-- MAX PRICE (Stocks) -->
+<label class="maxprice-filter">
   <span>Max</span>
   <input id="sm-max" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Max price" aria-label="Max price">
-  <button type="button" class="sort" aria-label="Sort asc/desc"></button>
+  <button type="button"
+          class="sort"
+          data-sort-btn
+          data-dir="asc"
+          data-keep-arrows="1"
+          aria-label="Sort asc/desc"></button>
   <button type="button" class="clear" aria-label="Clear">×</button>
 </label>
 
-      </div>
+</div>
 
-      <div id="stockList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
+<div id="stockList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
 
-      <div id="tradeBox" class="card" style="margin-top: 12px; display: none">
-        <div class="title" id="tradeTitle">Transaction</div>
+<div id="tradeBox" class="card" style="margin-top: 12px; display: none">
+  <div class="title" id="tradeTitle">Transaction</div>
 
-        <div class="row" style="margin-bottom: 8px">
-          <label class="muted" data-i18n="qty">Quantity</label>
-          <input id="qty" type="number" min="1" step="1" value="1" class="input" />
-          <div class="right muted">
-            <span data-i18n="cost">Cost:</span>
-            <span id="cost">0.00 USD</span>
-          </div>
-        </div>
-
-        <div class="space">
-      <button id="addToStockBasket" class="btn primary">Add to basket</button>
-      <button id="cancelTrade" class="btn" data-i18n="cancel">Cancel</button>
-      </div>
-      </div>
+  <div class="row" style="margin-bottom: 8px">
+    <label class="muted" data-i18n="qty">Quantity</label>
+    <input id="qty" type="number" min="1" step="1" value="1" class="input" />
+    <div class="right muted">
+      <span data-i18n="cost">Cost:</span>
+      <span id="cost">0.00 USD</span>
     </div>
   </div>
 
-  <!-- PRAWA: najpierw Basket, potem Portfolio -->
-  <div class="col right">
-    <!-- Basket (JEDYNY dla akcji) -->
-    <div class="card basket" id="stock-basket">
-      <div class="panel-header">
-        <h3>Basket (Stocks)</h3>
-      </div>
+  <div class="space">
+    <button id="addToStockBasket" class="btn primary">Add to basket</button>
+    <button id="cancelTrade" class="btn" data-i18n="cancel">Cancel</button>
+  </div>
+</div>
+</div>
+</div>
 
-      <div class="basket-list" data-basket-list="stocks">
-        <div class="basket-empty">No items in basket.</div>
-      </div>
+<!-- PRAWA: najpierw Basket, potem Portfolio -->
+<div class="col right">
+  <!-- Basket (JEDYNY dla akcji) -->
+  <div class="card basket" id="stock-basket">
+    <div class="panel-header">
+      <h3>Basket (Stocks)</h3>
+    </div>
 
-      <div class="basket-summary row" style="justify-content: space-between">
-        <div class="metric">
-          <span>Quantity</span>
-          <strong class="val" data-basket-qty="stocks">0</strong>
-        </div>
-        <div class="metric">
-          <span>Amount</span>
-          <strong class="val" data-basket-amt="stocks">0.00 USD</strong>
-        </div>
-      </div>
+    <div class="basket-list" data-basket-list="stocks">
+      <div class="basket-empty">No items in basket.</div>
+    </div>
 
-      <div class="basket-actions">
-        <button class="btn btn-grad" data-basket-buy="stocks">Buy (investment cash)</button>
+    <div class="basket-summary row" style="justify-content: space-between">
+      <div class="metric">
+        <span>Quantity</span>
+        <strong class="val" data-basket-qty="stocks">0</strong>
+      </div>
+      <div class="metric">
+        <span>Amount</span>
+        <strong class="val" data-basket-amt="stocks">0.00 USD</strong>
       </div>
     </div>
 
-    <!-- Stock Portfolio -->
-    <div class="card">
-      <div class="title" data-i18n="stocksPortfolio">Stock Portfolio</div>
-      <div id="portfolioEmpty" class="muted" data-i18n="empty">No positions.</div>
-      <div class="tableWrap" style="overflow: auto; display: none">
-        <table>
-          <thead>
-            <tr class="muted">
-              <th data-i18n="ticker">Ticker</th>
-              <th data-i18n="shares">Shares</th>
-              <th data-i18n="avgCost">Avg. cost</th>
-              <th data-i18n="price">Price</th>
-              <th data-i18n="value">Value</th>
-              <th>P/L</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="portfolioBody"></tbody>
-        </table>
-      </div>
+    <div class="basket-actions">
+      <button class="btn btn-grad" data-basket-buy="stocks">Buy (investment cash)</button>
     </div>
   </div>
+
+  <!-- Stock Portfolio -->
+  <div class="card">
+    <div class="title" data-i18n="stocksPortfolio">Stock Portfolio</div>
+    <div id="portfolioEmpty" class="muted" data-i18n="empty">No positions.</div>
+    <div class="tableWrap" style="overflow: auto; display: none">
+      <table>
+        <thead>
+          <tr class="muted">
+            <th data-i18n="ticker">Ticker</th>
+            <th data-i18n="shares">Shares</th>
+            <th data-i18n="avgCost">Avg. cost</th>
+            <th data-i18n="price">Price</th>
+            <th data-i18n="value">Value</th>
+            <th>P/L</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="portfolioBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 </section>
 
 
@@ -603,42 +608,47 @@
         <div class="title" data-i18n="fxMarket">Currency Market (FX)</div>
       </div>
 
-<div class="row" style="margin: 6px 0" id="fxControls">
+      <div class="row" style="margin: 6px 0" id="fxControls">
         <input id="fxSearch" class="input" placeholder="EUR/PLN, USD" />
         <button id="fxMoreBtn" class="btn" data-i18n="addMajors">Add more currencies</button>
 
         <label class="maxprice-filter">
-    <span>Max</span>
-    <input id="cm-max" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="Max rate">
-    <button type="button" class="clear" aria-label="Clear" title="Clear">×</button>
-  </label>
-</div>
-      </div>
-
-      <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
-
-      <div id="fxTradeBox" class="card" style="margin-top: 12px; display: none">
-        <div class="title" id="fxTradeTitle" data-i18n="fxTrade">FX Transaction</div>
-
-        <div class="row" style="margin-bottom: 8px">
-          <label class="muted" data-i18n="qtyBase">Quantity (base currency)</label>
-          <input id="fxQty" type="number" min="1" step="1" value="100" class="input" />
-          <div class="right muted">
-            <span data-i18n="cost">Cost:</span>
-            <span id="fxCost">0.00 USD</span>
-          </div>
-        </div>
-
-        <div class="space">
-  <button id="addToFxBasket" class="btn primary">Add to basket</button>
-  <button id="fxCancelTrade" class="btn" data-i18n="cancel">Cancel</button>
-</div>
-
-
-        <div class="sub" data-i18n="fxHint"></div>
+          <span>Max</span>
+          <input id="cm-max" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="Max rate">
+          <button type="button"
+                  class="sort"
+                  data-sort-btn
+                  data-dir="asc"
+                  data-keep-arrows="1"
+                  aria-label="Sort asc/desc"></button>
+          <button type="button" class="clear" aria-label="Clear" title="Clear">×</button>
+        </label>
       </div>
     </div>
+
+    <div id="fxList" class="grid" style="grid-template-columns: 1fr; gap: 8px"></div>
+
+    <div id="fxTradeBox" class="card" style="margin-top: 12px; display: none">
+      <div class="title" id="fxTradeTitle" data-i18n="fxTrade">FX Transaction</div>
+
+      <div class="row" style="margin-bottom: 8px">
+        <label class="muted" data-i18n="qtyBase">Quantity (base currency)</label>
+        <input id="fxQty" type="number" min="1" step="1" value="100" class="input" />
+        <div class="right muted">
+          <span data-i18n="cost">Cost:</span>
+          <span id="fxCost">0.00 USD</span>
+        </div>
+      </div>
+
+      <div class="space">
+        <button id="addToFxBasket" class="btn primary">Add to basket</button>
+        <button id="fxCancelTrade" class="btn" data-i18n="cancel">Cancel</button>
+      </div>
+
+      <div class="sub" data-i18n="fxHint"></div>
+    </div>
   </div>
+
 
   <!-- PRAWA: najpierw Basket, potem Portfolio -->
   <div class="col right">
@@ -1254,59 +1264,6 @@
 
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
-})();
-</script>
-<script>
-/* === Mobile-only fix: wynieś .sort i .clear z <label> (iOS label swallow) === */
-(function () {
-  const mql = window.matchMedia('(max-width:640px)');
-
-  function moveActionsOut(controlsSel){
-    const controls = document.querySelector(controlsSel);
-    if (!controls) return;
-    const label = controls.querySelector('.maxprice-filter');
-    if (!label) return;
-
-    // upewnij się, że mamy .sort (FX czasem nie ma w HTML – Twój kod i tak go tworzy)
-    let sortBtn = label.querySelector('.sort');
-    if (!sortBtn) {
-      sortBtn = document.createElement('button');
-      sortBtn.type = 'button';
-      sortBtn.className = 'sort';
-      sortBtn.setAttribute('aria-label', 'Sort asc/desc');
-      label.appendChild(sortBtn);
-    }
-    // ochrona przed killerem strzałek
-    sortBtn.setAttribute('data-keep-arrows','1');
-
-    const clearBtn = label.querySelector('.clear');
-
-    // kontener na przyciski poza <label>
-    let actions = label.nextElementSibling;
-    if (!actions || !actions.classList || !actions.classList.contains('maxprice-actions')) {
-      actions = document.createElement('div');
-      actions.className = 'maxprice-actions';
-      label.insertAdjacentElement('afterend', actions);
-    }
-
-    function toMobile(){
-      // przenieś przyciski poza label (klik na iOS zacznie działać)
-      if (sortBtn && sortBtn.parentElement !== actions) actions.appendChild(sortBtn);
-      if (clearBtn && clearBtn.parentElement !== actions) actions.appendChild(clearBtn);
-    }
-    function toDesktop(){
-      // odwrót: wróć do oryginalnego DOM-u
-      if (sortBtn && sortBtn.parentElement !== label) label.appendChild(sortBtn);
-      if (clearBtn && clearBtn.parentElement !== label) label.appendChild(clearBtn);
-    }
-
-    // pierwszy raz + reaguj na zmianę szerokości
-    mql.matches ? toMobile() : toDesktop();
-    mql.addEventListener('change', e => e.matches ? toMobile() : toDesktop());
-  }
-
-  moveActionsOut('#stockControls');
-  moveActionsOut('#fxControls');
 })();
 </script>
 

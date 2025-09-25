@@ -4414,3 +4414,16 @@ width: 110px;
     z-index: 3;
   }
 }
+/* wygodna strefa dotyku i brak opóźnień na mobile */
+[data-sort-btn]{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:44px; height:44px;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:16px 16px;
+  border:0; background-color:transparent;
+  -webkit-tap-highlight-color:transparent;
+  touch-action: manipulation;
+}
+/* jeśli chcesz obrócić SVG tłem przy 'desc' */
+[data-sort-btn].is-desc { transform: rotate(180deg); }

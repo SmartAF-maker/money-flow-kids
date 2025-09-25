@@ -3326,6 +3326,43 @@ const observer = new MutationObserver(() => {
     .forEach(btn => btn.remove());
 });
 observer.observe(document.body, { childList: true, subtree: true });
+
+/* === SORT ARROW: obsługa tap/klik (mobile + desktop) ===
+   WYMAGANE: na przycisku strzałki dodaj w HTML atrybut data-sort-btn,
+   np. <button class="sort" data-sort-btn data-dir="asc" aria-label="Sortuj"></button>
+   (data-dir będzie przełączane asc/desc)
+*/
+(function wireSortArrow() {
+  let justPointerUp = false;
+
+  function handleSortTap(e){
+    const btn = e.target.closest('[data-sort-btn]');
+    if (!btn) return;
+
+    // uniknij podwójnego wywołania (pointerup + click)
+    if (e.type === 'click' && justPointerUp) { justPointerUp = false; return; }
+    if (e.type !== 'click') justPointerUp = true;
+
+    e.preventDefault();
+
+    // przełącz kierunek
+    const next = (btn.getAttribute('data-dir') === 'desc') ? 'asc' : 'desc';
+    btn.setAttribute('data-dir', next);
+    btn.classList.toggle('is-desc', next === 'desc');  // możesz użyć w CSS do obrotu SVG
+
+    // ➜ TU wywołaj swoje sortowanie listy, np.:
+    // sortList(next);
+    // Jeśli jeszcze nie masz, na razie zobacz w konsoli:
+    if (typeof sortList === 'function') sortList(next);
+    else console.log('[sort arrow] dir =', next);
+  }
+
+  // pointerup = szybki tap na mobile; click = fallback/desktop
+  document.addEventListener('pointerup', handleSortTap, { passive: false });
+  document.addEventListener('click',     handleSortTap);
+})();
+
+
 /* === YouTube mini-player wiring === */
 (function () {
   const ytMini   = document.getElementById('ytMini');
@@ -3336,7 +3373,7 @@ observer.observe(document.body, { childList: true, subtree: true });
   const btnClose = document.getElementById('ytClose');
   const btnSize  = document.getElementById('ytToggleSize');
 
-  // Używamy wersji nocookie + playsinline (iOS)
+  // Wersja nocookie + playsinline (ważne na iOS/Android)
   const YT_URL = "https://www.youtube-nocookie.com/embed/eIpCd1wRhYE?rel=0&modestbranding=1&playsinline=1";
   iframe.setAttribute('data-src', YT_URL);
 
@@ -3344,27 +3381,22 @@ observer.observe(document.body, { childList: true, subtree: true });
     ytMini.classList.remove('hidden');
     if (!iframe.src) iframe.src = iframe.dataset.src; // lazy init
   }
-
   function closeMini() {
     ytMini.classList.add('hidden');
-    // zatrzymaj odtwarzanie przez zresetowanie src
     const tmp = iframe.src;
     iframe.src = '';
-    // przywróć oryginalny adres, żeby był gotowy na kolejne otwarcie
     setTimeout(() => { iframe.src = iframe.dataset.src; }, 0);
   }
-
   function toggleSize() {
     ytMini.classList.toggle('expanded');
   }
 
-  openers.forEach(btn => btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    openMini();
+  // Proste handlery — bez żadnych „blokad” klików
+  openers.forEach(btn => btn && btn.addEventListener('click', (e) => {
+    e.preventDefault(); openMini();
   }));
-
-  btnClose?.addEventListener('click', closeMini);
-  btnSize?.addEventListener('click', toggleSize);
+  btnClose && btnClose.addEventListener('click', (e) => { e.preventDefault(); closeMini(); });
+  btnSize  && btnSize.addEventListener('click',  (e) => { e.preventDefault(); toggleSize(); });
 
   // ESC zamyka
   document.addEventListener('keydown', (e) => {
@@ -4809,10 +4841,12 @@ document.addEventListener('click', (e) => {
 
     // zgaś ewentualny „ghost click” po tapie
     btn.addEventListener('click', (e) => {
-      if (performance.now() < lockUntil){
-        e.preventDefault(); e.stopPropagation();
-      }
-    }, {capture:true, passive:false});
+  // blokuj tylko prawdziwy „ghost click” z przeglądarki
+  // (syntetyczny click z fire() ma e.isTrusted === false)
+  if (e.isTrusted && performance.now() < lockUntil){
+    e.preventDefault(); e.stopPropagation();
+  }
+}, {capture:true, passive:false});
   }
 
   function boot(){ document.querySelectorAll(Q).forEach(wire); }
