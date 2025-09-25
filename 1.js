@@ -3327,38 +3327,34 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* === SORT ARROW: obsługa tap/klik (mobile + desktop) ===
-   WYMAGANE: na przycisku strzałki dodaj w HTML atrybut data-sort-btn,
-   np. <button class="sort" data-sort-btn data-dir="asc" aria-label="Sortuj"></button>
-   (data-dir będzie przełączane asc/desc)
-*/
+/* === SORT ARROW: mobile (tap) + desktop (click) === */
 (function wireSortArrow() {
-  let justPointerUp = false;
+  let lastTap = 0; // anty-ghost click po touchend
 
-  function handleSortTap(e){
+  function handleSortTap(e) {
     const btn = e.target.closest('[data-sort-btn]');
     if (!btn) return;
 
-    // uniknij podwójnego wywołania (pointerup + click)
-    if (e.type === 'click' && justPointerUp) { justPointerUp = false; return; }
-    if (e.type !== 'click') justPointerUp = true;
+    // zbij „ghost click” po dotyku (iOS/Android)
+    const now = Date.now();
+    if (e.type === 'click' && now - lastTap < 400) return;
+    if (e.type !== 'click') lastTap = now;
 
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
 
     // przełącz kierunek
     const next = (btn.getAttribute('data-dir') === 'desc') ? 'asc' : 'desc';
     btn.setAttribute('data-dir', next);
-    btn.classList.toggle('is-desc', next === 'desc');  // możesz użyć w CSS do obrotu SVG
+    btn.classList.toggle('is-desc', next === 'desc');
 
-    // ➜ TU wywołaj swoje sortowanie listy, np.:
-    // sortList(next);
-    // Jeśli jeszcze nie masz, na razie zobacz w konsoli:
+    // wywołaj Twoje sortowanie
     if (typeof sortList === 'function') sortList(next);
-    else console.log('[sort arrow] dir =', next);
+    else console.log('[sort arrow] SORT:', next);
   }
 
-  // pointerup = szybki tap na mobile; click = fallback/desktop
+  // mobile + desktop
   document.addEventListener('pointerup', handleSortTap, { passive: false });
+  document.addEventListener('touchend', handleSortTap,  { passive: true }); // ⬅ DODANE
   document.addEventListener('click',     handleSortTap);
 })();
 

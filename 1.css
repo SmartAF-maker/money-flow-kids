@@ -4432,3 +4432,5 @@ width: 110px;
   label.maxprice-filter { pointer-events: none; }
   label.maxprice-filter > * { pointer-events: auto; } /* przywróć dzieciom */
 }
+.sort .ic { transition: transform .15s; pointer-events: none; }
+.sort.is-desc .ic { transform: rotate(180deg); }
