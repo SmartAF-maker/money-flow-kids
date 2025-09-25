@@ -3151,10 +3151,6 @@ function refreshAuthI18n() { applyAuthUI(); }
 // --- NEW: jednorazowe wywołanie, by data-role było ustawione od startu ---
 applyAuthUI();
 
-
-loginBtn?.addEventListener('click', openLogin);
-loginCancel?.addEventListener('click', closeLogin);
-
 roleRadios.forEach(r => {
   r.addEventListener('change', () => {
     const role = [...roleRadios].find(x => x.checked)?.value;
@@ -3168,75 +3164,6 @@ roleRadios.forEach(r => {
   });
 });
 
-loginSubmit?.addEventListener('click', () => {
-  const role = [...roleRadios].find(x => x.checked)?.value;
-  try {
-    if (role === 'parent') {
-      const pin = (loginPin?.value || '').trim();
-      verifyPin(app, pin);
-      appAuth = { role: 'parent' };
-      saveAuth(appAuth);
-      closeLogin();
-      applyAuthUI();
-      toast('Logged in as Parent');
-    } else {
-      const kidId = loginChild?.value || app.activeChildId;
-      if (!kidId) { alert('No child in the list. Add a child as Parent.'); return; }
-      app.activeChildId = kidId; save(app);
-      appAuth = { role: 'child', childId: kidId }; saveAuth(appAuth);
-      closeLogin(); renderAll(); applyAuthUI(); toast('Logged in as Child');
-    }
-  } catch (err) { alert(err?.message || 'Login error'); }
-});
-
-logoutBtn?.addEventListener('click', () => {
-  if (isParent()) {
-    // Rodzic -> przełącz na aktywne dziecko (jak było)
-    const kidId = app.activeChildId || (app.childrenOrder?.[0] || null);
-    if (kidId) {
-      app.activeChildId = kidId;
-      save(app);
-      appAuth = { role: 'child', childId: kidId };
-      saveAuth(appAuth);
-      if (document.querySelector('.tab.active')?.dataset.tab === 'parent') {
-        document.querySelector('button[data-tab="invest"]')?.click();
-      }
-      renderAll();
-      const name = app.children?.[kidId]?.name || '';
-      toast(TT().badgeChild ? TT().badgeChild(name) : `Child: ${name}`);
-    } else {
-      appAuth = { role: 'guest' };
-      saveAuth(appAuth);
-      applyAuthUI();
-      toast('Logged out');
-    }
-  } else if (isChild()) {
-    // Dziecko -> pokaż modala logowania z rolą Parent (nie przechodź do Guest)
-    try {
-      // ustaw radio „parent” i pola PIN
-      roleRadios.forEach(r => (r.checked = r.value === 'parent'));
-      childFields && childFields.classList.add('hidden');
-      parentFields && parentFields.classList.remove('hidden');
-      loginPin && (loginPin.value = '');
-      fillLoginChildSelector(); // dla porządku – choć Parent nie używa listy
-      loginModal && loginModal.classList.remove('hidden');
-      refreshAuthI18n();
-      // Uwaga: rola zostaje „child”, dopóki użytkownik nie poda poprawnego PINu w submit
-    } catch {
-      // awaryjnie, gdyby czegoś brakło w DOM – zostaw stare zachowanie
-      appAuth = { role: 'guest' };
-      saveAuth(appAuth);
-      applyAuthUI();
-      toast('Logged out');
-    }
-  } else {
-    // Guest -> bez zmian
-    appAuth = { role: 'guest' };
-    saveAuth(appAuth);
-    applyAuthUI();
-    toast('Logged out');
-  }
-});
 
 
 document.getElementById('addChildBtn')?.addEventListener('click', () => setTimeout(fillLoginChildSelector, 200));
