@@ -5350,5 +5350,32 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     if (/krok.*kup|step.*buy/.test(low)) { writeLog(LEARN.howto_stock.body[getLang()]); return; }
     writeHelp();
   }
- 
-})();
+
+
+  
+  /* ========== Shortcuts & init ========== */
+document.addEventListener('keydown', (e) => {
+  if (!(e.altKey && e.shiftKey)) return;
+  if (e.code === 'KeyA') { e.preventDefault(); ensurePanel(); }
+  if (e.code === 'KeyR') { e.preventDefault(); const t = $('#ai-log')?.textContent || ''; if (t) speak(t); }
+  if (e.code === 'KeyS') { e.preventDefault(); stopSpeak(); }
+}, true);
+
+document.addEventListener('pointerup', (e) => {
+  const t = e.target;
+  if (t && (t.id === 'ai-fab' || t.closest?.('#ai-fab'))) {
+    e.preventDefault();
+    ensurePanel();
+  }
+}, true);
+
+onReady(() => {
+  removeOldRobots();
+  ensureFab();
+  $('#langSelect')?.addEventListener('change', refreshPanelLang);
+});
+})(); // ← zamknięcie IIFE agenta
+
+/* --- SORT jest obsługiwany wyłącznie w index.html ---
+   (usunięto: globalny click-handler sortu, mobile ensureSort, tap→click shim)
+*/
