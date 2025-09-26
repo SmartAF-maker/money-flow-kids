@@ -3385,7 +3385,6 @@ observer.observe(document.body, { childList: true, subtree: true });
 })();
 
 
-
 /* === YouTube mini-player wiring === */
 (function () {
   const ytMini   = document.getElementById('ytMini');
@@ -4503,15 +4502,625 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     return lang==='pl'?`Start → teraz: 0. Bez zmian.`:`Start → now: 0. No big change.`;
   };
 
-  /* ========== Quiz (simple) ========== */
-  const QUIZ_BANK = [
-    {q:{pl:"Co to ticker?",en:"What is a ticker?"}, a:[{pl:"Krótki kod spółki (AAPL)", en:"Short company code (AAPL)", ok:true},{pl:"Imię CEO",en:"CEO name"},{pl:"Rodzaj wykresu",en:"Chart type"}]},
-    {q:{pl:"Co robi stop‑loss?",en:"What does a stop‑loss do?"}, a:[{pl:"Automatycznie ucina stratę",en:"Cuts a loss automatically", ok:true},{pl:"Dodaje dywidendę",en:"Adds a dividend"},{pl:"Zwiększa dźwignię",en:"Increases leverage"}]}
-  ];
-  let quizIdx=0, quizScore=load('__ai_q_score__',0), quizRun=false;
-  function startQuiz(){ quizRun=true; quizIdx=0; quizScore=0; save('__ai_q_score__',0); renderQuiz(); writeToast('quiz'); }
-  function answerQuiz(i){ if(!quizRun) return; const bank=QUIZ_BANK[quizIdx]; if(!bank) return; const ok=!!bank.a[i]?.ok; const L=getLang(); if(ok){ quizScore++; save('__ai_q_score__',quizScore); writeToast('good'); } else { writeToast('bad'); }
-    quizIdx++; if(quizIdx>=QUIZ_BANK.length){ const msg = (L==='pl'?`Koniec! Wynik: ${quizScore}/${QUIZ_BANK.length}.`:`Done! Score: ${quizScore}/${QUIZ_BANK.length}.`); writeLog(msg); quizRun=false; } renderQuiz(); }
+/* ========== QUIZ — advanced (PL/EN, live switch) ========== */
+/* Drop-in za stary blok “Quiz (simple)” + stare renderQuiz() */
+
+(() => {
+  // --- etykiety (PL/EN) ---
+  const QZ_LBL = {
+    homeTitle:{pl:'Quiz mode', en:'Quiz mode'},
+    homeSub:{pl:'Wybierz zestaw (10 zestawów × 20 pytań).', en:'Pick a set (10 sets × 20 questions).'},
+    start:{pl:'Start', en:'Start'},
+    random:{pl:'Losuj', en:'Random'},
+    qOf:{pl:'Pytanie', en:'Question'},
+    skip:{pl:'Pomiń', en:'Skip'},
+    stop:{pl:'Zakończ', en:'Finish'},
+    score:{pl:'Wynik', en:'Score'},
+    again:{pl:'Nowy quiz', en:'New quiz'},
+    choose:{pl:'Wybierz zestaw', en:'Choose set'},
+    good:{pl:'Dobrze! ', en:'Nice! '},
+    almost:{pl:'Prawie… ', en:'Almost… '},
+    fb100:{pl:'Perfekcyjnie! Jesteś mistrzem rynku 🏆', en:'Perfect! You’re a market pro 🏆'},
+    fb80:{pl:'Świetna robota! 💪', en:'Great job! 💪'},
+    fb50:{pl:'Dobrze! Ćwicz dalej 🙂', en:'Good! Keep practicing 🙂'},
+    fb0:{pl:'Spoko — spróbuj jeszcze raz!', en:'No worries — try again!'}
+  };
+  const qz_t = (k) => QZ_LBL[k][getLang()] || QZ_LBL[k].en;
+
+  // --- helpers & templaty ---
+  const QZ_A = s => `A. ${s}`;
+  const QZ_B = s => `B. ${s}`;
+  const QZ_C = s => `C. ${s}`;
+  const QZ_D = s => `D. ${s}`;
+  const qz_mc2 = (qPL,qEN, chPL, chEN, a, exPL='', exEN='') =>
+    ({ q:{pl:qPL,en:qEN}, choices:{pl:chPL,en:chEN}, a, explain:{pl:exPL,en:exEN} });
+  const qz_msgByPct = (p)=> p===100 ? qz_t('fb100') : p>=80 ? qz_t('fb80') : p>=50 ? qz_t('fb50') : qz_t('fb0');
+  const qz_fmt = (s, vars) => s.replace(/\{\{(\w+)\}\}/g, (_,k)=> String(vars[k] ?? ''));
+
+  // ---------- BANKI PYTAŃ (10x) ----------
+  // 1) App basics & jars
+  function qz_bankBasicsApp(lang){
+    const Q = [
+      qz_mc2('Który słoik jest do długoterminowego odkładania?','Which jar is for long-term saving?',
+        [QZ_A('Savings'),QZ_B('Earnings'),QZ_C('Gifts')],[QZ_A('Savings'),QZ_B('Earnings'),QZ_C('Gifts')],0,'Savings = oszczędności.','Savings = money you keep.'),
+      qz_mc2('Z którego miejsca idą pieniądze na zakupy akcji lub walut?','Where does the money for buying stocks/FX come from?',
+        [QZ_A('Investment cash'),QZ_B('Savings'),QZ_C('Gifts')],[QZ_A('Investment cash'),QZ_B('Savings'),QZ_C('Gifts')],0,'Kupujemy z „Investment cash”.','We buy using “Investment cash”.'),
+      qz_mc2('Przycisk „Move Earnings → Savings” służy do…','The “Move Earnings → Savings” button…',
+        [QZ_A('przeniesienia kieszonkowego do oszczędności'),QZ_B('kupna akcji'),QZ_C('zmiany języka')],
+        [QZ_A('moves pocket money to savings'),QZ_B('buys stocks'),QZ_C('changes language')],0),
+      qz_mc2('„Allowance 10 USD” dodaje środki do…','“Allowance 10 USD” adds money to…',
+        [QZ_A('Savings'),QZ_B('Gifts'),QZ_C('FX Portfolio')],[QZ_A('Savings'),QZ_B('Gifts'),QZ_C('FX Portfolio')],0),
+      qz_mc2('W „Parent panel” ustawiasz…','In “Parent panel” you set…',
+        [QZ_A('miesięczne kieszonkowe'),QZ_B('cenę akcji'),QZ_C('kurs walut')],
+        [QZ_A('monthly allowance'),QZ_B('stock price'),QZ_C('FX rate')],0),
+      qz_mc2('„Net Worth” to…','“Net Worth” is…',
+        [QZ_A('suma słoików + akcje + waluty'),QZ_B('tylko słoiki'),QZ_C('tylko akcje')],
+        [QZ_A('jars + stocks + FX total'),QZ_B('jars only'),QZ_C('stocks only')],0),
+      qz_mc2('Szybkie sumy na górze to…','The small numbers on top are…',
+        [QZ_A('mini słoiki'),QZ_B('tutorial'),QZ_C('watchlist')],
+        [QZ_A('sticky mini-jars'),QZ_B('tutorial'),QZ_C('watchlist')],0),
+      qz_mc2('Watchlist służy do…','Watchlist is for…',
+        [QZ_A('obserwowania instrumentów'),QZ_B('płatności'),QZ_C('zmiany PIN')],
+        [QZ_A('tracking instruments'),QZ_B('payments'),QZ_C('PIN change')],0),
+      qz_mc2('„Basket (Stocks)” to…','“Basket (Stocks)” is…',
+        [QZ_A('koszyk przed zakupem'),QZ_B('video'),QZ_C('chat')],
+        [QZ_A('a pre-purchase basket'),QZ_B('video'),QZ_C('chat')],0),
+      qz_mc2('„Stock Portfolio” pokazuje…','“Stock Portfolio” shows…',
+        [QZ_A('kupione akcje'),QZ_B('plan lekcji'),QZ_C('pulpit rodzica')],
+        [QZ_A('your bought stocks'),QZ_B('timetable'),QZ_C('parent panel')],0),
+      qz_mc2('„FX Portfolio” pokazuje…','“FX Portfolio” shows…',
+        [QZ_A('kupione waluty'),QZ_B('samouczek'),QZ_C('historię akcji')],
+        [QZ_A('your bought currencies'),QZ_B('tutorial'),QZ_C('stock history')],0),
+      qz_mc2('Filtr „Max” w listach robi…','The “Max” filter does…',
+        [QZ_A('pokazuje tylko tańsze/niższy kurs niż wpisany limit'),QZ_B('powiększa wykres'),QZ_C('zmienia język')],
+        [QZ_A('shows items cheaper/lower than limit'),QZ_B('zooms chart'),QZ_C('changes language')],0),
+      qz_mc2('Przycisk sortowania ceny (↕) robi…','The sort price button (↕)…',
+        [QZ_A('sortuje rosnąco/malejąco'),QZ_B('usuwa pozycje'),QZ_C('kupuje automatycznie')],
+        [QZ_A('sorts up/down'),QZ_B('removes items'),QZ_C('auto-buys')],0),
+      qz_mc2('„Add to basket” przy transakcji…','“Add to basket” in trade…',
+        [QZ_A('dodaje pozycję do koszyka'),QZ_B('sprzedaje'),QZ_C('zmienia region')],
+        [QZ_A('adds the item to basket'),QZ_B('sells'),QZ_C('changes region')],0),
+      qz_mc2('„Buy (investment cash)” oznacza…','“Buy (investment cash)” means…',
+        [QZ_A('zakup za środki inwestycyjne'),QZ_B('prezent'),QZ_C('nowy słoik')],
+        [QZ_A('buy using investment cash'),QZ_B('a gift'),QZ_C('a new jar')],0),
+      qz_mc2('„Sales History” pokazuje…','“Sales History” shows…',
+        [QZ_A('zrealizowane transakcje'),QZ_B('przyszłe ceny'),QZ_C('PIN')],
+        [QZ_A('completed trades'),QZ_B('future prices'),QZ_C('PIN')],0),
+      qz_mc2('„Available Cash” to…','“Available Cash” is…',
+        [QZ_A('Savings + Earnings + Gifts'),QZ_B('tylko Savings'),QZ_C('tylko Earnings')],
+        [QZ_A('Savings + Earnings + Gifts'),QZ_B('Savings only'),QZ_C('Earnings only')],0),
+      qz_mc2('„Investments” (słoik) oznacza…','“Investments” (jar) means…',
+        [QZ_A('gotówkę na inwestowanie'),QZ_B('prezenty'),QZ_C('wydatki szkolne')],
+        [QZ_A('cash for investing'),QZ_B('gifts'),QZ_C('school spend')],0),
+      qz_mc2('Aby kupić akcje trzeba najpierw…','To buy stocks you first need…',
+        [QZ_A('mieć środki w Investment cash'),QZ_B('YouTube'),QZ_C('tryb nocny')],
+        [QZ_A('funds in Investment cash'),QZ_B('YouTube'),QZ_C('dark mode')],0),
+      qz_mc2('Watchlist kupuje sama?','Does watchlist auto-buy?',
+        [QZ_A('Nie, to tylko obserwacja'),QZ_B('Tak'),QZ_C('Tylko w piątki')],
+        [QZ_A('No, it’s only tracking'),QZ_B('Yes'),QZ_C('Only on Fridays')],0)
+    ];
+    return { id:'app-basics', title:(lang==='pl'?'App basics & słoiki':'App basics & jars'), questions:Q };
+  }
+
+  // 2) Stocks • easy math
+  function qz_bankStocksMath(lang){
+    const pairs = [[5,3],[7,2],[10,3],[12,2],[15,4],[8,5],[9,4],[20,2],[25,1],[6,6],[4,7],[3,8]];
+    const pnl   = [[12,15],[9,7],[5,9],[20,18],[10,10],[7,11],[14,12],[3,5]];
+    const Q = [];
+    pairs.forEach(([p,q])=>{
+      const cost=p*q;
+      const qPL = qz_fmt('Akcja kosztuje ${{p}}. Kupujesz {{q}} szt. Ile płacisz?',{p,q});
+      const qEN = qz_fmt('The share costs ${{p}}. You buy {{q}} pcs. How much do you pay?',{p,q});
+      Q.push(qz_mc2(qPL,qEN,[QZ_A(`$${cost}`),QZ_B(`$${p+q}`),QZ_C(`$${cost-1}`)],[QZ_A(`$${cost}`),QZ_B(`$${p+q}`),QZ_C(`$${cost-1}`)],0,'Koszt = cena × ilość.','Cost = price × quantity.'));
+    });
+    pnl.forEach(([buy,now])=>{
+      const diff=now-buy, sign=diff>0?'+':'';
+      const qPL = qz_fmt('Kupiłeś po ${{b}}. Teraz ${{n}}. Jaki zysk/strata na 1 akcję?',{b:buy,n:now});
+      const qEN = qz_fmt('Bought at ${{b}}. Now ${{n}}. P/L per 1 share?',{b:buy,n:now});
+      Q.push(qz_mc2(qPL,qEN,[QZ_A(`${sign}$${Math.abs(diff)}`),QZ_B(`$${buy+now}`),QZ_C(`$${Math.abs(diff)+1}`)],[QZ_A(`${sign}$${Math.abs(diff)}`),QZ_B(`$${buy+now}`),QZ_C(`$${Math.abs(diff)+1}`)],0,'P/L = cena teraz − cena zakupu.','P/L = now − buy.'));
+    });
+    return { id:'stocks-math', title:(lang==='pl'?'Akcje • prosta matematyka':'Stocks • easy math'), questions:Q.slice(0,20) };
+  }
+
+  // 3) Stocks • concepts
+  function qz_bankStockConcepts(lang){
+    const Q = [
+      qz_mc2('„Ticker” to…','“Ticker” is…',
+        [QZ_A('krótki symbol spółki, np. AAPL'),QZ_B('rodzaj wykresu'),QZ_C('konto rodzica')],
+        [QZ_A('short company symbol, e.g., AAPL'),QZ_B('chart type'),QZ_C('parent account')],0),
+      qz_mc2('Jeśli linia wykresu rośnie w prawo, to zwykle…','If the chart line goes up to the right, usually…',
+        [QZ_A('cena rośnie'),QZ_B('cena spada'),QZ_C('nie wiemy')],
+        [QZ_A('price is rising'),QZ_B('price is falling'),QZ_C('we don’t know')],0),
+      qz_mc2('Kupując 1 akcję, stajesz się…','When you buy 1 share, you become…',
+        [QZ_A('współwłaścicielem maleńkiej części firmy'),QZ_B('pracownikiem'),QZ_C('klientem banku')],
+        [QZ_A('a tiny co-owner of the company'),QZ_B('an employee'),QZ_C('a bank client')],0),
+      qz_mc2('„Portfolio (Stocks)” to…','“Portfolio (Stocks)” is…',
+        [QZ_A('Twoje kupione akcje'),QZ_B('lista życzeń'),QZ_C('film instruktażowy')],
+        [QZ_A('your bought stocks'),QZ_B('wishlist'),QZ_C('tutorial video')],0),
+      qz_mc2('Czy cena akcji może się zmieniać codziennie?','Can a stock price change every day?',
+        [QZ_A('Tak'),QZ_B('Nie'),QZ_C('Tylko w piątki')],
+        [QZ_A('Yes'),QZ_B('No'),QZ_C('Only on Fridays')],0),
+      qz_mc2('Dywersyfikacja to…','Diversification is…',
+        [QZ_A('posiadanie różnych spółek'),QZ_B('kupno tylko 1 spółki'),QZ_C('zmiana waluty')],
+        [QZ_A('owning different companies'),QZ_B('only 1 company'),QZ_C('changing currency')],0),
+      qz_mc2('„Region” na liście rynku akcji wybiera…','“Region” on stocks list selects…',
+        [QZ_A('USA/Europa/Chiny itd.'),QZ_B('kolor tła'),QZ_C('PIN')],
+        [QZ_A('USA/Europe/China etc.'),QZ_B('background color'),QZ_C('PIN')],0),
+      qz_mc2('„Add to basket” przed „Buy” pomaga…','“Add to basket” before “Buy” helps…',
+        [QZ_A('zaplanować zakup kilku pozycji'),QZ_B('zmienić język'),QZ_C('otworzyć tutorial')],
+        [QZ_A('plan several items before buying'),QZ_B('change language'),QZ_C('open tutorial')],0),
+      qz_mc2('Wartość pozycji =','Position value =',
+        [QZ_A('cena × liczba akcji'),QZ_B('cena + 1'),QZ_C('zawsze 10 USD')],
+        [QZ_A('price × number of shares'),QZ_B('price + 1'),QZ_C('always 10 USD')],0),
+      qz_mc2('Gdy cena spada poniżej ceny zakupu, masz…','If price drops under buy price, you have…',
+        [QZ_A('tymczasową stratę'),QZ_B('stałą wygraną'),QZ_C('gratisowe akcje')],
+        [QZ_A('a temporary loss'),QZ_B('guaranteed win'),QZ_C('free shares')],0),
+      qz_mc2('„Sales History (Stocks)” to…','“Sales History (Stocks)” is…',
+        [QZ_A('sprzedane transakcje'),QZ_B('lista filmów'),QZ_C('kursy walut')],
+        [QZ_A('sold trades'),QZ_B('video list'),QZ_C('FX rates')],0),
+      qz_mc2('Czy możesz mieć 0 akcji danej spółki?','Can you have 0 shares of a company?',
+        [QZ_A('Tak, po sprzedaży'),QZ_B('Nie'),QZ_C('Tylko w weekend')],
+        [QZ_A('Yes, after selling'),QZ_B('No'),QZ_C('Only on weekends')],0),
+      qz_mc2('„Cancel” w oknie transakcji…','“Cancel” in trade window…',
+        [QZ_A('zamyka okno bez zakupu'),QZ_B('sprzedaje akcje'),QZ_C('czyści słoiki')],
+        [QZ_A('closes without buying'),QZ_B('sells stocks'),QZ_C('clears jars')],0),
+      qz_mc2('„Quantity” w transakcji oznacza…','“Quantity” in trade means…',
+        [QZ_A('ile sztuk kupujesz'),QZ_B('cenę jednej akcji'),QZ_C('nr odcinka')],
+        [QZ_A('how many shares you buy'),QZ_B('price per share'),QZ_C('episode number')],0),
+      qz_mc2('„Avg. cost” w portfelu to…','“Avg. cost” in portfolio is…',
+        [QZ_A('średnia cena kupna akcji'),QZ_B('najwyższa cena dnia'),QZ_C('opłata bankowa')],
+        [QZ_A('average buy price'),QZ_B('day high'),QZ_C('bank fee')],0),
+      qz_mc2('Jedna spółka może mieć różne ceny w różne dni?','Can one company have different prices on different days?',
+        [QZ_A('Tak'),QZ_B('Nie'),QZ_C('Tylko w środy')],
+        [QZ_A('Yes'),QZ_B('No'),QZ_C('Only on Wednesdays')],0),
+      qz_mc2('„Add more” na rynku akcji…','“Add more” on stock market…',
+        [QZ_A('doładowuje listę popularnych spółek'),QZ_B('zmienia waluty'),QZ_C('otwiera Parent panel')],
+        [QZ_A('adds popular stocks'),QZ_B('changes currencies'),QZ_C('opens Parent panel')],0),
+      qz_mc2('„Max price” filtr…','“Max price” filter…',
+        [QZ_A('pokazuje spółki tańsze niż limit'),QZ_B('ustawia nową cenę spółki'),QZ_C('wycisza dźwięk')],
+        [QZ_A('shows stocks cheaper than limit'),QZ_B('sets a new company price'),QZ_C('mutes sounds')],0),
+      qz_mc2('Warto mieć plan i budżet, bo…','It’s good to have a plan and budget because…',
+        [QZ_A('rynek bywa zmienny'),QZ_B('pieniądze się nie kończą'),QZ_C('smok tak mówi')],
+        [QZ_A('markets can be bumpy'),QZ_B('money never ends'),QZ_C('a dragon said so')],0),
+      qz_mc2('Długi horyzont (lata) zwykle…','A long horizon (years) usually…',
+        [QZ_A('zmniejsza wpływ krótkich wahań'),QZ_B('powiększa każdy spadek'),QZ_C('blokuje kupowanie')],
+        [QZ_A('reduces short-term noise'),QZ_B('amplifies every drop'),QZ_C('blocks buying')],0)
+    ];
+    return { id:'stocks-concepts', title:(lang==='pl'?'Akcje • pojęcia':'Stocks • concepts'), questions:Q };
+  }
+
+  // 4) Charts & ranges
+  function qz_bankCharts(lang){
+    const Q = [
+      qz_mc2('Zakres „1D” oznacza…','Range “1D” means…',[QZ_A('jeden dzień'),QZ_B('jeden miesiąc'),QZ_C('cały rok')],[QZ_A('one day'),QZ_B('one month'),QZ_C('full year')],0),
+      qz_mc2('„5D” to…','“5D” is…',[QZ_A('5 dni'),QZ_B('5 tygodni'),QZ_C('5 lat')],[QZ_A('5 days'),QZ_B('5 weeks'),QZ_C('5 years')],0),
+      qz_mc2('„1M” to…','“1M” is…',[QZ_A('1 miesiąc'),QZ_B('1 minuta'),QZ_C('1 milion')],[QZ_A('1 month'),QZ_B('1 minute'),QZ_C('1 million')],0),
+      qz_mc2('„6M” pokazuje…','“6M” shows…',[QZ_A('ostatnie 6 miesięcy'),QZ_B('6 dni'),QZ_C('6 lat')],[QZ_A('last 6 months'),QZ_B('6 days'),QZ_C('6 years')],0),
+      qz_mc2('„YTD” znaczy…','“YTD” means…',[QZ_A('od początku roku'),QZ_B('od wczoraj'),QZ_C('od 6 miesięcy')],[QZ_A('year-to-date (since Jan 1)'),QZ_B('since yesterday'),QZ_C('since 6 months')],0),
+      qz_mc2('„1Y” to…','“1Y” is…',[QZ_A('ostatni rok'),QZ_B('1 dzień'),QZ_C('1 miesiąc')],[QZ_A('last year'),QZ_B('1 day'),QZ_C('1 month')],0),
+      qz_mc2('Wykres idzie w dół →','Chart goes down →',[QZ_A('cena spadała'),QZ_B('cena rosła'),QZ_C('nic nie wiemy')],[QZ_A('price was falling'),QZ_B('price was rising'),QZ_C('no info')],0),
+      qz_mc2('Szybkie zmiany góra-dół to…','Fast up-down moves are…',[QZ_A('zmienność'),QZ_B('dywidenda'),QZ_C('podatek')],[QZ_A('volatility'),QZ_B('dividend'),QZ_C('tax')],0),
+      qz_mc2('Płaska linia to zwykle…','A flatter line usually means…',[QZ_A('mniejsze wahania'),QZ_B('większe wahania'),QZ_C('brak danych')],[QZ_A('smaller swings'),QZ_B('bigger swings'),QZ_C('no data')],0),
+      qz_mc2('Czy można przełączać zakresy?','Can you switch ranges?',[QZ_A('Tak, 1D/5D/…'),QZ_B('Nie'),QZ_C('Tylko w nocy')],[QZ_A('Yes, 1D/5D/…'),QZ_B('No'),QZ_C('Only at night')],0),
+      qz_mc2('Wzrost z 10 do 12 to…','Rise from 10 to 12 is…',[QZ_A('+2'),QZ_B('−2'),QZ_C('0')],[QZ_A('+2'),QZ_B('−2'),QZ_C('0')],0),
+      qz_mc2('Spadek z 8 do 6 to…','Drop from 8 to 6 is…',[QZ_A('−2'),QZ_B('+2'),QZ_C('0')],[QZ_A('−2'),QZ_B('+2'),QZ_C('0')],0),
+      qz_mc2('Wykres =','A chart is…',[QZ_A('historia ceny w czasie'),QZ_B('lista zakupów'),QZ_C('PIN rodzica')],[QZ_A('price over time'),QZ_B('shopping list'),QZ_C('parent PIN')],0),
+      qz_mc2('Przełączanie zakresu pomaga…','Changing the range helps…',[QZ_A('zobaczyć szerzej/ciaśniej'),QZ_B('zmienić walutę'),QZ_C('zmienić profil')],[QZ_A('zoom out/in'),QZ_B('change currency'),QZ_C('change profile')],0),
+      qz_mc2('Krótszy zakres (1D) pokazuje…','Short range (1D) shows…',[QZ_A('więcej szczegółów dnia'),QZ_B('wynik roczny'),QZ_C('listę życzeń')],[QZ_A('more day details'),QZ_B('year result'),QZ_C('wishlist')],0),
+      qz_mc2('Dłuższy zakres (1Y) pokazuje…','Long range (1Y) shows…',[QZ_A('trend w dłuższym czasie'),QZ_B('tylko dziś'),QZ_C('historia zakupów')],[QZ_A('long-term trend'),QZ_B('today only'),QZ_C('shop history')],0),
+      qz_mc2('Jeśli w „1Y” cena jest wyżej niż start…','If in “1Y” price is above start…',
+        [QZ_A('był wzrost w roku'),QZ_B('na pewno strata'),QZ_C('zawsze 0')],
+        [QZ_A('it grew this year'),QZ_B('sure loss'),QZ_C('always 0')],0),
+      qz_mc2('Nagły skok w górę to…','A sudden jump up is…',[QZ_A('duży wzrost szybko'),QZ_B('cisza'),QZ_C('zmiana języka')],[QZ_A('a big quick rise'),QZ_B('silence'),QZ_C('language change')],0),
+      qz_mc2('Zmiana zakresu nic nie kupuje — to…','Changing range doesn’t buy — it’s…',
+        [QZ_A('tylko podgląd'),QZ_B('płatność'),QZ_C('koszyk')],
+        [QZ_A('just a view'),QZ_B('payment'),QZ_C('basket')],0),
+      qz_mc2('Analiza wykresu + plan =','Chart + plan =',
+        [QZ_A('mądrzejsze decyzje'),QZ_B('magia'),QZ_C('gratisy')],
+        [QZ_A('smarter decisions'),QZ_B('magic'),QZ_C('freebies')],0)
+    ];
+    return { id:'charts', title:(lang==='pl'?'Wykresy i zakresy':'Charts & ranges'), questions:Q };
+  }
+
+  // 5) FX • basics
+  function qz_bankFXBasics(lang){
+    const bases = [
+      ['EUR/PLN','EUR'],['USD/PLN','USD'],['GBP/PLN','GBP'],
+      ['USD/EUR','USD'],['CHF/PLN','CHF'],['EUR/USD','EUR'],
+      ['JPY/PLN','JPY'],['AUD/USD','AUD'],['CAD/PLN','CAD'],['EUR/GBP','EUR']
+    ];
+    const strength = [
+      {pair:'EUR/PLN',from:4.00,to:4.20,pl:'PLN słabszy',en:'PLN weaker'},
+      {pair:'EUR/PLN',from:4.20,to:4.00,pl:'PLN silniejszy',en:'PLN stronger'},
+      {pair:'USD/PLN',from:3.90,to:4.10,pl:'PLN słabszy',en:'PLN weaker'},
+      {pair:'USD/PLN',from:4.10,to:3.90,pl:'PLN silniejszy',en:'PLN stronger'},
+      {pair:'EUR/USD',from:1.05,to:1.10,pl:'EUR silniejszy',en:'EUR stronger'},
+      {pair:'EUR/USD',from:1.10,to:1.05,pl:'EUR słabszy',en:'EUR weaker'},
+      {pair:'GBP/PLN',from:5.00,to:4.80,pl:'PLN silniejszy',en:'PLN stronger'},
+      {pair:'GBP/PLN',from:4.80,to:5.00,pl:'PLN słabszy',en:'PLN weaker'},
+      {pair:'CHF/PLN',from:4.40,to:4.20,pl:'PLN silniejszy',en:'PLN stronger'},
+      {pair:'CHF/PLN',from:4.20,to:4.40,pl:'PLN słabszy',en:'PLN weaker'}
+    ];
+    const Q=[];
+    bases.forEach(([pair,base])=>{
+      Q.push(qz_mc2(
+        `W parze ${pair} walutą bazową jest…`,
+        `In pair ${pair} the base currency is…`,
+        [QZ_A(base),QZ_B(pair.split('/')[1]),QZ_C('obie')],[QZ_A(base),QZ_B(pair.split('/')[1]),QZ_C('both')],0,
+        'Pierwsza w parze = waluta bazowa.','First in pair = base currency.'
+      ));
+    });
+    strength.forEach(s=>{
+      Q.push(qz_mc2(
+        `${s.pair} zmienia się z ${s.from} → ${s.to}. Co to znaczy?`,
+        `${s.pair} moves from ${s.from} → ${s.to}. What does it mean?`,
+        [QZ_A(s.pl),QZ_B('nic to nie znaczy'),QZ_C('zmiana języka')],
+        [QZ_A(s.en),QZ_B('means nothing'),QZ_C('language change')],0
+      ));
+    });
+    return { id:'fx-basics', title:(lang==='pl'?'FX • podstawy':'FX • basics'), questions:Q };
+  }
+
+  // 6) FX • easy math
+  function qz_bankFXMath(lang){
+    const calc = [
+      {pair:'EUR/PLN', rate:4.00, askPL:'Ile PLN za 5 EUR?', askEN:'How many PLN for 5 EUR?', ans:20, alt:[18,22]},
+      {pair:'EUR/PLN', rate:4.20, askPL:'Ile PLN za 3 EUR?', askEN:'How many PLN for 3 EUR?', ans:12.6, alt:[11.4,13.2]},
+      {pair:'USD/PLN', rate:4.00, askPL:'Ile PLN za 2 USD?', askEN:'How many PLN for 2 USD?', ans:8, alt:[6,10]},
+      {pair:'USD/PLN', rate:3.90, askPL:'Ile PLN za 10 USD?',askEN:'How many PLN for 10 USD?', ans:39, alt:[40,35]},
+      {pair:'GBP/PLN', rate:5.00, askPL:'Ile PLN za 1 GBP?', askEN:'How many PLN for 1 GBP?', ans:5, alt:[4,6]},
+      {pair:'EUR/USD', rate:1.10, askPL:'Ile USD za 4 EUR?', askEN:'How many USD for 4 EUR?', ans:4.4, alt:[4.0,4.8]},
+      {pair:'EUR/USD', rate:1.05, askPL:'Ile USD za 10 EUR?',askEN:'How many USD for 10 EUR?', ans:10.5, alt:[9.5,11]},
+      {pair:'CHF/PLN', rate:4.20, askPL:'Ile PLN za 2 CHF?', askEN:'How many PLN for 2 CHF?', ans:8.4, alt:[8.2,8.8]},
+      {pair:'JPY/PLN', rate:0.028,askPL:'Ile PLN za 100 JPY?',askEN:'How many PLN for 100 JPY?',ans:2.8, alt:[2.0,3.2]},
+      {pair:'AUD/USD', rate:0.70, askPL:'Ile USD za 5 AUD?', askEN:'How many USD for 5 AUD?', ans:3.5, alt:[3.0,4.0]},
+      {pair:'EUR/PLN', rate:4.00, askPL:'Ile EUR za 20 PLN?', askEN:'How many EUR for 20 PLN?', ans:5, alt:[4,6]},
+      {pair:'USD/PLN', rate:4.00, askPL:'Ile USD za 12 PLN?', askEN:'How many USD for 12 PLN?', ans:3, alt:[2,4]},
+      {pair:'EUR/USD', rate:1.10, askPL:'Ile EUR za 5.5 USD?',askEN:'How many EUR for 5.5 USD?',ans:5, alt:[4,6]},
+      {pair:'GBP/PLN', rate:5.00, askPL:'Ile GBP za 25 PLN?',askEN:'How many GBP for 25 PLN?', ans:5, alt:[4,6]},
+      {pair:'CHF/PLN', rate:4.00, askPL:'Ile CHF za 8 PLN?', askEN:'How many CHF for 8 PLN?', ans:2, alt:[1,3]},
+      {pair:'CAD/PLN', rate:3.00, askPL:'Ile CAD za 9 PLN?', askEN:'How many CAD for 9 PLN?', ans:3, alt:[2,4]},
+      {pair:'EUR/PLN', rate:4.50, askPL:'Ile PLN za 2 EUR?', askEN:'How many PLN for 2 EUR?', ans:9, alt:[8,10]},
+      {pair:'USD/PLN', rate:4.20, askPL:'Ile PLN za 5 USD?', askEN:'How many PLN for 5 USD?', ans:21, alt:[20,22]},
+      {pair:'EUR/USD', rate:1.20, askPL:'Ile USD za 1 EUR?', askEN:'How many USD for 1 EUR?', ans:1.2, alt:[1.1,1.3]},
+      {pair:'EUR/GBP', rate:0.85, askPL:'Ile GBP za 2 EUR?', askEN:'How many GBP for 2 EUR?', ans:1.7, alt:[1.6,1.8]}
+    ];
+    const Q = calc.map(c => qz_mc2(
+      `${c.pair} = ${c.rate}. ${lang==='pl'?c.askPL:c.askEN}`,
+      `${c.pair} = ${c.rate}. ${c.askEN}`,
+      [QZ_A(String(c.ans)),QZ_B(String(c.alt[0])),QZ_C(String(c.alt[1]))],
+      [QZ_A(String(c.ans)),QZ_B(String(c.alt[0])),QZ_C(String(c.alt[1]))],
+      0,'Prosty mnożnik/dzielnik według kursu.','Multiply/divide by the rate.'
+    ));
+    return { id:'fx-math', title:(lang==='pl'?'FX • prosta matematyka':'FX • easy math'), questions:Q };
+  }
+
+  // 7) Risk & diversification
+  function qz_bankRisk(lang){
+    const Q = [
+      qz_mc2('Rynek bywa…','Markets can be…',[QZ_A('zmienny'),QZ_B('zawsze stały'),QZ_C('nudny')],[QZ_A('volatile'),QZ_B('always fixed'),QZ_C('boring')],0),
+      qz_mc2('Dywersyfikacja zmniejsza ryzyko, bo…','Diversification lowers risk because…',
+        [QZ_A('nie wszystko zależy od 1 spółki'),QZ_B('zawsze podwaja zysk'),QZ_C('blokuje zakupy')],
+        [QZ_A('not all depends on 1 stock'),QZ_B('always doubles profit'),QZ_C('blocks buys')],0),
+      qz_mc2('Nie inwestujemy pieniędzy, które są…','Don’t invest money that is…',
+        [QZ_A('potrzebne na ważne wydatki'),QZ_B('na prezent'),QZ_C('na zabawę')],
+        [QZ_A('needed for important costs'),QZ_B('for gifts'),QZ_C('for toys')],0),
+      qz_mc2('Plan i budżet pomagają…','A plan and budget help…',
+        [QZ_A('kontrolować ryzyko'),QZ_B('magicznie wygrywać'),QZ_C('wyłączyć internet')],
+        [QZ_A('control risk'),QZ_B('win by magic'),QZ_C('turn off internet')],0),
+      qz_mc2('Krótkie skoki cen to…','Short price jumps are…',
+        [QZ_A('normalne wahania'),QZ_B('błąd aplikacji'),QZ_C('zawsze panika')],
+        [QZ_A('normal swings'),QZ_B('an app error'),QZ_C('always panic')],0),
+      qz_mc2('Emocje mogą…','Emotions can…',
+        [QZ_A('psuć decyzje'),QZ_B('poprawiać kurs'),QZ_C('usuwać opłaty')],
+        [QZ_A('hurt decisions'),QZ_B('fix prices'),QZ_C('remove fees')],0),
+      qz_mc2('Długi horyzont…','A long horizon…',
+        [QZ_A('pomaga przeczekać wahania'),QZ_B('blokuje rezultaty'),QZ_C('zmienia walutę')],
+        [QZ_A('helps ride out swings'),QZ_B('blocks results'),QZ_C('changes currency')],0),
+      qz_mc2('Małe kwoty na start to…','Small amounts to start are…',
+        [QZ_A('bezpieczniejsze'),QZ_B('tajny cheat'),QZ_C('nowy PIN')],
+        [QZ_A('safer'),QZ_B('a secret cheat'),QZ_C('a new PIN')],0),
+      qz_mc2('Czy zysk jest gwarantowany?','Is profit guaranteed?',
+        [QZ_A('Nie'),QZ_B('Tak'),QZ_C('Tak, w środy')],
+        [QZ_A('No'),QZ_B('Yes'),QZ_C('Yes, on Wednesdays')],0),
+      qz_mc2('Najważniejsze jest…','Most important is…',
+        [QZ_A('rozumieć co kupujesz'),QZ_B('kopiować kolegę'),QZ_C('klikać losowo')],
+        [QZ_A('understand what you buy'),QZ_B('copy a friend'),QZ_C('click random')],0),
+      qz_mc2('Zbyt piękne obietnice…','If it sounds too good…',
+        [QZ_A('bądź ostrożny'),QZ_B('kup podwójnie'),QZ_C('sprzedaj słoiki')],
+        [QZ_A('be careful'),QZ_B('buy double'),QZ_C('sell jars')],0),
+      qz_mc2('All-in w jedną rzecz to…','Going all-in on one thing is…',
+        [QZ_A('duże ryzyko'),QZ_B('bez ryzyka'),QZ_C('wymóg aplikacji')],
+        [QZ_A('high risk'),QZ_B('no risk'),QZ_C('an app rule')],0),
+      qz_mc2('Ucz się na małych kwotach, bo…','Learn with small amounts because…',
+        [QZ_A('łatwiej naprawić błąd'),QZ_B('będzie nudno'),QZ_C('wykres nie działa')],
+        [QZ_A('mistakes cost less'),QZ_B('it’s boring'),QZ_C('charts break')],0),
+      qz_mc2('Ryzyko i nagroda są…','Risk and reward are…',
+        [QZ_A('często powiązane'),QZ_B('niezależne'),QZ_C('losowe')],
+        [QZ_A('often linked'),QZ_B('independent'),QZ_C('random')],0),
+      qz_mc2('Paper trading pozwala…','Paper trading lets you…',
+        [QZ_A('trenować bez prawdziwych pieniędzy'),QZ_B('zarobić odsetki'),QZ_C('zmienić PIN')],
+        [QZ_A('practice without real money'),QZ_B('earn interest'),QZ_C('change PIN')],0),
+      qz_mc2('Cierpliwość w inwestowaniu jest…','Patience in investing is…',
+        [QZ_A('bardzo ważna'),QZ_B('niepotrzebna'),QZ_C('zabroniona')],
+        [QZ_A('very important'),QZ_B('useless'),QZ_C('forbidden')],0),
+      qz_mc2('Jeśli nie rozumiesz instrumentu…','If you don’t understand an asset…',
+        [QZ_A('najpierw poznaj, nie kupuj'),QZ_B('kup dla testu'),QZ_C('proś o spoiler')],
+        [QZ_A('learn first, don’t buy yet'),QZ_B('buy to test'),QZ_C('ask for spoiler')],0),
+      qz_mc2('Regularne przeglądy portfela…','Regular portfolio reviews…',
+        [QZ_A('utrzymują porządek'),QZ_B('psują wyniki'),QZ_C('kasują historię')],
+        [QZ_A('keep things tidy'),QZ_B('ruin results'),QZ_C('delete history')],0),
+      qz_mc2('Cele (np. „rower w wakacje”) pomagają…','Goals (e.g., “bike in summer”) help…',
+        [QZ_A('trzymać plan'),QZ_B('przewidzieć przyszłość'),QZ_C('ominąć budżet')],
+        [QZ_A('stick to the plan'),QZ_B('predict the future'),QZ_C('skip budget')],0),
+      qz_mc2('Nie ma wstydu w…','There’s no shame in…',
+        [QZ_A('pytaniu i nauce'),QZ_B('udawaniu eksperta'),QZ_C('tajnym hazardzie')],
+        [QZ_A('asking and learning'),QZ_B('pretending expert'),QZ_C('secret gambling')],0)
+    ];
+    return { id:'risk', title:(lang==='pl'?'Ryzyko i dywersyfikacja':'Risk & diversification'), questions:Q };
+  }
+
+  // 8) Watchlist & basket
+  function qz_bankWatchlistBasket(lang){
+    const Q = [
+      qz_mc2('Watchlist to…','Watchlist is…',[QZ_A('lista obserwowanych'),QZ_B('historia sprzedaży'),QZ_C('PIN')],[QZ_A('your tracking list'),QZ_B('sales history'),QZ_C('PIN')],0),
+      qz_mc2('Do watchlisty dodajemy…','We add to watchlist…',[QZ_A('spółki i pary FX'),QZ_B('zdjęcia'),QZ_C('kontakty')],[QZ_A('stocks and FX pairs'),QZ_B('photos'),QZ_C('contacts')],0),
+      qz_mc2('Filtr „Stocks / Currencies / All” zmienia…','The “Stocks / Currencies / All” filter changes…',
+        [QZ_A('co widzisz na liście'),QZ_B('język'),QZ_C('wysokość słoików')],
+        [QZ_A('what you see on list'),QZ_B('language'),QZ_C('jar height')],0),
+      qz_mc2('Karta w watchliście pokazuje…','A watchlist card shows…',[QZ_A('cenę/kurs i szybkie info'),QZ_B('PIN'),QZ_C('regulamin')],[QZ_A('price/rate and quick info'),QZ_B('PIN'),QZ_C('rules')],0),
+      qz_mc2('Klik karty…','Clicking card…',[QZ_A('otwiera szczegóły + duży wykres'),QZ_B('kupuje'),QZ_C('zamyka appkę')],[QZ_A('opens details + big chart'),QZ_B('buys'),QZ_C('closes app')],0),
+      qz_mc2('Koszyk (Basket) służy do…','Basket is for…',[QZ_A('zbierania pozycji przed zakupem'),QZ_B('zmiany motywu'),QZ_C('czatu')],[QZ_A('collecting items before buy'),QZ_B('theme change'),QZ_C('chat')],0),
+      qz_mc2('„Add to basket”…','“Add to basket”…',[QZ_A('dodaje transakcję do koszyka'),QZ_B('usuwa watchlistę'),QZ_C('otwiera tutorial')],[QZ_A('adds the trade to basket'),QZ_B('deletes watchlist'),QZ_C('opens tutorial')],0),
+      qz_mc2('„Quantity” w koszyku to…','“Quantity” in basket is…',[QZ_A('ile sztuk/kwoty kupujesz'),QZ_B('jaki region'),QZ_C('który język')],[QZ_A('how many units you buy'),QZ_B('which region'),QZ_C('which language')],0),
+      qz_mc2('„Buy (investment cash)”…','“Buy (investment cash)”…',[QZ_A('kupuje za środki inwestycyjne'),QZ_B('sprzedaje wszystko'),QZ_C('zmienia PIN')],[QZ_A('buys using investment cash'),QZ_B('sells all'),QZ_C('changes PIN')],0),
+      qz_mc2('Koszyk FX i koszyk Akcji są…','FX and Stocks baskets are…',[QZ_A('oddzielne'),QZ_B('tym samym koszykiem'),QZ_C('ukryte')],[QZ_A('separate'),QZ_B('the same'),QZ_C('hidden')],0),
+      qz_mc2('Po zakupie pozycja…','After buying the item…',[QZ_A('znika z koszyka i trafia do portfela'),QZ_B('pojawia się w tutorialu'),QZ_C('znika z aplikacji')],[QZ_A('leaves basket and goes to portfolio'),QZ_B('goes to tutorial'),QZ_C('vanishes')],0),
+      qz_mc2('W koszyku widać…','In basket you see…',[QZ_A('sumę ilości i kwotę'),QZ_B('PIN'),QZ_C('tylko obrazek')],[QZ_A('total qty and amount'),QZ_B('PIN'),QZ_C('picture only')],0),
+      qz_mc2('Watchlist nie kupuje — to…','Watchlist doesn’t buy — it’s…',[QZ_A('tylko obserwacja'),QZ_B('magiczny sklep'),QZ_C('chat')],[QZ_A('just tracking'),QZ_B('magic shop'),QZ_C('chat')],0),
+      qz_mc2('Możesz mieć w koszyku…','You can have in basket…',[QZ_A('kilka różnych pozycji'),QZ_B('tylko jedną'),QZ_C('zero i nic więcej')],[QZ_A('several different items'),QZ_B('only one'),QZ_C('zero forever')],0),
+      qz_mc2('Usunięcie z koszyka…','Removing from basket…',[QZ_A('to nie sprzedaż z portfela'),QZ_B('kasuje portfel'),QZ_C('zmienia język')],[QZ_A('is not selling from portfolio'),QZ_B('deletes portfolio'),QZ_C('changes language')],0),
+      qz_mc2('„X” w oknach zwykle…','The “X” in dialogs usually…',[QZ_A('zamyka okno'),QZ_B('kupuje'),QZ_C('dodaje do watchlisty')],[QZ_A('closes the window'),QZ_B('buys'),QZ_C('adds to watchlist')],0),
+      qz_mc2('Gdy nie masz Investment cash…','If you have no Investment cash…',[QZ_A('nie kupisz — doładuj słoiki'),QZ_B('kupisz i tak'),QZ_C('appka płaci za Ciebie')],[QZ_A('you can’t buy — top up'),QZ_B('you still buy'),QZ_C('the app pays')],0),
+      qz_mc2('Sort w liście instrumentów pomaga…','Sorting the list helps…',[QZ_A('ułożyć wg ceny/kursu'),QZ_B('zmienić PIN'),QZ_C('otworzyć YouTube')],[QZ_A('order by price/rate'),QZ_B('change PIN'),QZ_C('open YouTube')],0),
+      qz_mc2('Wyszukiwarka (search) pozwala…','Search lets you…',[QZ_A('szybko znaleźć instrument'),QZ_B('zmienić region'),QZ_C('zmienić kolor')],[QZ_A('find an instrument fast'),QZ_B('change region'),QZ_C('change color')],0),
+      qz_mc2('To Ty decydujesz — appka…','You decide — the app…',[QZ_A('nic nie kupuje sama'),QZ_B('kupuje o północy'),QZ_C('pyta sąsiada')],[QZ_A('never buys by itself'),QZ_B('buys at midnight'),QZ_C('asks a neighbor')],0)
+    ];
+    return { id:'wl-basket', title:(lang==='pl'?'Watchlist i koszyk':'Watchlist & basket'), questions:Q };
+  }
+
+  // 9) P/L & averages
+  function qz_bankPnL(lang){
+    const Q = [
+      qz_mc2('„Unrealized P/L” to…','“Unrealized P/L” is…',
+        [QZ_A('wynik na pozycjach niesprzedanych'),QZ_B('wynik po sprzedaży'),QZ_C('opłata')],
+        [QZ_A('result on not-sold positions'),QZ_B('after selling'),QZ_C('a fee')],0),
+      qz_mc2('„Realized P/L” to…','“Realized P/L” is…',
+        [QZ_A('wynik po sprzedaży'),QZ_B('wynik na żywo'),QZ_C('kurs waluty')],
+        [QZ_A('result after selling'),QZ_B('live only'),QZ_C('FX rate')],0),
+      qz_mc2('Średni koszt rośnie, gdy…','Average cost goes up when…',
+        [QZ_A('dokupisz drożej'),QZ_B('nic nie robisz'),QZ_C('zmienisz język')],
+        [QZ_A('you add at higher price'),QZ_B('you do nothing'),QZ_C('you change language')],0),
+      qz_mc2('Średni koszt spada, gdy…','Average cost drops when…',
+        [QZ_A('dokupisz taniej'),QZ_B('kupisz drożej'),QZ_C('zjesz obiad')],
+        [QZ_A('you add cheaper'),QZ_B('you buy higher'),QZ_C('you eat lunch')],0),
+      qz_mc2('P/L liczymy mniej więcej jako…','P/L is roughly…',
+        [QZ_A('wartość teraz − koszt'),QZ_B('koszt − 1'),QZ_C('zawsze 0')],
+        [QZ_A('value now − cost'),QZ_B('cost − 1'),QZ_C('always 0')],0),
+      qz_mc2('Net Worth to…','Net Worth is…',
+        [QZ_A('słoiki + portfele'),QZ_B('tylko słoiki'),QZ_C('tylko FX')],
+        [QZ_A('jars + portfolios'),QZ_B('jars only'),QZ_C('FX only')],0),
+      qz_mc2('Sprzedaż przenosi wynik do…','Selling moves result to…',
+        [QZ_A('Realized P/L'),QZ_B('Unrealized P/L'),QZ_C('Tutorial')],
+        [QZ_A('Realized P/L'),QZ_B('Unrealized P/L'),QZ_C('Tutorial')],0),
+      qz_mc2('Gdy cena = cena zakupu, P/L jest…','If price = buy price, P/L is…',
+        [QZ_A('około 0'),QZ_B('+10'),QZ_C('−10')],[QZ_A('about 0'),QZ_B('+10'),QZ_C('−10')],0),
+      qz_mc2('Wartość pozycji akcji =','Stock position value =',
+        [QZ_A('cena × liczba akcji'),QZ_B('cena + ilość'),QZ_C('ilość − 1')],
+        [QZ_A('price × shares'),QZ_B('price + qty'),QZ_C('qty − 1')],0),
+      qz_mc2('Wartość pozycji FX liczona jest…','FX position value is…',
+        [QZ_A('wg bieżącego kursu'),QZ_B('losowo'),QZ_C('1:1 zawsze')],
+        [QZ_A('by current rate'),QZ_B('randomly'),QZ_C('always 1:1')],0),
+      qz_mc2('Historia sprzedaży zawiera…','Sales history includes…',
+        [QZ_A('datę, ilość, cenę, P/L'),QZ_B('tylko obrazek'),QZ_C('PIN')],
+        [QZ_A('date, qty, price, P/L'),QZ_B('only a picture'),QZ_C('PIN')],0),
+      qz_mc2('Możesz mieć zysk na jednej, stratę na innej?','Profit on one, loss on another?',
+        [QZ_A('Tak'),QZ_B('Nie'),QZ_C('Tylko w piątek')],
+        [QZ_A('Yes'),QZ_B('No'),QZ_C('Only on Friday')],0),
+      qz_mc2('Duży wynik dziś nie oznacza…','A big result today doesn’t mean…',
+        [QZ_A('tego samego jutro'),QZ_B('wygranej w loterii'),QZ_C('zmiany regionu')],
+        [QZ_A('the same tomorrow'),QZ_B('lottery win'),QZ_C('region change')],0),
+      qz_mc2('„Amount” w koszyku to…','“Amount” in basket is…',
+        [QZ_A('łączny koszt planowanych zakupów'),QZ_B('zawsze 0'),QZ_C('PIN')],
+        [QZ_A('total cost of planned buys'),QZ_B('always 0'),QZ_C('PIN')],0),
+      qz_mc2('Po sprzedaży gotówka trafia do…','After a sale, cash goes to…',
+        [QZ_A('Investment cash'),QZ_B('Gifts'),QZ_C('Savings zawsze')],
+        [QZ_A('Investment cash'),QZ_B('Gifts'),QZ_C('always Savings')],0),
+      qz_mc2('„Qty” w historii znaczy…','“Qty” in history means…',
+        [QZ_A('ile sztuk/kwoty'),QZ_B('jaki region'),QZ_C('który wykres')],
+        [QZ_A('how many units'),QZ_B('which region'),QZ_C('which chart')],0),
+      qz_mc2('P/L w FX zależy od…','FX P/L depends on…',
+        [QZ_A('różnicy kursów'),QZ_B('pory dnia'),QZ_C('motywu')],
+        [QZ_A('rate differences'),QZ_B('time of day'),QZ_C('theme')],0),
+      qz_mc2('Jeśli nie masz pozycji — unrealized P/L…','If you have no position — unrealized P/L…',
+        [QZ_A('nie występuje'),QZ_B('jest ogromny'),QZ_C('zawsze −1')],
+        [QZ_A('doesn’t exist'),QZ_B('is huge'),QZ_C('is always −1')],0),
+      qz_mc2('Śledzenie P/L pomaga…','Tracking P/L helps…',
+        [QZ_A('uczyć się na danych'),QZ_B('zgubić budżet'),QZ_C('zmienić PIN')],
+        [QZ_A('learn from data'),QZ_B('lose budget'),QZ_C('change PIN')],0)
+    ];
+    return { id:'pnl', title:(lang==='pl'?'P/L i średnie':'P/L & averages'), questions:Q };
+  }
+
+  // 10) Safety & smart habits
+  function qz_bankSafety(lang){
+    const Q = [
+      qz_mc2('PIN rodzica…','Parent PIN…',[QZ_A('nie udostępniaj nikomu'),QZ_B('pisz na tablicy'),QZ_C('wysyłaj w czacie')],[QZ_A('don’t share with anyone'),QZ_B('write on a board'),QZ_C('send in chat')],0),
+      qz_mc2('Nie inwestuj prawdziwych pieniędzy bez…','Don’t invest real money without…',[QZ_A('zgody dorosłego'),QZ_B('memów'),QZ_C('losowania')],[QZ_A('adult permission'),QZ_B('memes'),QZ_C('a lottery')],0),
+      qz_mc2('Paper trading w nauce jest…','Paper trading for learning is…',[QZ_A('bezpieczne i pomocne'),QZ_B('zakazane'),QZ_C('bezużyteczne')],[QZ_A('safe and helpful'),QZ_B('forbidden'),QZ_C('useless')],0),
+      qz_mc2('Ustaw budżet, bo…','Set a budget because…',[QZ_A('chroni kieszonkowe'),QZ_B('wygrywa zawody'),QZ_C('zmienia kurs')],[QZ_A('it protects your cash'),QZ_B('wins contests'),QZ_C('changes rates')],0),
+      qz_mc2('Czytaj i pytaj, gdy…','Read and ask when…',[QZ_A('czegoś nie rozumiesz'),QZ_B('wszyscy kupują'),QZ_C('masz drzemkę')],[QZ_A('you don’t understand'),QZ_B('everyone buys'),QZ_C('you nap')],0),
+      qz_mc2('Gorące „tipy” z netu…','Hot tips online…',[QZ_A('traktuj z dystansem'),QZ_B('zawsze prawdziwe'),QZ_C('gwarantują zysk')],[QZ_A('treat carefully'),QZ_B('always true'),QZ_C('guarantee profit')],0),
+      qz_mc2('Historia to nie gwarancja…','Past is not a guarantee of…',[QZ_A('przyszłych wyników'),QZ_B('koloru wykresu'),QZ_C('udziału w loterii')],[QZ_A('future results'),QZ_B('chart color'),QZ_C('lottery entry')],0),
+      qz_mc2('Zabezpieczaj urządzenie…','Secure your device…',[QZ_A('hasłem/biometrią'),QZ_B('taśmą'),QZ_C('otwartym hasłem')],[QZ_A('with password/biometrics'),QZ_B('with tape'),QZ_C('with open password')],0),
+      qz_mc2('„Buy” naprawdę…','“Buy” really…',[QZ_A('kupuje'),QZ_B('robi screen'),QZ_C('zmienia język')],[QZ_A('buys'),QZ_B('takes a screenshot'),QZ_C('changes language')],0),
+      qz_mc2('Rozmawiaj z rodzicem o…','Talk with a parent about…',[QZ_A('celach i planie'),QZ_B('tajnych zakładach'),QZ_C('PIN-ie do banku')],[QZ_A('goals and plan'),QZ_B('secret bets'),QZ_C('bank PIN')],0),
+      qz_mc2('Notuj wnioski, bo…','Write notes because…',[QZ_A('pamięć bywa ulotna'),QZ_B('to mem'),QZ_C('appka nie lubi notatek')],[QZ_A('memory fades'),QZ_B('it’s a meme'),QZ_C('app hates notes')],0),
+      qz_mc2('Regularne przerwy…','Regular breaks…',[QZ_A('pomagają myśleć jasno'),QZ_B('psują wyniki'),QZ_C('blokują buy')],[QZ_A('help clear thinking'),QZ_B('ruin results'),QZ_C('block buy')],0),
+      qz_mc2('Zaufane źródła wiedzy to…','Trusted sources are…',[QZ_A('materiały, rodzice, nauczyciele'),QZ_B('anonimowe komentarze'),QZ_C('magiczne reklamy')],[QZ_A('learning materials, parents, teachers'),QZ_B('anonymous comments'),QZ_C('magic ads')],0),
+      qz_mc2('Cele SMART są…','SMART goals are…',[QZ_A('konkretne i mierzalne'),QZ_B('tajne i losowe'),QZ_C('magiczne')],[QZ_A('specific and measurable'),QZ_B('secret and random'),QZ_C('magic')],0),
+      qz_mc2('Małe kroki →','Small steps →',[QZ_A('mądrzejsza nauka'),QZ_B('szybki hazard'),QZ_C('więcej losu')],[QZ_A('smarter learning'),QZ_B('quick gambling'),QZ_C('more luck')],0),
+      qz_mc2('Zanim klikniesz — sprawdź…','Before clicking — check…',[QZ_A('ilość, cenę/kurs, koszyk'),QZ_B('pogodę'),QZ_C('kolor tła')],[QZ_A('qty, price/rate, basket'),QZ_B('weather'),QZ_C('background')],0),
+      qz_mc2('Nie każda okazja jest dla Ciebie — ważne są…','Not every opportunity is for you — important are…',
+        [QZ_A('Twoje cele i budżet'),QZ_B('plotki'),QZ_C('złote reklamy')],
+        [QZ_A('your goals and budget'),QZ_B('gossip'),QZ_C('golden ads')],0),
+      qz_mc2('Plan „co zrobię, gdy spadnie/urośnie” to…','A plan “what if it falls/rises” is…',
+        [QZ_A('dobre przygotowanie'),QZ_B('zabobon'),QZ_C('nakaz')],
+        [QZ_A('good preparation'),QZ_B('superstition'),QZ_C('a mandate')],0),
+      qz_mc2('Pytaj, ucz się, testuj — to…','Ask, learn, test — that’s…',
+        [QZ_A('sekret postępów'),QZ_B('trik na skróty'),QZ_C('zbędne')],
+        [QZ_A('the secret of progress'),QZ_B('a shortcut trick'),QZ_C('useless')],0),
+      qz_mc2('Szanuj pieniądze — to…','Respect money — it’s…',
+        [QZ_A('narzędzie do celów'),QZ_B('gra bez zasad'),QZ_C('magiczna moneta')],
+        [QZ_A('a tool for goals'),QZ_B('a rule-less game'),QZ_C('a magic coin')],0)
+    ];
+    return { id:'safety', title:(lang==='pl'?'Bezpieczeństwo i dobre nawyki':'Safety & smart habits'), questions:Q };
+  }
+
+  function qz_makeBANKS(lang){
+    return [
+      qz_bankBasicsApp(lang),
+      qz_bankStocksMath(lang),
+      qz_bankStockConcepts(lang),
+      qz_bankCharts(lang),
+      qz_bankFXBasics(lang),
+      qz_bankFXMath(lang),
+      qz_bankRisk(lang),
+      qz_bankWatchlistBasket(lang),
+      qz_bankPnL(lang),
+      qz_bankSafety(lang)
+    ];
+  }
+
+  // ---------- STATE + RENDER ----------
+  const QZ = {
+    host:null, lang:getLang(),
+    BANKS: qz_makeBANKS(getLang()),
+    mode:'home', bank:null, qs:[], idx:0, score:0,
+
+    mount(){
+      this.host = document.getElementById('ai-quiz-wrap');
+      if (!this.host) return;
+      this.BANKS = qz_makeBANKS(this.lang);
+      this.home();
+      // kompatybilność z przyciskiem w UI Play
+      const sbtn = document.getElementById('ai-quiz-start');
+      if (sbtn && !sbtn._wired){ sbtn.addEventListener('click', ()=> this.home()); sbtn._wired = true; }
+    },
+
+    home(){
+      this.mode='home';
+      const opts = this.BANKS.map((b,i)=>`<option value="${i}">${b.title} — 20Q</option>`).join('');
+      this.host.innerHTML = `
+        <div class="quiz-home" style="display:flex;flex-direction:column;gap:8px">
+          <div class="title" style="font-weight:800">${qz_t('homeTitle')}</div>
+          <div class="sub" style="opacity:.8">${qz_t('homeSub')}</div>
+          <div class="row" style="display:flex;gap:8px;align-items:center">
+            <select id="qzPick" style="flex:1;background:#0b1324;border:1px solid #334155;color:#e5e7eb;border-radius:10px;height:32px;padding:0 8px">${opts}</select>
+            <button id="qzGo" class="abtn">${qz_t('start')}</button>
+            <button id="qzRand" class="abtn">${qz_t('random')}</button>
+          </div>
+        </div>`;
+      this.host.querySelector('#qzGo').addEventListener('click', ()=>{
+        const i = +this.host.querySelector('#qzPick').value || 0; this.start(i);
+      });
+      this.host.querySelector('#qzRand').addEventListener('click', ()=> this.start(Math.floor(Math.random()*this.BANKS.length)));
+    },
+
+    start(i){
+      this.bank = this.BANKS[i];
+      this.qs = this.bank.questions.slice(0,20);
+      this.idx = 0; this.score = 0; this.mode='q';
+      this.renderQ();
+    },
+
+    renderQ(){
+      this.mode='q';
+      const q = this.qs[this.idx]; const n = this.idx+1; const L=this.lang;
+      const choices = (q.choices[L]||q.choices.en).map((t,j)=>(
+        `<button class="abtn" data-i="${j}" style="justify-content:flex-start">${t}</button>`
+      )).join('');
+      this.host.innerHTML = `
+        <div class="quiz-q" style="display:flex;flex-direction:column;gap:8px">
+          <div class="muted" style="opacity:.8">${this.bank.title} — ${qz_t('qOf')} ${n}/20</div>
+          <div class="title" style="font-weight:700">${q.q[L]||q.q.en}</div>
+          <div class="space" style="display:flex;flex-direction:column;gap:6px">${choices}</div>
+          <div id="qzMsg" class="sub" style="min-height:22px;opacity:.95"></div>
+          <div class="row" style="display:flex;gap:8px">
+            <button id="qzSkip" class="abtn">${qz_t('skip')}</button>
+            <button id="qzStop" class="abtn" style="background:#1f2937">${qz_t('stop')}</button>
+          </div>
+        </div>`;
+      this.host.querySelectorAll('.abtn[data-i]').forEach(b=> b.addEventListener('click', (e)=> this.onPick(+e.currentTarget.dataset.i)));
+      this.host.querySelector('#qzSkip').addEventListener('click', ()=> this.next());
+      this.host.querySelector('#qzStop').addEventListener('click', ()=> this.finish());
+    },
+
+    onPick(pick){
+      const q = this.qs[this.idx];
+      const ok = pick===q.a; if (ok) this.score++;
+      const msg = this.host.querySelector('#qzMsg');
+      const L=this.lang;
+      if (msg) msg.textContent = (ok ? qz_t('good') : qz_t('almost')) + (q.explain[L]||q.explain.en||'');
+      setTimeout(()=> this.next(), 700);
+    },
+
+    next(){
+      this.idx++;
+      if (this.idx>=20) this.finish(); else this.renderQ();
+    },
+
+    finish(){
+      this.mode='done';
+      const pct = Math.round(100*this.score/20);
+      this.host.innerHTML = `
+        <div class="quiz-done" style="display:flex;flex-direction:column;gap:8px">
+          <div class="title" style="font-weight:800">${qz_t('score')}: ${this.score}/20 (${pct}%)</div>
+          <div class="sub" style="opacity:.9">${qz_msgByPct(pct)}</div>
+          <div class="row" style="display:flex;gap:8px">
+            <button id="qzAgain" class="abtn" style="background:#1f2937">${qz_t('again')}</button>
+            <button id="qzHome"  class="abtn">${qz_t('choose')}</button>
+          </div>
+        </div>`;
+      this.host.querySelector('#qzAgain').addEventListener('click', ()=> this.start(Math.floor(Math.random()*this.BANKS.length)));
+      this.host.querySelector('#qzHome').addEventListener('click', ()=> this.home());
+    },
+
+    refreshLang(){
+      const newLang = getLang();
+      if (newLang === this.lang) return;
+      this.lang = newLang;
+      this.BANKS = qz_makeBANKS(this.lang);
+      if (!this.host) this.host = document.getElementById('ai-quiz-wrap');
+      if (!this.host) return;
+      if (this.mode==='home') this.home();
+      else if (this.mode==='q') this.renderQ();
+      else if (this.mode==='done') this.finish();
+    }
+  };
+
+  // --- HOOKI kompatybilne z Twoim agentem ---
+  // (1) Komenda czatu: "start quiz" wywołuje to samo API
+  window.startQuiz = function(){ switchTab('play'); QZ.mount(); };
+
+  // (2) Funkcja wołana przy otwarciu panelu i przy zmianie języka
+  window.renderQuiz = function(){ QZ.refreshLang(); if (!QZ.host) QZ.mount(); };
+
+  // (3) Jeżeli gdzieś masz lokalny przycisk #ai-quiz-start, dociągniemy go po mount
+  // (obsłużone w QZ.mount).
+
+})();
+
 
   /* ========== Missions ========== */
   const MISSIONS = { pl:[{id:'watch-1w', title:'Obserwuj tydzień', text:'Wykres 1W i opisz trend.'}], en:[{id:'watch-1w', title:'Watch 1W', text:'Open 1W chart and describe.'}] };
@@ -4745,145 +5354,28 @@ window.dispatchEvent(new Event('fx:universe-changed'));
 
   
   /* ========== Shortcuts & init ========== */
-  document.addEventListener('keydown', (e)=>{ if(!(e.altKey && e.shiftKey)) return; if(e.code==='KeyA'){ e.preventDefault(); ensurePanel(); } if(e.code==='KeyR'){ e.preventDefault(); const t=$('#ai-log')?.textContent||''; if(t) speak(t); } if(e.code==='KeyS'){ e.preventDefault(); stopSpeak(); } }, true);
-  document.addEventListener('pointerup', (e)=>{ const t=e.target; if (t && (t.id==='ai-fab' || t.closest?.('#ai-fab'))) { e.preventDefault(); ensurePanel(); } }, true);
-  onReady(() => { removeOldRobots(); ensureFab(); $('#langSelect')?.addEventListener('change', refreshPanelLang); });
-})();
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('.maxprice-filter .sort');
-  if (!btn) return;
+document.addEventListener('keydown', (e) => {
+  if (!(e.altKey && e.shiftKey)) return;
+  if (e.code === 'KeyA') { e.preventDefault(); ensurePanel(); }
+  if (e.code === 'KeyR') { e.preventDefault(); const t = $('#ai-log')?.textContent || ''; if (t) speak(t); }
+  if (e.code === 'KeyS') { e.preventDefault(); stopSpeak(); }
+}, true);
 
-  e.preventDefault();
-  btn.classList.toggle('desc'); // obrót ikonki ↑/↓
+document.addEventListener('pointerup', (e) => {
+  const t = e.target;
+  if (t && (t.id === 'ai-fab' || t.closest?.('#ai-fab'))) {
+    e.preventDefault();
+    ensurePanel();
+  }
+}, true);
 
-  // Jeśli chcesz od razu sortować listę:
-  const list =
-    btn.closest('#stockControls') ? document.querySelector('#stockList')
-    : btn.closest('#fxControls')  ? document.querySelector('#fxList')
-    : null;
-
-  if (!list) return;
-
-  const dir = btn.classList.contains('desc') ? 'desc' : 'asc';
-
-  const toNum = (t) => {
-    const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
-    return Number.isFinite(v) ? v : NaN;
-  };
-  const getPrice = (card) => {
-    const ds = card.getAttribute('data-price');
-    if (ds && Number.isFinite(+ds)) return +ds;
-    const el = card.querySelector('[data-price], .price, .row-price, .wl-price');
-    if (el) {
-      const v = toNum(el.getAttribute('data-price') || el.textContent);
-      if (Number.isFinite(v)) return v;
-    }
-    const txt = card.textContent || '';
-    const m = txt.match(/-?\d+(?:[.,]\d+)?/g);
-    return m ? toNum(m[m.length-1]) : NaN;
-  };
-
-  const cards = Array.from(list.children).filter(n => n.nodeType === 1);
-  cards.sort((a,b) => {
-    const av = getPrice(a), bv = getPrice(b);
-    if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
-    if (!Number.isFinite(av)) return 1;
-    if (!Number.isFinite(bv)) return -1;
-    return dir === 'asc' ? av - bv : bv - av;
-  });
-  const frag = document.createDocumentFragment();
-  cards.forEach(c => frag.appendChild(c));
-  list.appendChild(frag);
+onReady(() => {
+  removeOldRobots();
+  ensureFab();
+  $('#langSelect')?.addEventListener('change', refreshPanelLang);
 });
+})(); // ← zamknięcie IIFE agenta
 
-(function () {
-  if (!matchMedia('(max-width:640px)').matches) return;
-
-  function ensureSort(filter){
-    if (!filter) return;
-
-    // znajdź/utwórz przycisk
-    let btn = filter.querySelector('.sort');
-    if (!btn){
-      btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'sort';
-      // wstawiamy przed "×" jeśli jest
-      const x = filter.querySelector('.clear');
-      x ? filter.insertBefore(btn, x) : filter.appendChild(btn);
-    }
-
-    // ochrona przed killerem
-    btn.setAttribute('data-keep-arrows','1');
-
-    // wymuś strzałkę jako tło (inline, żeby nic jej nie nadpisało)
-    const svgBG = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\")";
-    Object.assign(btn.style, {
-      backgroundImage: svgBG,
-      backgroundRepeat: 'no-repeat',
-      backgroundPosition: 'center',
-      backgroundSize: '16px 16px'
-    });
-  }
-
-  ensureSort(document.querySelector('#stockControls .maxprice-filter'));
-  ensureSort(document.querySelector('#fxControls .maxprice-filter'));
-
-  // prosty toggle kierunku (jeśli nie masz swojego)
-  document.addEventListener('click', (e) => {
-    const b = e.target.closest('.maxprice-filter .sort');
-    if (!b) return;
-    b.classList.toggle('desc');
-  });
-})();
-/* === Mobile tap→click shim for existing .sort (desktop untouched) === */
-(() => {
-  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-  if (!isTouch) return;
-
-  const Q = '#stockControls .maxprice-filter .sort, #fxControls .maxprice-filter .sort';
-
-  function wire(btn){
-    if (!btn || btn._tapShim) return;
-    btn._tapShim = true;
-
-    // jeśli to <button> bez typu, zabezpiecz przed submitem formy
-    if (btn.tagName === 'BUTTON' && !btn.getAttribute('type')) btn.setAttribute('type','button');
-
-    let lockUntil = 0;
-
-    const fire = (e) => {
-      // tylko dotyk (na iOS/Android)
-      if (e.pointerType && e.pointerType !== 'touch') return;
-      e.preventDefault(); e.stopPropagation();
-      lockUntil = performance.now() + 400; // zgaś ghost-click
-      // odpal istniejący handler 'click' z Twojego kodu (tri-state)
-      btn.dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true}));
-    };
-
-    btn.addEventListener('pointerup', fire, {passive:false});
-    btn.addEventListener('touchend',  fire, {passive:false});
-
-    // zgaś ewentualny „ghost click” po tapie
-    btn.addEventListener('click', (e) => {
-  // blokuj tylko prawdziwy „ghost click” z przeglądarki
-  // (syntetyczny click z fire() ma e.isTrusted === false)
-  if (e.isTrusted && performance.now() < lockUntil){
-    e.preventDefault(); e.stopPropagation();
-  }
-}, {capture:true, passive:false});
-  }
-
-  function boot(){ document.querySelectorAll(Q).forEach(wire); }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
-
-  // re-wire gdy pasek filtrów przebuduje się na mobile
-  ['#stockControls', '#fxControls'].forEach(sel => {
-    const root = document.querySelector(sel);
-    if (!root) return;
-    new MutationObserver(boot).observe(root, {childList:true, subtree:true});
-  });
-})();
-
+/* --- SORT jest obsługiwany wyłącznie w index.html ---
+   (usunięto: globalny click-handler sortu, mobile ensureSort, tap→click shim)
+*/

@@ -4535,3 +4535,12 @@ maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
     gap: 8px;
   }
 }
+/* MOBILE tap: strzałka zawsze klikalna i nad sąsiadami */
+#stockControls .maxprice-filter .sort,
+#fxControls    .maxprice-filter .sort{
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}

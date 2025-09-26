@@ -696,4 +696,18 @@
   // start: pokaz ekran wyboru
   startBtn.addEventListener('click', renderHome);
 })();
+// minimal core for AI Agent open/close
+(() => {
+  const btn   = document.getElementById('aiAgentBtn');
+  const panel = document.getElementById('aiAgentPanel');
+  const close = document.getElementById('aiAgentClose');
+  if (!btn || !panel || !close) return;
+
+  const open  = () => panel.classList.remove('hidden');
+  const hide  = () => panel.classList.add('hidden');
+
+  btn.addEventListener('click', open);
+  close.addEventListener('click', hide);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
+})();
 
