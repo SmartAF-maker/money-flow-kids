@@ -1516,16 +1516,37 @@ renderMiniJars();   //
 function renderStocks(filter = "") {
   const ch = activeChild(); if (!ch || !stockList) return;
   ensureExpandedStocks(ch);
+
+  // ⬇⬇⬇ Zachowaj pasek filtra, jeśli siedzi w #stockList (mobile)
+  const filterBar = stockList.querySelector('.maxprice-filter') || null;
+
   stockList.innerHTML = "";
+  if (filterBar) stockList.appendChild(filterBar);
+
   const f = (filter || "").trim().toUpperCase();
   const isDefaultView = f === "";
-  const data = (ch.stocks || []).filter(s => !f || s.t.toUpperCase().includes(f) || (s.n || "").toUpperCase().includes(f));
+  let data = (ch.stocks || []).filter(s =>
+    !f || s.t.toUpperCase().includes(f) || (s.n || "").toUpperCase().includes(f)
+  );
+
+  // ⬇⬇⬇ Stabilny sort wg ceny, jeśli user włączył strzałkę
+  const dir = (window.__sortStocksDir === 'asc' || window.__sortStocksDir === 'desc') ? window.__sortStocksDir : null;
+  if (dir) {
+    data.sort((a, b) => {
+      const av = Number(priceOfStock(a.t, a.p));
+      const bv = Number(priceOfStock(b.t, b.p));
+      if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
+      if (!Number.isFinite(av)) return 1;
+      if (!Number.isFinite(bv)) return -1;
+      return dir === 'asc' ? av - bv : bv - av;
+    });
+  }
+
   const total = data.length;
   const limit = isDefaultView ? (stockExpanded ? 500 : 5) : 500;
 
   data.slice(0, limit).forEach(s => {
-    const cur = priceOfStock(s.t, s.p); // ← czytaj cenę z HUB-a (fallback: s.p)
-
+    const cur = priceOfStock(s.t, s.p); // HUB
     const dir = stockTrendDir(s.t, s.p);
     const btn = document.createElement("button");
     btn.className = "stock" + (selectedStock === s.t ? " active" : "");
@@ -1552,6 +1573,7 @@ function renderStocks(filter = "") {
   save(app);
   updateTradeBox();
 }
+
 stockSearch?.addEventListener('input', (e) => renderStocks(e.target.value));
 
 function renderPortfolioStocks() {
@@ -3337,12 +3359,14 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* === SORT ARROW: mobile-safe for existing .sort (no HTML changes) === */
+/* === SORT ARROW: mobile-safe + PERSIST sort dir === */
 (() => {
-  // Nasłuchuj zarówno na [data-sort-btn], jak i na Twoją .sort w filtrach
+  // zapamiętany kierunek (globalnie)
+  window.__sortStocksDir = window.__sortStocksDir || null; // 'asc'|'desc'|null
+  window.__sortFxDir     = window.__sortFxDir     || null;
+
   const BTN_SELECTOR = '[data-sort-btn], #stockControls .maxprice-filter .sort, #fxControls .maxprice-filter .sort';
 
-  // ── pomocnicze: parsowanie ceny z kafelka ──
   const toNum = t => {
     const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
     return Number.isFinite(v) ? v : NaN;
@@ -3360,14 +3384,12 @@ observer.observe(document.body, { childList: true, subtree: true });
     return m ? toNum(m[m.length-1]) : NaN;
   };
 
-  // Jeżeli nie masz globalnej sortList(), zrób lokalne sortowanie listy
   function sortListCompat(btn, dir){
     const list =
       btn.closest('#stockControls') ? document.getElementById('stockList') :
       btn.closest('#fxControls')    ? document.getElementById('fxList')   : null;
     if (!list) return;
-
-    const cards = Array.from(list.children).filter(n => n.nodeType === 1);
+    const cards = Array.from(list.children).filter(n => n.nodeType === 1 && !n.classList.contains('maxprice-filter'));
     cards.sort((a,b) => {
       const av=getPrice(a), bv=getPrice(b);
       if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
@@ -3376,6 +3398,9 @@ observer.observe(document.body, { childList: true, subtree: true });
       return dir==='asc' ? av - bv : bv - av;
     });
     const frag = document.createDocumentFragment();
+    // jeśli w liście siedzi pasek filtra – zostaw go na początku
+    const filterBar = list.querySelector('.maxprice-filter');
+    if (filterBar) frag.appendChild(filterBar);
     cards.forEach(c => frag.appendChild(c));
     list.appendChild(frag);
   }
@@ -3386,6 +3411,9 @@ observer.observe(document.body, { childList: true, subtree: true });
     btn.classList.toggle('desc',    dir === 'desc');
     btn.classList.toggle('is-desc', dir === 'desc'); // wsteczna zgodność
     btn.classList.add('sort');
+    btn.dataset.scope = btn.closest('#stockControls') ? 'stocks'
+                      : btn.closest('#fxControls')    ? 'fx'
+                      : (btn.dataset.scope || 'stocks');
     btn.setAttribute('role', 'button');
     btn.setAttribute('tabindex', '0');
     btn.setAttribute('aria-pressed', 'true');
@@ -3397,9 +3425,27 @@ observer.observe(document.body, { childList: true, subtree: true });
     const cur  = (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
     const next = cur === 'desc' ? 'asc' : 'desc';
     setSortState(btn, next);
-    // Jeśli istnieje Twoja globalna sortList(next) – użyj jej, w przeciwnym razie fallback lokalny
-    if (typeof window.sortList === 'function') window.sortList(next);
-    else sortListCompat(btn, next);
+
+    // 🧠 zapamiętaj kierunek per-sekcja i odśwież listę,
+    //    żeby tick 2–3 s nie „cofał” sortu
+    if (btn.dataset.scope === 'fx') {
+      window.__sortFxDir = next;
+      if (typeof renderFxList === 'function') {
+        const v = document.getElementById('fxSearch')?.value || "";
+        renderFxList(v);
+        return;
+      }
+    } else {
+      window.__sortStocksDir = next;
+      if (typeof renderStocks === 'function') {
+        const v = document.getElementById('stockSearch')?.value || "";
+        renderStocks(v);
+        return;
+      }
+    }
+
+    // fallback: posortuj istniejące karty w DOM (gdyby render* nie istniały)
+    sortListCompat(btn, next);
   }
 
   function onTap(e) {
@@ -3407,7 +3453,6 @@ observer.observe(document.body, { childList: true, subtree: true });
     e.stopPropagation();
     toggle(e.currentTarget);
   }
-
   function onKey(e) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e.currentTarget); }
   }
@@ -3417,16 +3462,16 @@ observer.observe(document.body, { childList: true, subtree: true });
       if (btn._sortWired) return;
       btn._sortWired = true;
 
-      // startowy stan
+      // startowy stan (i zakres: stocks/fx)
       setSortState(btn, (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase());
 
-      // pewność, że dotyk klika natychmiast
+      // dotyk klika natychmiast
       if (btn.tagName === 'BUTTON' && !btn.getAttribute('type')) btn.setAttribute('type','button');
       btn.style.touchAction = 'manipulation';
 
-      // słuchacze prosto na elemencie (pewne na iOS/Android + desktop)
+      // niezawodne handlery
       if ('PointerEvent' in window) btn.addEventListener('pointerup', onTap, { passive: false });
-      btn.addEventListener('touchend', onTap, { passive: false }); // starsze webview
+      btn.addEventListener('touchend', onTap, { passive: false });
       btn.addEventListener('click',    onTap, false);
       btn.addEventListener('keydown',  onKey);
     });
@@ -3436,12 +3481,13 @@ observer.observe(document.body, { childList: true, subtree: true });
     ? document.addEventListener('DOMContentLoaded', init)
     : init();
 
-  // Jeśli filtry się przebudowują – dowiąż ponownie
+  // jeśli filtry się przebudowują – dowiąż ponownie
   ['#stockControls','#fxControls'].forEach(sel => {
     const root = document.querySelector(sel);
     if (root) new MutationObserver(init).observe(root, {childList:true, subtree:true});
   });
 })();
+
 
 
 
