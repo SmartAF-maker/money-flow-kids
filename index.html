@@ -859,6 +859,7 @@
     <div id="toast" class="toast" style="display:none"></div>
 
     <script src="1.js"></script>
+    <script src="quiz.js" defer></script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -1163,6 +1164,7 @@
     <button class="btn" data-ai="explain-chart" data-i18n="agent.action.explain">Explain chart</button>
     <button class="btn" data-ai="check-price"   data-i18n="agent.action.check">Check price</button>
     <button class="btn" data-ai="rebalance"     data-i18n="agent.action.rebalance">Rebalance tip</button>
+      <button class="btn" data-ai="start-quiz" id="aiStartQuiz">Start quiz</button>
   </div>
 
   <!-- NOWE: pole do wpisywania komend -->

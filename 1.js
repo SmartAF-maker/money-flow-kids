@@ -3330,56 +3330,55 @@ observer.observe(document.body, { childList: true, subtree: true });
 /* === SORT ARROW: mobile-safe (PointerEvent) + ARIA + .desc === */
 (function wireSortArrow() {
   function setSortState(btn, state) {
-    const dir = (state === 'desc') ? 'desc' : 'asc';
+    const dir = state === 'desc' ? 'desc' : 'asc';
     btn.setAttribute('data-dir', dir);
-
-    // klasy pod CSS (w tym wstecznie zgodna .is-desc)
     btn.classList.toggle('desc',    dir === 'desc');
-    btn.classList.toggle('is-desc', dir === 'desc');
+    btn.classList.toggle('is-desc', dir === 'desc'); // wsteczna zgodność
     btn.classList.add('sort');
-
-    // ARIA + tooltip
+    // a11y
     btn.setAttribute('role', 'button');
+    btn.setAttribute('tabindex', '0');
     btn.setAttribute('aria-pressed', 'true');
-    if (dir === 'desc') {
-      btn.setAttribute('aria-label', 'Sort: highest to lowest');
-      btn.title = 'Sort: highest → lowest';
-    } else {
-      btn.setAttribute('aria-label', 'Sort: lowest to highest');
-      btn.title = 'Sort: lowest → highest';
-    }
+    btn.setAttribute('aria-label',
+      dir === 'desc' ? 'Sort: highest to lowest' : 'Sort: lowest to highest'
+    );
+    btn.title = dir === 'desc' ? 'Sort: highest → lowest' : 'Sort: lowest → highest';
   }
 
-  function toggleSort(btn) {
-    const cur  = (btn.getAttribute('data-dir') ||
-                 (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
-    const next = (cur === 'desc') ? 'asc' : 'desc';
+  function toggle(btn) {
+    const cur  = (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
+    const next = cur === 'desc' ? 'asc' : 'desc';
     setSortState(btn, next);
     if (typeof sortList === 'function') sortList(next);
   }
 
-  function handler(e) {
-    const btn = e.target.closest('[data-sort-btn]');
-    if (!btn) return;
+  function onTap(e) {
     if (e.cancelable) e.preventDefault();
-    toggleSort(btn);
+    e.stopPropagation();
+    toggle(e.currentTarget);
   }
 
-  // 1 handler: jeśli są Pointer Events → tylko pointerup, inaczej touchend + click
-  if ('PointerEvent' in window) {
-    document.addEventListener('pointerup', handler, { passive: false });
-  } else {
-    document.addEventListener('touchend', handler,  { passive: true  });
-    document.addEventListener('click',    handler,  false);
+  function onKey(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e.currentTarget); }
   }
 
-  // inicjalizacja po starcie
   function init() {
     document.querySelectorAll('[data-sort-btn]').forEach(btn => {
-      const initial = (btn.getAttribute('data-dir') || 'asc').toLowerCase();
-      setSortState(btn, initial);
+      // startowy stan
+      setSortState(btn, (btn.getAttribute('data-dir') || 'asc').toLowerCase());
+      // pewność, że dotyk kliknie natychmiast
+      btn.style.touchAction = 'manipulation';
+
+      // słuchacze prosto na elemencie (nie na dokumencie)
+      if ('PointerEvent' in window) {
+        btn.addEventListener('pointerup', onTap, { passive: false });
+      }
+      btn.addEventListener('click', onTap, false);          // fallback
+      btn.addEventListener('touchend', onTap, { passive: false }); // starsze webview
+      btn.addEventListener('keydown', onKey);
     });
   }
+
   (document.readyState === 'loading')
     ? document.addEventListener('DOMContentLoaded', init)
     : init();

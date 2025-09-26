@@ -4512,3 +4512,26 @@ maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
   maxprice-filter .sort,
   maxprice-filter .clear{ width:32px; }
 }
+/* powiększ klikalny obszar i upewnij się, że nic go nie przykrywa */
+[data-sort-btn]{
+  position: relative;
+  z-index: 5;                 /* ponad sąsiadami (np. ×) */
+  pointer-events: auto;
+  touch-action: manipulation; /* szybki tap na iOS/Android */
+}
+
+/* większy hit-area (nawet gdy ikonka jest mała) */
+[data-sort-btn]::after{
+  content: "";
+  position: absolute;
+  inset: -8px;                /* „poducha” wokół ikony */
+}
+
+/* jeśli kontrolki w jednym rzędzie się nie mieszczą — zawijaj */
+@media (max-width: 680px){
+  .controls-row, .input-row, .qty-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
