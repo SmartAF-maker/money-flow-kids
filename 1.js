@@ -3327,21 +3327,59 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* === SORT ARROW: mobile-safe (PointerEvent) + ARIA + .desc === */
-(function wireSortArrow() {
+/* === SORT ARROW: mobile-safe for existing .sort (no HTML changes) === */
+(() => {
+  // Nasłuchuj zarówno na [data-sort-btn], jak i na Twoją .sort w filtrach
+  const BTN_SELECTOR = '[data-sort-btn], #stockControls .maxprice-filter .sort, #fxControls .maxprice-filter .sort';
+
+  // ── pomocnicze: parsowanie ceny z kafelka ──
+  const toNum = t => {
+    const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
+    return Number.isFinite(v) ? v : NaN;
+  };
+  const getPrice = (card) => {
+    const ds = card.getAttribute && card.getAttribute('data-price');
+    if (ds && Number.isFinite(+ds)) return +ds;
+    const el = card.querySelector && card.querySelector('[data-price], .price, .row-price, .wl-price');
+    if (el){
+      const v = toNum((el.getAttribute && el.getAttribute('data-price')) || el.textContent);
+      if (Number.isFinite(v)) return v;
+    }
+    const txt = card.textContent || '';
+    const m = txt.match(/-?\d+(?:[.,]\d+)?/g);
+    return m ? toNum(m[m.length-1]) : NaN;
+  };
+
+  // Jeżeli nie masz globalnej sortList(), zrób lokalne sortowanie listy
+  function sortListCompat(btn, dir){
+    const list =
+      btn.closest('#stockControls') ? document.getElementById('stockList') :
+      btn.closest('#fxControls')    ? document.getElementById('fxList')   : null;
+    if (!list) return;
+
+    const cards = Array.from(list.children).filter(n => n.nodeType === 1);
+    cards.sort((a,b) => {
+      const av=getPrice(a), bv=getPrice(b);
+      if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
+      if (!Number.isFinite(av)) return 1;
+      if (!Number.isFinite(bv)) return -1;
+      return dir==='asc' ? av - bv : bv - av;
+    });
+    const frag = document.createDocumentFragment();
+    cards.forEach(c => frag.appendChild(c));
+    list.appendChild(frag);
+  }
+
   function setSortState(btn, state) {
     const dir = state === 'desc' ? 'desc' : 'asc';
     btn.setAttribute('data-dir', dir);
     btn.classList.toggle('desc',    dir === 'desc');
     btn.classList.toggle('is-desc', dir === 'desc'); // wsteczna zgodność
     btn.classList.add('sort');
-    // a11y
     btn.setAttribute('role', 'button');
     btn.setAttribute('tabindex', '0');
     btn.setAttribute('aria-pressed', 'true');
-    btn.setAttribute('aria-label',
-      dir === 'desc' ? 'Sort: highest to lowest' : 'Sort: lowest to highest'
-    );
+    btn.setAttribute('aria-label', dir === 'desc' ? 'Sort: highest to lowest' : 'Sort: lowest to highest');
     btn.title = dir === 'desc' ? 'Sort: highest → lowest' : 'Sort: lowest → highest';
   }
 
@@ -3349,7 +3387,9 @@ observer.observe(document.body, { childList: true, subtree: true });
     const cur  = (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
     const next = cur === 'desc' ? 'asc' : 'desc';
     setSortState(btn, next);
-    if (typeof sortList === 'function') sortList(next);
+    // Jeśli istnieje Twoja globalna sortList(next) – użyj jej, w przeciwnym razie fallback lokalny
+    if (typeof window.sortList === 'function') window.sortList(next);
+    else sortListCompat(btn, next);
   }
 
   function onTap(e) {
@@ -3363,26 +3403,36 @@ observer.observe(document.body, { childList: true, subtree: true });
   }
 
   function init() {
-    document.querySelectorAll('[data-sort-btn]').forEach(btn => {
+    document.querySelectorAll(BTN_SELECTOR).forEach(btn => {
+      if (btn._sortWired) return;
+      btn._sortWired = true;
+
       // startowy stan
-      setSortState(btn, (btn.getAttribute('data-dir') || 'asc').toLowerCase());
-      // pewność, że dotyk kliknie natychmiast
+      setSortState(btn, (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase());
+
+      // pewność, że dotyk klika natychmiast
+      if (btn.tagName === 'BUTTON' && !btn.getAttribute('type')) btn.setAttribute('type','button');
       btn.style.touchAction = 'manipulation';
 
-      // słuchacze prosto na elemencie (nie na dokumencie)
-      if ('PointerEvent' in window) {
-        btn.addEventListener('pointerup', onTap, { passive: false });
-      }
-      btn.addEventListener('click', onTap, false);          // fallback
+      // słuchacze prosto na elemencie (pewne na iOS/Android + desktop)
+      if ('PointerEvent' in window) btn.addEventListener('pointerup', onTap, { passive: false });
       btn.addEventListener('touchend', onTap, { passive: false }); // starsze webview
-      btn.addEventListener('keydown', onKey);
+      btn.addEventListener('click',    onTap, false);
+      btn.addEventListener('keydown',  onKey);
     });
   }
 
   (document.readyState === 'loading')
     ? document.addEventListener('DOMContentLoaded', init)
     : init();
+
+  // Jeśli filtry się przebudowują – dowiąż ponownie
+  ['#stockControls','#fxControls'].forEach(sel => {
+    const root = document.querySelector(sel);
+    if (root) new MutationObserver(init).observe(root, {childList:true, subtree:true});
+  });
 })();
+
 
 
 /* === YouTube mini-player wiring === */
