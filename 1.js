@@ -3327,44 +3327,51 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* === SORT ARROW: mobile-safe (1 handler) + zgodność z CSS (.desc / .is-desc) === */
+/* === SORT ARROW: mobile-safe (PointerEvent) + ARIA + .desc === */
 (function wireSortArrow() {
-  let lastPointer = 0;
+  function setSortState(btn, state) {
+    const dir = (state === 'desc') ? 'desc' : 'asc';
+    btn.setAttribute('data-dir', dir);
 
-  function toggle(btn){
-    const cur = (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
+    // klasy pod CSS (w tym wstecznie zgodna .is-desc)
+    btn.classList.toggle('desc',    dir === 'desc');
+    btn.classList.toggle('is-desc', dir === 'desc');
+    btn.classList.add('sort');
+
+    // ARIA + tooltip
+    btn.setAttribute('role', 'button');
+    btn.setAttribute('aria-pressed', 'true');
+    if (dir === 'desc') {
+      btn.setAttribute('aria-label', 'Sort: highest to lowest');
+      btn.title = 'Sort: highest → lowest';
+    } else {
+      btn.setAttribute('aria-label', 'Sort: lowest to highest');
+      btn.title = 'Sort: lowest → highest';
+    }
+  }
+
+  function toggleSort(btn) {
+    const cur  = (btn.getAttribute('data-dir') ||
+                 (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
     const next = (cur === 'desc') ? 'asc' : 'desc';
-
-    // atrybut + obie klasy (różne warianty CSS)
-    btn.setAttribute('data-dir', next);
-    btn.classList.toggle('desc',    next === 'desc');
-    btn.classList.toggle('is-desc', next === 'desc');
-    btn.setAttribute('aria-pressed', String(next === 'desc'));
-
+    setSortState(btn, next);
     if (typeof sortList === 'function') sortList(next);
   }
 
-  function handle(e){
-    const btn = e.target.closest('[data-sort-btn], maxprice-filter .sort');
+  function handler(e) {
+    const btn = e.target.closest('[data-sort-btn]');
     if (!btn) return;
-
-    // uniknij dubla (pointerup -> click)
-    if (e.type === 'click' && ('PointerEvent' in window) && Date.now() - lastPointer < 500) return;
-
     if (e.cancelable) e.preventDefault();
-    toggle(btn);
+    toggleSort(btn);
   }
 
+  // 1 handler: jeśli są Pointer Events → tylko pointerup, inaczej touchend + click
   if ('PointerEvent' in window) {
-    document.addEventListener('pointerup', (e) => { lastPointer = Date.now(); handle(e); }, { passive: false });
-    // bez touchend/click – unikamy zdublowania
+    document.addEventListener('pointerup', handler, { passive: false });
   } else {
-    // fallback dla bardzo starych przeglądarek
-    document.addEventListener('touchend', handle, { passive: true });
-    document.addEventListener('click', handle, false);
+    document.addEventListener('touchend', handler,  { passive: true  });
+    document.addEventListener('click',    handler,  false);
   }
-
-
 
   // inicjalizacja po starcie
   function init() {
@@ -3377,6 +3384,7 @@ observer.observe(document.body, { childList: true, subtree: true });
     ? document.addEventListener('DOMContentLoaded', init)
     : init();
 })();
+
 
 
 /* === YouTube mini-player wiring === */
