@@ -4425,7 +4425,15 @@ width: 110px;
   -webkit-tap-highlight-color:transparent;
   touch-action: manipulation;
 }
-
+/* jeśli chcesz obrócić SVG tłem przy 'desc' */
+[data-sort-btn].is-desc { transform: rotate(180deg); }
+/* iOS/Android: elementy interaktywne wewnątrz <label> bywają „nieklikalne” */
+@media (max-width:640px){
+  label.maxprice-filter { pointer-events: none; }
+  label.maxprice-filter > * { pointer-events: auto; } /* przywróć dzieciom */
+}
+.sort .ic { transition: transform .15s; pointer-events: none; }
+.sort.is-desc .ic { transform: rotate(180deg); }
 
 /* === Auth modal (MFK_AUTH) === */
 .auth-modal{
@@ -4487,3 +4495,39 @@ width: 110px;
   color:#fff; font-weight:600;
 }
 .auth-card .btn{ padding:10px 14px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e5e7eb; }
+/* Max filter: compact, consistent buttons */
+.maxprice-filter{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:4px 8px; border:1px solid var(--border-c);
+  background:#0c1528; border-radius:10px;
+}
+.maxprice-filter > span{ color:var(--muted); font-size:.9rem; }
+.maxprice-filter input{ width:110px; min-width:110px; }
+
+/* Icon buttons */
+.maxprice-filter .sort,
+.maxprice-filter .clear{
+  width:28px; height:28px;
+  display:inline-grid; place-items:center;
+  padding:0; margin:0;
+  border-radius:8px; border:1px solid #334155;
+  background:#1f2937; line-height:1; flex:0 0 auto;
+}
+
+/* Chevron (SVG) size + rotate when .desc */
+.maxprice-filter .sort svg{ width:16px; height:16px; display:block; transition:transform .18s ease; }
+.maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
+
+/* Clear “×” size */
+.maxprice-filter .clear{ font-size:16px; font-weight:700; }
+
+/* Mobile color-lock overrides shouldn’t wash these out */
+@media (max-width:640px){
+  .maxprice-filter .sort,
+  .maxprice-filter .clear{
+    background:#1f2937 !important;
+    border-color:#334155 !important;
+    color:#e5e7eb !important;
+    box-shadow:none !important;
+  }
+}

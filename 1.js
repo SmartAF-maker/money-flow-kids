@@ -1,4 +1,4 @@
-        // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
+         // ==== Same-origin sandbox guard (allowlist for needed APIs) ====
 /* Dodaj etykiety i mały podpis pod każdą wartością w tabelach (mobile) */
 (function () {
   function labelize(table){
@@ -3151,6 +3151,10 @@ function refreshAuthI18n() { applyAuthUI(); }
 // --- NEW: jednorazowe wywołanie, by data-role było ustawione od startu ---
 applyAuthUI();
 
+
+loginBtn?.addEventListener('click', openLogin);
+loginCancel?.addEventListener('click', closeLogin);
+
 roleRadios.forEach(r => {
   r.addEventListener('change', () => {
     const role = [...roleRadios].find(x => x.checked)?.value;
@@ -3164,6 +3168,75 @@ roleRadios.forEach(r => {
   });
 });
 
+loginSubmit?.addEventListener('click', () => {
+  const role = [...roleRadios].find(x => x.checked)?.value;
+  try {
+    if (role === 'parent') {
+      const pin = (loginPin?.value || '').trim();
+      verifyPin(app, pin);
+      appAuth = { role: 'parent' };
+      saveAuth(appAuth);
+      closeLogin();
+      applyAuthUI();
+      toast('Logged in as Parent');
+    } else {
+      const kidId = loginChild?.value || app.activeChildId;
+      if (!kidId) { alert('No child in the list. Add a child as Parent.'); return; }
+      app.activeChildId = kidId; save(app);
+      appAuth = { role: 'child', childId: kidId }; saveAuth(appAuth);
+      closeLogin(); renderAll(); applyAuthUI(); toast('Logged in as Child');
+    }
+  } catch (err) { alert(err?.message || 'Login error'); }
+});
+
+logoutBtn?.addEventListener('click', () => {
+  if (isParent()) {
+    // Rodzic -> przełącz na aktywne dziecko (jak było)
+    const kidId = app.activeChildId || (app.childrenOrder?.[0] || null);
+    if (kidId) {
+      app.activeChildId = kidId;
+      save(app);
+      appAuth = { role: 'child', childId: kidId };
+      saveAuth(appAuth);
+      if (document.querySelector('.tab.active')?.dataset.tab === 'parent') {
+        document.querySelector('button[data-tab="invest"]')?.click();
+      }
+      renderAll();
+      const name = app.children?.[kidId]?.name || '';
+      toast(TT().badgeChild ? TT().badgeChild(name) : `Child: ${name}`);
+    } else {
+      appAuth = { role: 'guest' };
+      saveAuth(appAuth);
+      applyAuthUI();
+      toast('Logged out');
+    }
+  } else if (isChild()) {
+    // Dziecko -> pokaż modala logowania z rolą Parent (nie przechodź do Guest)
+    try {
+      // ustaw radio „parent” i pola PIN
+      roleRadios.forEach(r => (r.checked = r.value === 'parent'));
+      childFields && childFields.classList.add('hidden');
+      parentFields && parentFields.classList.remove('hidden');
+      loginPin && (loginPin.value = '');
+      fillLoginChildSelector(); // dla porządku – choć Parent nie używa listy
+      loginModal && loginModal.classList.remove('hidden');
+      refreshAuthI18n();
+      // Uwaga: rola zostaje „child”, dopóki użytkownik nie poda poprawnego PINu w submit
+    } catch {
+      // awaryjnie, gdyby czegoś brakło w DOM – zostaw stare zachowanie
+      appAuth = { role: 'guest' };
+      saveAuth(appAuth);
+      applyAuthUI();
+      toast('Logged out');
+    }
+  } else {
+    // Guest -> bez zmian
+    appAuth = { role: 'guest' };
+    saveAuth(appAuth);
+    applyAuthUI();
+    toast('Logged out');
+  }
+});
 
 
 document.getElementById('addChildBtn')?.addEventListener('click', () => setTimeout(fillLoginChildSelector, 200));
@@ -3254,9 +3327,32 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* === SORT ARROW: mobile (tap) + desktop (click) === */
+/* === SORT ARROW: mobile (tap) + desktop (click) — z ARIA i klasą .desc === */
 (function wireSortArrow() {
   let lastTap = 0; // anty-ghost click po touchend
+
+  function setSortA11y(btn, state) {
+    if (!btn) return;
+    // stan + klasy pod CSS
+    btn.setAttribute('data-dir', state);
+    btn.classList.toggle('desc', state === 'desc'); // używamy .desc zamiast .is-desc
+    btn.classList.add('sort'); // upewnij się, że ma klasę .sort (jeśli stylujesz po niej)
+
+    // ARIA + tooltip
+    if (state === 'asc') {
+      btn.setAttribute('aria-pressed', 'true');
+      btn.setAttribute('aria-label', 'Sort: lowest to highest');
+      btn.title = 'Sort: lowest → highest';
+    } else if (state === 'desc') {
+      btn.setAttribute('aria-pressed', 'true');
+      btn.setAttribute('aria-label', 'Sort: highest to lowest');
+      btn.title = 'Sort: highest → lowest';
+    } else {
+      btn.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-label', 'Sort by price');
+      btn.title = 'Sort by price (asc/desc)';
+    }
+  }
 
   function handleSortTap(e) {
     const btn = e.target.closest('[data-sort-btn]');
@@ -3270,9 +3366,9 @@ observer.observe(document.body, { childList: true, subtree: true });
     if (e.cancelable) e.preventDefault();
 
     // przełącz kierunek
-    const next = (btn.getAttribute('data-dir') === 'desc') ? 'asc' : 'desc';
-    btn.setAttribute('data-dir', next);
-    btn.classList.toggle('is-desc', next === 'desc');
+    const cur  = btn.getAttribute('data-dir');
+    const next = (cur === 'desc') ? 'asc' : 'desc';
+    setSortA11y(btn, next);
 
     // wywołaj Twoje sortowanie
     if (typeof sortList === 'function') sortList(next);
@@ -3281,8 +3377,16 @@ observer.observe(document.body, { childList: true, subtree: true });
 
   // mobile + desktop
   document.addEventListener('pointerup', handleSortTap, { passive: false });
-  document.addEventListener('touchend', handleSortTap,  { passive: true }); // ⬅ DODANE
+  document.addEventListener('touchend',  handleSortTap, { passive: true  });
   document.addEventListener('click',     handleSortTap);
+
+  // inicjalizacja po starcie (zsynchronizuj stan i ARIA)
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-sort-btn]').forEach(btn => {
+      const initial = btn.getAttribute('data-dir') || 'asc';
+      setSortA11y(btn, initial);
+    });
+  });
 })();
 
 
@@ -4784,3 +4888,4 @@ document.addEventListener('click', (e) => {
     new MutationObserver(boot).observe(root, {childList:true, subtree:true});
   });
 })();
+

@@ -95,36 +95,45 @@
 </head>
 
 <body>
-  <!-- ===== TOP BAR (wrócił) ===== -->
-  <header class="topbar mfk-topbar" role="banner">
-    <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
-    <h1 id="t-appTitle" class="logo brand-title">Money Flow</h1>
-    <button id="lang-toggle" class="lang-btn" aria-label="Change language">PL</button>
+<!-- ===== TOP BAR (wrócił) ===== -->
+<header class="topbar mfk-topbar" role="banner">
+  <button id="mfkNavToggle" class="mfk-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mfkMobileDrawer">☰</button>
+  <h1 id="t-appTitle" class="logo brand-title">Money Flow</h1>
+  <button id="lang-toggle" class="lang-btn" aria-label="Change language">PL</button>
 
-    <div class="role-switch" id="mfkTopNav">
-      <select id="langSelect" title="Language">
-        <option value="pl">PL</option>
-        <option value="en" selected>EN</option>
-      </select>
+  <div class="role-switch" id="mfkTopNav">
+    <select id="langSelect" title="Language">
+      <option value="pl">PL</option>
+      <option value="en" selected>EN</option>
+    </select>
 
-      <div class="role-parent-only" style="display:inline-flex;align-items:center;gap:6px">
-        <label class="muted" for="childSelector"></label>
-        <select id="childSelector" class="input" style="min-width:160px"></select>
-      </div>
-
-      <button id="addChildBtn" type="button" class="tab role-parent-only" data-i18n="addChild">+ Add child</button>
-      <button type="button" class="tab active" data-tab="invest" data-i18n="tabStocks">Stocks</button>
-      <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
-      <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
-      <button id="tutorialBtn" type="button" class="tab">📘 <span data-i18n="tutorial">Tutorial</span></button>
+    <div class="role-parent-only" style="display:inline-flex;align-items:center;gap:6px">
+      <label class="muted" for="childSelector"></label>
+      <select id="childSelector" class="input" style="min-width:160px"></select>
     </div>
 
-    <div class="authwrap">
-      <span id="authBadge" class="muted" aria-live="polite">Guest</span>
-      <button id="loginBtn" type="button" class="tab"><span id="t-btnLoginTop">Login</span></button>
-      <button id="logoutBtn" type="button" class="tab hidden"><span id="t-btnLogout">Logout</span></button>
-    </div>
-  </header>
+    <button id="addChildBtn" type="button" class="tab role-parent-only" data-i18n="addChild">+ Add child</button>
+    <button type="button" class="tab active" data-tab="invest" data-i18n="tabStocks">Stocks</button>
+    <button type="button" class="tab" data-tab="fx" data-i18n="tabFx">Currencies (FX)</button>
+    <button type="button" class="tab" data-tab="profits" data-i18n="tabPnL">Profits</button>
+
+    <!-- ✅ Przywrócony przycisk Parent w topbarze -->
+    <button type="button"
+            class="tab role-parent-only"
+            data-parent-only="1"
+            data-tab="parent"
+            data-i18n="tabParent">Parent</button>
+
+    <button id="tutorialBtn" type="button" class="tab">📘 <span data-i18n="tutorial">Tutorial</span></button>
+  </div>
+
+  <div class="authwrap">
+    <span id="authBadge" class="muted" aria-live="polite">Guest</span>
+    <button id="loginBtn" type="button" class="tab"><span id="t-btnLoginTop">Login</span></button>
+    <button id="logoutBtn" type="button" class="tab hidden"><span id="t-btnLogout">Logout</span></button>
+  </div>
+</header>
+
 
   <!-- ===== Mobile drawer (poza topbarem) ===== -->
   <aside id="mfkMobileDrawer" class="mfk-drawer" aria-hidden="true">
@@ -816,175 +825,119 @@
 </div>
     </main>
     <footer class="footer"><small id="t-footerNote"> </small></footer>
-  
+     <!-- Login modal -->
+    <div id="loginModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <div class="modal-content">
+        <h2 id="loginTitle" class="title" style="margin-bottom:12px">Login</h2>
+
+        <div class="row" style="margin-bottom:8px">
+          <label><input type="radio" name="role" value="child" checked /> <span id="t-roleChild">Child</span></label>
+          <label><input type="radio" name="role" value="parent" /> <span id="t-roleParent">Parent</span></label>
+        </div>
+
+        <div id="childFields">
+          <div class="row" style="margin-bottom:8px">
+            <label class="muted" for="loginChild" id="t-selectChild">Select child</label>
+            <select id="loginChild"></select>
+          </div>
+        </div>
+
+        <div id="parentFields" class="hidden">
+          <div class="row" style="margin-bottom:8px">
+            <label class="muted" for="loginPin" id="t-parentPin">Parent PIN</label>
+            <input id="loginPin" type="password" inputmode="numeric" maxlength="6" placeholder="4–6 digits" />
+          </div>
+        </div>
+
+        <div class="tutorial-controls">
+          <button id="loginCancel" class="btn"><span id="t-btnCancel">Cancel</span></button>
+          <button id="loginSubmit" class="btn primary"><span id="t-btnLogin">Login</span></button>
+        </div>
+      </div>
+    </div>
 
     <div id="toast" class="toast" style="display:none"></div>
 
-  <script src="auth.js"></script>
     <script src="1.js"></script>
     <script>
-      
-  // Callbacki wołane przez moduł auth po (re)logowaniu
-// + ustawianie roli na <body data-role="..."> i spinanie przycisków w drawerze
-function _clearChildSessionArtifacts(){
-  try {
-    const keys = [];
-    for (let i = 0; i < sessionStorage.length; i++){
-      const k = sessionStorage.key(i);
-      if (!k) continue;
-      if (k.startsWith('mfk_child') || k.startsWith('kid_') || k.indexOf('child') > -1) keys.push(k);
-    }
-    keys.forEach(k => sessionStorage.removeItem(k));
-  } catch {}
-}
-
-window.MFK_APP = {
-  onLoggedIn(user){
-    const role = (user && user.role) || 'guest';
-    document.body.dataset.role = role;      // <-- KLUCZOWE
-
-    if (role === 'parent') _clearChildSessionArtifacts();
-
-    const badge = document.getElementById('authBadge');
-    if (badge) {
-      if (role === 'parent') {
-        badge.textContent = (typeof TT === 'function' && TT() && TT().badgeParent) || "Parent";
-      } else if (role === 'child') {
-        const labelChild = (typeof TT === 'function' && TT() && TT().badgeChild) || "Child";
-        badge.textContent = user?.name ? `${labelChild}: ${user.name}` : labelChild;
-      } else {
-        badge.textContent = (typeof TT === 'function' && TT() && TT().badgeGuest) || "Guest";
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
-    }
 
-    document.getElementById('loginBtn')?.classList.add('hidden');
-    document.getElementById('logoutBtn')?.classList.remove('hidden');
-    document.getElementById('drawerLogin')?.classList.add('hidden');
-    document.getElementById('drawerLogout')?.classList.remove('hidden');
+      // 4a) Otwieranie / zamykanie drawer (hamburger menu)
+      (function(){
+        const btn = document.getElementById('mfkNavToggle');
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        if(!btn || !drawer || !backdrop) return;
 
-    try { if (typeof applyAuthUI === 'function') applyAuthUI(); } catch {}
-    try { if (typeof renderAll   === 'function') renderAll();   } catch {}
-  },
+        function open(){
+          drawer.classList.add('open');
+          backdrop.hidden = false;
+          btn.setAttribute('aria-expanded','true');
+          document.body.style.overflow = 'hidden';
+        }
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
+        }
 
-  onLoggedOut(){
-    document.body.dataset.role = 'guest';
+        btn.addEventListener('click', () =>
+          drawer.classList.contains('open') ? close() : open()
+        );
+        backdrop.addEventListener('click', close);
+        document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+      })();
 
-    const badge = document.getElementById('authBadge');
-    if (badge) badge.textContent = (typeof TT === 'function' && TT() && TT().badgeGuest) || "Guest";
+      // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
+      (function(){
+        const drawer = document.getElementById('mfkMobileDrawer');
+        const backdrop = document.getElementById('mfkBackdrop');
+        const btn = document.getElementById('mfkNavToggle');
+        if(!drawer || !backdrop || !btn) return;
 
-    document.getElementById('loginBtn')?.classList.remove('hidden');
-    document.getElementById('logoutBtn')?.classList.add('hidden');
-    document.getElementById('drawerLogin')?.classList.remove('hidden');
-    document.getElementById('drawerLogout')?.classList.add('hidden');
+        function close(){
+          drawer.classList.remove('open');
+          backdrop.hidden = true;
+          btn.setAttribute('aria-expanded','false');
+          document.body.style.overflow = '';
+        }
 
-    try { if (typeof applyAuthUI === 'function') applyAuthUI(); } catch {}
+        drawer.addEventListener('click', (e) => {
+          if (e.target.closest('.tab')) close();
+        });
+      })();
+
+           
+      /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
+(function () {
+  const drawerTut = document.getElementById('drawerTutorial');
+  if (!drawerTut) return;
+
+  const drawer   = document.getElementById('mfkMobileDrawer');
+  const backdrop = document.getElementById('mfkBackdrop');
+  const navBtn   = document.getElementById('mfkNavToggle');
+  const ytMini   = document.getElementById('ytMini');
+
+  function closeDrawer() {
+    if (drawer)   drawer.classList.remove('open');
+    if (backdrop) backdrop.hidden = true;
+    if (navBtn)   navBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
   }
-};
 
-// Dorysuj modal i zsynchronizuj topbar wg aktualnej sesji
-MFK_AUTH.ensureAuthUI();
+  function openYT() {
+    if (ytMini) ytMini.classList.remove('hidden');
+  }
 
-// Hooki drawer: otwórz modal logowania / wyloguj
-(function(){
-  const dl   = document.getElementById('drawerLogin');
-  const doff = document.getElementById('drawerLogout');
-
-  dl && dl.addEventListener('click', () => {
-    const modal = document.getElementById('authModal');
-    modal && modal.classList.remove('hidden');
-  });
-
-  doff && doff.addEventListener('click', () => {
-    MFK_AUTH.logoutUser();
-    window.MFK_APP.onLoggedOut();
+  drawerTut.addEventListener('click', function () {
+    closeDrawer();
+    setTimeout(openYT, 150);
   });
 })();
 
-// (opcjonalnie) ustaw badge od razu po odświeżeniu
-(function(){
-  const u = MFK_AUTH.getCurrentUser && MFK_AUTH.getCurrentUser();
-  if (u) window.MFK_APP.onLoggedIn(u);
-  else   window.MFK_APP.onLoggedOut && window.MFK_APP.onLoggedOut();
-})();
-</script>
-
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  }
-
-  // 4a) Otwieranie / zamykanie drawer (hamburger menu)
-  (function(){
-    const btn = document.getElementById('mfkNavToggle');
-    const drawer = document.getElementById('mfkMobileDrawer');
-    const backdrop = document.getElementById('mfkBackdrop');
-    if(!btn || !drawer || !backdrop) return;
-
-    function open(){
-      drawer.classList.add('open');
-      backdrop.hidden = false;
-      btn.setAttribute('aria-expanded','true');
-      document.body.style.overflow = 'hidden';
-    }
-    function close(){
-      drawer.classList.remove('open');
-      backdrop.hidden = true;
-      btn.setAttribute('aria-expanded','false');
-      document.body.style.overflow = '';
-    }
-
-    btn.addEventListener('click', () =>
-      drawer.classList.contains('open') ? close() : open()
-    );
-    backdrop.addEventListener('click', close);
-    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
-  })();
-
-  // 4a-bis) Zamknięcie drawer po kliknięciu w dowolną pozycję menu (przycisk .tab)
-  (function(){
-    const drawer = document.getElementById('mfkMobileDrawer');
-    const backdrop = document.getElementById('mfkBackdrop');
-    const btn = document.getElementById('mfkNavToggle');
-    if(!drawer || !backdrop || !btn) return;
-
-    function close(){
-      drawer.classList.remove('open');
-      backdrop.hidden = true;
-      btn.setAttribute('aria-expanded','false');
-      document.body.style.overflow = '';
-    }
-
-    drawer.addEventListener('click', (e) => {
-      if (e.target.closest('.tab')) close();
-    });
-  })();
-
-  /* === KROK 3.B — Tutorial z hamburgera: zamknij drawer i otwórz modal === */
-  (function () {
-    const drawerTut = document.getElementById('drawerTutorial');
-    if (!drawerTut) return;
-
-    const drawer   = document.getElementById('mfkMobileDrawer');
-    const backdrop = document.getElementById('mfkBackdrop');
-    const navBtn   = document.getElementById('mfkNavToggle');
-    const ytMini   = document.getElementById('ytMini');
-
-    function closeDrawer() {
-      if (drawer)   drawer.classList.remove('open');
-      if (backdrop) backdrop.hidden = true;
-      if (navBtn)   navBtn.setAttribute('aria-expanded', 'false');
-      document.body.style.overflow = '';
-    }
-
-    function openYT() {
-      if (ytMini) ytMini.classList.remove('hidden');
-    }
-
-    drawerTut.addEventListener('click', function () {
-      closeDrawer();
-      setTimeout(openYT, 150);
-    });
-  })();
 /* === Mini-YT: powiększ / zamknij === */
 (function () {
   const mini   = document.getElementById('ytMini');

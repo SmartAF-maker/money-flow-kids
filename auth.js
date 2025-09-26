@@ -1,5 +1,4 @@
-(function(){
-/* ==========================================================================
+ /* ==========================================================================
  * Money Flow Kids — Local Auth (Register/Login per user)
  * Front-only, Live Server friendly, hashed secrets via Web Crypto.
  * ========================================================================== */
@@ -13,7 +12,7 @@ const SESSION_KEY = "mfk_session_v1";
 const DB_PREFIX   = "mfk_db_v1:";
 const LEGACY_DB   = "kidmoney_multi_fx_live_i18n_v1";
 
-const $      = s => document.querySelector(s);
+const $ = s => document.querySelector(s);
 const nowIso = () => new Date().toISOString();
 const toHex  = buf => Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 const fromUtf8 = str => new TextEncoder().encode(str);
@@ -41,6 +40,18 @@ function setSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
 function clearSession(){ localStorage.removeItem(SESSION_KEY); }
 
 function userDbKey(userId){ return `${DB_PREFIX}${userId}`; }
+
+window.MFK_AUTH = {
+  getCurrentUser,
+  ensureAuthUI,
+  registerUser,
+  loginUser,
+  logoutUser,
+  requireParentRole,
+  userDbKey,
+  migrateLegacyDbIfNeeded,
+  verifyParentSecret, // <-- NOWE
+};
 
 function getCurrentUser(){
   const s = getSession();
@@ -112,7 +123,7 @@ function migrateLegacyDbIfNeeded(userId){
   }catch(e){}
 }
 
-// === Weryfikacja tajemnicy bieżącego użytkownika (np. PIN rodzica) ===
+// === NOWE: weryfikacja tajemnicy bieżącego użytkownika (np. PIN rodzica) ===
 async function verifyParentSecret(secret){
   const u = getCurrentUser();
   if(!u) throw new Error("Not logged in");
@@ -124,7 +135,6 @@ async function verifyParentSecret(secret){
 // --- UI modal ---
 function ensureAuthUI(){
   if($("#authModal")) return;
-
   const root = document.createElement("div");
   root.innerHTML = `
   <div id="authModal" class="auth-modal hidden">
@@ -143,9 +153,7 @@ function ensureAuthUI(){
           <label>PIN / Password
             <input type="password" id="loginSecret" required inputmode="numeric" />
           </label>
-          <div class="auth-actions">
-            <button type="submit" class="btn-primary">Log in</button>
-          </div>
+          <button type="submit" class="btn-primary">Log in</button>
         </form>
       </div>
 
@@ -166,16 +174,13 @@ function ensureAuthUI(){
           <label>PIN / Password
             <input type="password" id="regSecret" required inputmode="numeric" minlength="4" />
           </label>
-          <div class="auth-actions">
-            <button type="submit" class="btn-primary">Create account</button>
-          </div>
+          <button type="submit" class="btn-primary">Create account</button>
         </form>
       </div>
     </div>
   </div>`;
   document.body.appendChild(root.firstElementChild);
 
-  // Przełączanie zakładek
   document.querySelectorAll(".auth-tab").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       document.querySelectorAll(".auth-tab").forEach(b=>b.classList.remove("is-active"));
@@ -186,27 +191,15 @@ function ensureAuthUI(){
     });
   });
 
-  // Zamknij modal krzyżykiem
   $("#authClose")?.addEventListener("click", ()=> $("#authModal").classList.add("hidden"));
-
-  // === ADAPTER ID-ków przycisków (Twoje #loginBtn/#logoutBtn vs domyślne #btnLogin/#btnLogout)
-  const loginEl  = document.querySelector("#btnLogin")  || document.querySelector("#loginBtn");
-  const logoutEl = document.querySelector("#btnLogout") || document.querySelector("#logoutBtn");
-
-  // Otwieranie nowego modala
-  loginEl?.addEventListener("click", ()=> {
-    $("#authModal")?.classList.remove("hidden");
-  });
-
-  // Wylogowanie przez nowy moduł + odświeżenie UI
-  logoutEl?.addEventListener("click", ()=>{
+  $("#btnLogin")?.addEventListener("click", ()=> $("#authModal").classList.remove("hidden"));
+  $("#btnLogout")?.addEventListener("click", ()=>{
     logoutUser();
-    (document.querySelector("#btnLogin")  || document.querySelector("#loginBtn"))?.classList.remove("hidden");
-    (document.querySelector("#btnLogout") || document.querySelector("#logoutBtn"))?.classList.add("hidden");
+    $("#btnLogin")?.classList.remove("hidden");
+    $("#btnLogout")?.classList.add("hidden");
     if(window.MFK_APP?.onLoggedOut) window.MFK_APP.onLoggedOut();
   });
 
-  // SUBMITY FORMULARZY
   $("#loginForm")?.addEventListener("submit", async (e)=>{
     e.preventDefault();
     try{
@@ -214,8 +207,8 @@ function ensureAuthUI(){
       const secret = $("#loginSecret").value;
       const u = await loginUser({ email, secret });
       $("#authModal").classList.add("hidden");
-      (document.querySelector("#btnLogin")  || document.querySelector("#loginBtn"))?.classList.add("hidden");
-      (document.querySelector("#btnLogout") || document.querySelector("#logoutBtn"))?.classList.remove("hidden");
+      $("#btnLogin")?.classList.add("hidden");
+      $("#btnLogout")?.classList.remove("hidden");
       if(window.MFK_APP?.onLoggedIn) window.MFK_APP.onLoggedIn(u);
     }catch(err){ alert(err.message || "Login failed"); }
   });
@@ -229,34 +222,19 @@ function ensureAuthUI(){
       const secret = $("#regSecret").value;
       const u = await registerUser({ name, email, role, secret });
       $("#authModal").classList.add("hidden");
-      (document.querySelector("#btnLogin")  || document.querySelector("#loginBtn"))?.classList.add("hidden");
-      (document.querySelector("#btnLogout") || document.querySelector("#logoutBtn"))?.classList.remove("hidden");
+      $("#btnLogin")?.classList.add("hidden");
+      $("#btnLogout")?.classList.remove("hidden");
       if(window.MFK_APP?.onLoggedIn) window.MFK_APP.onLoggedIn(u);
     }catch(err){ alert(err.message || "Register failed"); }
   });
 
-  // Sync przycisków na starcie
   const user = getCurrentUser();
   if(user){
-    (document.querySelector("#btnLogin")  || document.querySelector("#loginBtn"))?.classList.add("hidden");
-    (document.querySelector("#btnLogout") || document.querySelector("#logoutBtn"))?.classList.remove("hidden");
+    $("#btnLogin")?.classList.add("hidden");
+    $("#btnLogout")?.classList.remove("hidden");
   }else{
-    (document.querySelector("#btnLogin")  || document.querySelector("#loginBtn"))?.classList.remove("hidden");
-    (document.querySelector("#btnLogout") || document.querySelector("#logoutBtn"))?.classList.add("hidden");
+    $("#btnLogin")?.classList.remove("hidden");
+    $("#btnLogout")?.classList.add("hidden");
   }
 }
 
-// ===== KOŃCOWY EXPORT API (tylko raz) =====
-window.MFK_AUTH = {
-  ensureAuthUI,
-  getCurrentUser,
-  registerUser,
-  loginUser,
-  logoutUser,
-  requireParentRole,
-  userDbKey,
-  migrateLegacyDbIfNeeded,
-  verifyParentSecret
-};
-
-})();
