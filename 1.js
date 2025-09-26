@@ -3327,66 +3327,62 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* === SORT ARROW: mobile (tap) + desktop (click) — z ARIA i klasą .desc === */
+/* === SORT ARROW: mobile-safe (PointerEvent) + ARIA + .desc === */
 (function wireSortArrow() {
-  let lastTap = 0; // anty-ghost click po touchend
+  function setSortState(btn, state) {
+    const dir = (state === 'desc') ? 'desc' : 'asc';
+    btn.setAttribute('data-dir', dir);
 
-  function setSortA11y(btn, state) {
-    if (!btn) return;
-    // stan + klasy pod CSS
-    btn.setAttribute('data-dir', state);
-    btn.classList.toggle('desc', state === 'desc'); // używamy .desc zamiast .is-desc
-    btn.classList.add('sort'); // upewnij się, że ma klasę .sort (jeśli stylujesz po niej)
+    // klasy pod CSS (w tym wstecznie zgodna .is-desc)
+    btn.classList.toggle('desc',    dir === 'desc');
+    btn.classList.toggle('is-desc', dir === 'desc');
+    btn.classList.add('sort');
 
     // ARIA + tooltip
-    if (state === 'asc') {
-      btn.setAttribute('aria-pressed', 'true');
-      btn.setAttribute('aria-label', 'Sort: lowest to highest');
-      btn.title = 'Sort: lowest → highest';
-    } else if (state === 'desc') {
-      btn.setAttribute('aria-pressed', 'true');
+    btn.setAttribute('role', 'button');
+    btn.setAttribute('aria-pressed', 'true');
+    if (dir === 'desc') {
       btn.setAttribute('aria-label', 'Sort: highest to lowest');
       btn.title = 'Sort: highest → lowest';
     } else {
-      btn.setAttribute('aria-pressed', 'false');
-      btn.setAttribute('aria-label', 'Sort by price');
-      btn.title = 'Sort by price (asc/desc)';
+      btn.setAttribute('aria-label', 'Sort: lowest to highest');
+      btn.title = 'Sort: lowest → highest';
     }
   }
 
-  function handleSortTap(e) {
-    const btn = e.target.closest('[data-sort-btn]');
-    if (!btn) return;
-
-    // zbij „ghost click” po dotyku (iOS/Android)
-    const now = Date.now();
-    if (e.type === 'click' && now - lastTap < 400) return;
-    if (e.type !== 'click') lastTap = now;
-
-    if (e.cancelable) e.preventDefault();
-
-    // przełącz kierunek
-    const cur  = btn.getAttribute('data-dir');
+  function toggleSort(btn) {
+    const cur  = (btn.getAttribute('data-dir') ||
+                 (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
     const next = (cur === 'desc') ? 'asc' : 'desc';
-    setSortA11y(btn, next);
-
-    // wywołaj Twoje sortowanie
+    setSortState(btn, next);
     if (typeof sortList === 'function') sortList(next);
-    else console.log('[sort arrow] SORT:', next);
   }
 
-  // mobile + desktop
-  document.addEventListener('pointerup', handleSortTap, { passive: false });
-  document.addEventListener('touchend',  handleSortTap, { passive: true  });
-  document.addEventListener('click',     handleSortTap);
+  function handler(e) {
+    const btn = e.target.closest('[data-sort-btn]');
+    if (!btn) return;
+    if (e.cancelable) e.preventDefault();
+    toggleSort(btn);
+  }
 
-  // inicjalizacja po starcie (zsynchronizuj stan i ARIA)
-  document.addEventListener('DOMContentLoaded', () => {
+  // 1 handler: jeśli są Pointer Events → tylko pointerup, inaczej touchend + click
+  if ('PointerEvent' in window) {
+    document.addEventListener('pointerup', handler, { passive: false });
+  } else {
+    document.addEventListener('touchend', handler,  { passive: true  });
+    document.addEventListener('click',    handler,  false);
+  }
+
+  // inicjalizacja po starcie
+  function init() {
     document.querySelectorAll('[data-sort-btn]').forEach(btn => {
-      const initial = btn.getAttribute('data-dir') || 'asc';
-      setSortA11y(btn, initial);
+      const initial = (btn.getAttribute('data-dir') || 'asc').toLowerCase();
+      setSortState(btn, initial);
     });
-  });
+  }
+  (document.readyState === 'loading')
+    ? document.addEventListener('DOMContentLoaded', init)
+    : init();
 })();
 
 

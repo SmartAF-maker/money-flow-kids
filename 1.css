@@ -4495,39 +4495,20 @@ width: 110px;
   color:#fff; font-weight:600;
 }
 .auth-card .btn{ padding:10px 14px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e5e7eb; }
-/* Max filter: compact, consistent buttons */
-.maxprice-filter{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:4px 8px; border:1px solid var(--border-c);
-  background:#0c1528; border-radius:10px;
+/* koszyk/filtr max-price – niech elementy się nie nachodzą */
+maxprice-filter{ display:inline-flex; align-items:center; gap:.5rem; }
+maxprice-filter .qty{ flex:0 0 auto; width:72px; }                /* pole liczby */
+maxprice-filter .sort,
+maxprice-filter .clear{
+  flex:0 0 auto;
+  width:36px; height:var(--ctl-h,34px);
+  display:inline-flex; align-items:center; justify-content:center;
 }
-.maxprice-filter > span{ color:var(--muted); font-size:.9rem; }
-.maxprice-filter input{ width:110px; min-width:110px; }
+maxprice-filter .sort svg{ width:18px; height:18px; }
+maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
 
-/* Icon buttons */
-.maxprice-filter .sort,
-.maxprice-filter .clear{
-  width:28px; height:28px;
-  display:inline-grid; place-items:center;
-  padding:0; margin:0;
-  border-radius:8px; border:1px solid #334155;
-  background:#1f2937; line-height:1; flex:0 0 auto;
-}
-
-/* Chevron (SVG) size + rotate when .desc */
-.maxprice-filter .sort svg{ width:16px; height:16px; display:block; transition:transform .18s ease; }
-.maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
-
-/* Clear “×” size */
-.maxprice-filter .clear{ font-size:16px; font-weight:700; }
-
-/* Mobile color-lock overrides shouldn’t wash these out */
-@media (max-width:640px){
-  .maxprice-filter .sort,
-  .maxprice-filter .clear{
-    background:#1f2937 !important;
-    border-color:#334155 !important;
-    color:#e5e7eb !important;
-    box-shadow:none !important;
-  }
+@media (orientation:landscape) and (max-width: 900px){
+  maxprice-filter .qty{ width:64px; }
+  maxprice-filter .sort,
+  maxprice-filter .clear{ width:32px; }
 }
