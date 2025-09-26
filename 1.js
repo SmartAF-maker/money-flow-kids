@@ -3327,51 +3327,44 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* === SORT ARROW: mobile-safe (PointerEvent) + ARIA + .desc === */
+/* === SORT ARROW: mobile-safe (1 handler) + zgodność z CSS (.desc / .is-desc) === */
 (function wireSortArrow() {
-  function setSortState(btn, state) {
-    const dir = (state === 'desc') ? 'desc' : 'asc';
-    btn.setAttribute('data-dir', dir);
+  let lastPointer = 0;
 
-    // klasy pod CSS (w tym wstecznie zgodna .is-desc)
-    btn.classList.toggle('desc',    dir === 'desc');
-    btn.classList.toggle('is-desc', dir === 'desc');
-    btn.classList.add('sort');
-
-    // ARIA + tooltip
-    btn.setAttribute('role', 'button');
-    btn.setAttribute('aria-pressed', 'true');
-    if (dir === 'desc') {
-      btn.setAttribute('aria-label', 'Sort: highest to lowest');
-      btn.title = 'Sort: highest → lowest';
-    } else {
-      btn.setAttribute('aria-label', 'Sort: lowest to highest');
-      btn.title = 'Sort: lowest → highest';
-    }
-  }
-
-  function toggleSort(btn) {
-    const cur  = (btn.getAttribute('data-dir') ||
-                 (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
+  function toggle(btn){
+    const cur = (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
     const next = (cur === 'desc') ? 'asc' : 'desc';
-    setSortState(btn, next);
+
+    // atrybut + obie klasy (różne warianty CSS)
+    btn.setAttribute('data-dir', next);
+    btn.classList.toggle('desc',    next === 'desc');
+    btn.classList.toggle('is-desc', next === 'desc');
+    btn.setAttribute('aria-pressed', String(next === 'desc'));
+
     if (typeof sortList === 'function') sortList(next);
   }
 
-  function handler(e) {
-    const btn = e.target.closest('[data-sort-btn]');
+  function handle(e){
+    const btn = e.target.closest('[data-sort-btn], maxprice-filter .sort');
     if (!btn) return;
+
+    // uniknij dubla (pointerup -> click)
+    if (e.type === 'click' && ('PointerEvent' in window) && Date.now() - lastPointer < 500) return;
+
     if (e.cancelable) e.preventDefault();
-    toggleSort(btn);
+    toggle(btn);
   }
 
-  // 1 handler: jeśli są Pointer Events → tylko pointerup, inaczej touchend + click
   if ('PointerEvent' in window) {
-    document.addEventListener('pointerup', handler, { passive: false });
+    document.addEventListener('pointerup', (e) => { lastPointer = Date.now(); handle(e); }, { passive: false });
+    // bez touchend/click – unikamy zdublowania
   } else {
-    document.addEventListener('touchend', handler,  { passive: true  });
-    document.addEventListener('click',    handler,  false);
+    // fallback dla bardzo starych przeglądarek
+    document.addEventListener('touchend', handle, { passive: true });
+    document.addEventListener('click', handle, false);
   }
+
+
 
   // inicjalizacja po starcie
   function init() {
@@ -4742,6 +4735,8 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     writeHelp();
   }
 
+
+  
   /* ========== Shortcuts & init ========== */
   document.addEventListener('keydown', (e)=>{ if(!(e.altKey && e.shiftKey)) return; if(e.code==='KeyA'){ e.preventDefault(); ensurePanel(); } if(e.code==='KeyR'){ e.preventDefault(); const t=$('#ai-log')?.textContent||''; if(t) speak(t); } if(e.code==='KeyS'){ e.preventDefault(); stopSpeak(); } }, true);
   document.addEventListener('pointerup', (e)=>{ const t=e.target; if (t && (t.id==='ai-fab' || t.closest?.('#ai-fab'))) { e.preventDefault(); ensurePanel(); } }, true);
