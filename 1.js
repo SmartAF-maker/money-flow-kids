@@ -1740,12 +1740,28 @@ function renderFxList(filter = "") {
   const isDefaultView = raw === "";
   const quote = fxQuote(); // <-- USD lub PLN zależnie od języka
 
+  // kierunek sortu ustawiany przez przycisk strzałki
+  const dir = (window.__sortFxDir === 'asc' || window.__sortFxDir === 'desc') ? window.__sortFxDir : null;
+
+  // sortuj pary wg bieżącego kursu
+  function sortPairs(pairs) {
+    if (!dir) return pairs;
+    return pairs.slice().sort((a, b) => {
+      const ra = Number(fxRate(a));
+      const rb = Number(fxRate(b));
+      if (!Number.isFinite(ra) && !Number.isFinite(rb)) return 0;
+      if (!Number.isFinite(ra)) return 1;
+      if (!Number.isFinite(rb)) return -1;
+      return dir === 'asc' ? ra - rb : rb - ra;
+    });
+  }
+
   // generator jednego kafelka FX
   const toBtn = (pair) => {
     const r = fxRate(pair);
     if (!Number.isFinite(r)) return null;
 
-    const dir = fxTrendDir(pair, r);
+    const dirTrend = fxTrendDir(pair, r);
     const [baseC, quoteC] = pair.split("/");
     const baseName = CURRENCY_NAMES[baseC] || baseC;
 
@@ -1758,7 +1774,7 @@ function renderFxList(filter = "") {
           <div class="muted" style="font-size:12px">${baseName}</div>
         </div>
         <div class="right" style="text-align:right">
-          <div style="font-weight:700">${FX(r)} ${arrowHtml(dir)}</div>
+          <div style="font-weight:700">${FX(r)} ${arrowHtml(dirTrend)}</div>
           <div class="muted" style="font-size:11px">vs ${quoteC}</div>
         </div>
       </div>`;
@@ -1782,7 +1798,8 @@ function renderFxList(filter = "") {
       }
     }));
     const uniq = [...new Set(out)];
-    uniq.slice(0, 500).forEach(p => { const el = toBtn(p); if (el) fxList.appendChild(el); });
+    const sorted = sortPairs(uniq);
+    sorted.slice(0, 500).forEach(p => { const el = toBtn(p); if (el) fxList.appendChild(el); });
     updateFxMoreBtn(uniq.length, false);
     save(app);
     return;
@@ -1807,10 +1824,10 @@ function renderFxList(filter = "") {
       return;
     }
 
-    const pairs = bases.map(b => `${b}/${quote}`);
-    const uniq = [...new Set(pairs)];
-    uniq.slice(0, 500).forEach(p => { const el = toBtn(p); if (el) fxList.appendChild(el); });
-    updateFxMoreBtn(uniq.length, false);
+    const pairs = [...new Set(bases.map(b => `${b}/${quote}`))];
+    const sorted = sortPairs(pairs);
+    sorted.slice(0, 500).forEach(p => { const el = toBtn(p); if (el) fxList.appendChild(el); });
+    updateFxMoreBtn(pairs.length, false);
     save(app);
     return;
   }
@@ -1818,8 +1835,9 @@ function renderFxList(filter = "") {
   // 3) Widok domyślny -> wszystkie A/QUOTE (A != QUOTE)
   const allBaseVsQuote = ISO.filter(b => b !== quote).map(b => `${b}/${quote}`);
   const uniq = [...new Set(allBaseVsQuote)];
+  const sorted = sortPairs(uniq);
   const limit = fxExpanded ? 500 : 5;
-  uniq.slice(0, limit).forEach(p => { const el = toBtn(p); if (el) fxList.appendChild(el); });
+  sorted.slice(0, limit).forEach(p => { const el = toBtn(p); if (el) fxList.appendChild(el); });
   updateFxMoreBtn(uniq.length, true);
   save(app);
 }
