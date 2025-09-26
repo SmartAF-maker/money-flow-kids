@@ -1704,7 +1704,16 @@ document.getElementById('fxMoreBtn')?.addEventListener('click', () => {
 
 function renderFxList(filter = "") {
   const ch = activeChild(); if (!ch || !fxList) return;
+
+  // ⬇⬇⬇ Zachowaj pasek filtra, jeśli siedzi w #fxList
+  const filterBar = fxList.querySelector('.maxprice-filter') || null;
+
+  // czyść listę
   fxList.innerHTML = "";
+
+  // ⬇⬇⬇ Przywróć pasek filtra na początek listy
+  if (filterBar) fxList.appendChild(filterBar);
+
   const raw = (filter || "").trim();
   const isDefaultView = raw === "";
   const quote = fxQuote(); // <-- USD lub PLN zależnie od języka
@@ -1792,6 +1801,7 @@ function renderFxList(filter = "") {
   updateFxMoreBtn(uniq.length, true);
   save(app);
 }
+
 
 
 function renderPortfolioFx() {
