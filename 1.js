@@ -2376,7 +2376,9 @@ function buyBasketFx() {
   const items = app?.basket?.fx || [];
   if (!items.length) return toast('Basket is empty');
 
-const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty||0) * Number(it.price||0))), 0));
+  // ✅ licz sumę z priceUsd
+  const total = toCents(items.reduce(
+    (s, it) => toCents(s + toCents(Number(it.qty||0) * Number(it.priceUsd||0))), 0));
 
   if (total > ch.jars.save) return toast(TT().needFunds(PLN(total)));
 
@@ -2384,9 +2386,12 @@ const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty|
   ch.jars.invest += total;
 
   items.forEach(it => {
-    const pair = it.pair || it.key; const qty = Number(it.qty||0); const rUsd = Number(it.price||0);
-    if (!pair || qty<=0 || rUsd<=0) return;
-    let pos = ch.fxPortfolio[pair] || { q:0, b:rUsd };
+    const pair = it.pair || it.key;
+    const qty  = Number(it.qty||0);
+    const rUsd = Number(it.priceUsd||0);      // ✅ cena z priceUsd
+    if (!pair || qty <= 0 || rUsd <= 0) return;
+
+    let pos = ch.fxPortfolio[pair] || { q: 0, b: rUsd };
     const newQ = pos.q + qty;
     pos.b = ((pos.q * pos.b) + (qty * rUsd)) / newQ;
     pos.q = newQ;
@@ -2400,6 +2405,7 @@ const total = toCents(items.reduce((s, it) => toCents(s + toCents(Number(it.qty|
   renderPortfolioFx();
   toast('Bought all FX items from basket');
 }
+
 
 // --- podpięcie przycisków „Buy (investment cash)” w kartach koszyka
 document.querySelector('[data-basket-buy="stocks"]')?.addEventListener('click', buyBasketStocks);
@@ -4448,21 +4454,359 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     good:{pl:"Brawo!",en:"Nice!"}, bad:{pl:"Spróbuj ponownie",en:"Try again"}
   };
 
-  /* ========== LEARN content (trimmed for brevity but rich) ========== */
-  const LEARN = {
-    jars_intro:{ title:{pl:"Słoiki: baza Twoich finansów",en:"Jars: your money base"}, body:{ pl:`Tutaj poznasz, jak kieszonkowe, oszczędzanie i wyzwania budują umiejętności pieniędzy...\n\n🟢 Oszczędności • 🟠 Zarobki • 🔴 Prezenty • 🔵 Inwestycje`, en:`Here you’ll explore how pocket money, savings and challenges build money skills...\n\n🟢 Savings • 🟠 Earnings • 🔴 Gifts • 🔵 Investments` }},
-    savings:{ title:{pl:"Słoik Oszczędności (🟢)",en:"Savings Jar (🟢)"}, body:{ pl:`Twoja baza bezpieczeństwa. Cierpliwość = supermoc.`, en:`Your safety base. Patience is a superpower.` }},
-    earnings:{ title:{pl:"Słoik Zarobków (🟠)",en:"Earnings Jar (🟠)"}, body:{ pl:`Profity z transakcji i prace domowe.`, en:`Profits from trades and chores.` }},
-    gifts:{ title:{pl:"Słoik Prezentów (🔴)",en:"Gifts Jar (🔴)"}, body:{ pl:`Dzielenie się i równowaga.`, en:`Sharing and balance.` }},
-    invest:{ title:{pl:"Słoik Inwestycji (🔵)",en:"Investments Jar (🔵)"}, body:{ pl:`Gotówka do zakupu akcji i walut.`, en:`Cash you deploy into stocks and currencies.` }},
-    trading_intro:{ title:{pl:"Co to jest trading?",en:"What is trading?"}, body:{ pl:`Bid/Ask, zlecenia, ryzyko 1–2%, dźwignia, dywersyfikacja.`, en:`Bid/Ask, orders, 1–2% risk, leverage, diversification.` }},
-    market_stock:{ title:{pl:"Akcje i giełda",en:"Stocks & the market"}, body:{ pl:`Akcja = kawałek firmy.`, en:`A stock is a piece of a company.` }},
-    market_fx:{ title:{pl:"Waluty (FX)",en:"Currencies (FX)"}, body:{ pl:`EUR/USD = ile USD za 1 EUR.`, en:`EUR/USD shows how many USD for 1 EUR.` }},
-    accounting:{ title:{pl:"Księgowość = ślad pieniędzy",en:"Accounting = money trail"}, body:{ pl:`Każdy ruch to transakcja.`, en:`Every move is a transaction.` }},
-    pl_meaning:{ title:{pl:"P/L – wynik gry",en:"P/L – your score"}, body:{ pl:`Realized vs Unrealized.`, en:`Realized vs Unrealized.` }},
-    safety:{ title:{pl:"Bezpieczeństwo 100%",en:"100% Safety"}, body:{ pl:`Brak prawdziwych pieniędzy.`, en:`No real money at risk.` }},
-    howto_stock:{ title:{pl:"Krok po kroku: kup akcję",en:"Step by step: buy a stock"}, body:{ pl:`1. Stocks → 2. Trends → 3. Wyszukaj → 4. Koszyk → 5. Buy → 6. P/L.`, en:`1. Stocks → 2. Trends → 3. Search → 4. Basket → 5. Buy → 6. P/L.` }}
-  };
+/* ========== LEARN content — KID-FRIENDLY • EXPANDED (2×) ========== */
+const LEARN = {
+  /* ——— PODSTAWA: SŁOIKI ——— */
+  jars_intro:{
+    title:{pl:"Słoiki: baza Twoich finansów",en:"Jars: your money base"},
+    body:{
+      pl:`U nas pieniądze mieszkają w słoikach 🫙✨ Każdy ma zadanie:
+🟢 Oszczędności – odkładamy na marzenia.
+🟠 Zarobki – pieniądze za zadania i projekty.
+🔴 Prezenty – to, co dostajemy.
+🔵 Inwestycje – „paliwo” do kupowania akcji i walut.`,
+      en:`Here money lives in jars 🫙✨ Each has a job:
+🟢 Savings – we save for dreams.
+🟠 Earnings – money for chores and projects.
+🔴 Gifts – money we receive.
+🔵 Investments – fuel for buying stocks and currencies.`
+    }
+  },
+
+  savings:{
+    title:{pl:"Słoik Oszczędności (🟢)",en:"Savings Jar (🟢)"},
+    body:{
+      pl:`To skarbonka bezpieczeństwa. Małe wpłaty + cierpliwość = wielka moc.
+Tip: nazwij cel, np. „Rower na wakacje”.`,
+      en:`This is your safety piggy bank. Small deposits + patience = big power.
+Tip: name your goal, e.g. “Bike for summer”.`
+    }
+  },
+  earnings:{
+    title:{pl:"Słoik Zarobków (🟠)",en:"Earnings Jar (🟠)"},
+    body:{
+      pl:`Tu trafia kieszonkowe i nagrody za zadania. Część przenosimy do Oszczędności.`,
+      en:`Pocket money and rewards live here. Move a part to Savings to grow faster.`
+    }
+  },
+  gifts:{
+    title:{pl:"Słoik Prezentów (🔴)",en:"Gifts Jar (🔴)"},
+    body:{
+      pl:`Urodziny? Święta? Super! Uczymy się dzielić i planować, a nie wydawać wszystko naraz.`,
+      en:`Birthday? Holiday? Yay! We learn to share and plan, not spend all at once.`
+    }
+  },
+  invest:{
+    title:{pl:"Słoik Inwestycji (🔵)",en:"Investments Jar (🔵)"},
+    body:{
+      pl:`Z tego słoika kupujemy akcje i waluty. Bez niego nie zrobimy zakupu w aplikacji.`,
+      en:`We buy stocks and currencies from here. Without it we can’t buy in the app.`
+    }
+  },
+
+  allowance:{
+    title:{pl:"Kieszonkowe (Allowance)",en:"Allowance"},
+    body:{
+      pl:`Rodzic jednym kliknięciem dodaje kieszonkowe. Zasada: trochę do Oszczędności, trochę do Inwestycji.`,
+      en:`A parent adds allowance with one click. Rule: some to Savings, some to Investments.`
+    }
+  },
+  pocket_rules:{
+    title:{pl:"Proste zasady kieszonkowego",en:"Pocket money rules"},
+    body:{
+      pl:`1) Najpierw odkładam. 2) Potem planuję. 3) Na końcu wydaję z głową.`,
+      en:`1) Save first. 2) Plan next. 3) Spend wisely at the end.`
+    }
+  },
+
+  needs_wants:{
+    title:{pl:"Potrzeby vs Zachcianki",en:"Needs vs Wants"},
+    body:{
+      pl:`Potrzeba = coś ważnego (np. plecak). Zachcianka = fajne, ale niekonieczne (np. kolejna gra). Najpierw potrzeby.`,
+      en:`Need = important (e.g., school bag). Want = nice but not necessary (e.g., another game). Needs first.`
+    }
+  },
+
+  goals:{
+    title:{pl:"Cele (małe kroki → wielkie rzeczy)",en:"Goals (small steps → big things)"},
+    body:{
+      pl:`Zapisz cel, kwotę i datę. Każda wpłata to krok bliżej. Małe kroki działają najlepiej.`,
+      en:`Write your goal, amount and date. Every deposit is a step closer. Small steps work best.`
+    }
+  },
+  goal_smart:{
+    title:{pl:"Cel SMART dla dzieci",en:"SMART goal for kids"},
+    body:{
+      pl:`S – konkretny, M – mierzalny, A – osiągalny, R – ważny, T – do kiedy. Przykład: „Oszczędzę 200 zł do 30 czerwca na rolki”.`,
+      en:`S – specific, M – measurable, A – achievable, R – relevant, T – time-bound. Example: “Save $50 by June 30 for roller skates”.`
+    }
+  },
+  vision_board:{
+    title:{pl:"Tablica marzeń",en:"Dream board"},
+    body:{
+      pl:`Narysuj lub wklej zdjęcia celu. Gdy widzisz cel codziennie, łatwiej odkładać.`,
+      en:`Draw or paste pictures of your goal. Seeing it daily makes saving easier.`
+    }
+  },
+
+  budget:{
+    title:{pl:"Budżet = plan na pieniądze",en:"Budget = a plan for money"},
+    body:{
+      pl:`Budżet mówi „ile na co”. Dzięki temu decyzje są łatwiejsze, a niespodzianki mniejsze.`,
+      en:`A budget says “how much for what”. It makes choices easier and surprises smaller.`
+    }
+  },
+  split_rule:{
+    title:{pl:"Podział na 4 słoiki",en:"4-jars split idea"},
+    body:{
+      pl:`Przykład: 40% Oszczędności • 30% Inwestycje • 20% Wydatki • 10% Prezenty. Ustalcie własne proporcje.`,
+      en:`Example: 40% Savings • 30% Investments • 20% Spend • 10% Gifts. Make your own split.`
+    }
+  },
+  habit_loop:{
+    title:{pl:"Nawyk odkładania",en:"Saving habit"},
+    body:{
+      pl:`Sygnał → wpłata → nagroda (odznaka, pochwała, krok do celu). Powtarzaj co tydzień.`,
+      en:`Cue → deposit → reward (badge, praise, step to goal). Repeat weekly.`
+    }
+  },
+
+  jar_refill:{
+    title:{pl:"Doładowania słoików",en:"Refilling jars"},
+    body:{
+      pl:`Dostałeś 20 zł? Zrób szybki podział: 10 zł Oszczędności, 6 zł Inwestycje, 3 zł Wydatki, 1 zł Prezenty.`,
+      en:`Got $10? Quick split: $5 Savings, $3 Investments, $2 Spend, $1 Gifts.`
+    }
+  },
+
+  /* ——— RYNEK I PROSTE POJĘCIA ——— */
+  trading_intro:{
+    title:{pl:"Co to jest trading?",en:"What is trading?"},
+    body:{
+      pl:`Kupujemy i sprzedajemy aktywa (akcje, waluty). Ćwiczymy w trybie nauki — bez prawdziwych pieniędzy. Słowa: bid/ask (oferty), order (zlecenie), ryzyko (dbamy o bezpieczeństwo).`,
+      en:`We buy and sell assets (stocks, currencies). We practice in learning mode — no real money. Words: bid/ask (offers), order, risk (we stay safe).`
+    }
+  },
+  market_stock:{
+    title:{pl:"Akcje i giełda",en:"Stocks & the market"},
+    body:{
+      pl:`Akcja to cząstka firmy. Jeśli firma rośnie i zarabia, często rośnie też cena akcji (ale nie zawsze).`,
+      en:`A stock is a tiny piece of a company. If the company grows and earns, its price often rises (not always).`
+    }
+  },
+  stock_vs_etf:{
+    title:{pl:"Akcja vs ETF (prosto)",en:"Stock vs ETF (simple)"},
+    body:{
+      pl:`Akcja = jedna firma. ETF = koszyk wielu firm. ETF pomaga w dywersyfikacji.`,
+      en:`Stock = one company. ETF = a basket of many companies. ETFs help diversify.`
+    }
+  },
+  dividend_intro:{
+    title:{pl:"Dywidenda (prosto)",en:"Dividend (simple)"},
+    body:{
+      pl:`Czasem firma dzieli się zyskiem i wypłaca dywidendę. Nie każda firma to robi.`,
+      en:`Sometimes a company shares profit and pays a dividend. Not every company does.`
+    }
+  },
+
+  market_fx:{
+    title:{pl:"Waluty (FX)",en:"Currencies (FX)"},
+    body:{
+      pl:`Para EUR/USD mówi, ile USD kosztuje 1 EUR. Gdy wykres rośnie — EUR zwykle się wzmacnia wobec USD.`,
+      en:`EUR/USD shows how many USD for 1 EUR. If the chart goes up, EUR usually gets stronger to USD.`
+    }
+  },
+  fx_examples:{
+    title:{pl:"Przykłady siły walut",en:"Currency strength examples"},
+    body:{
+      pl:`EUR/PLN: 4.00 → 4.20 ⇒ PLN słabszy. 4.20 → 4.00 ⇒ PLN silniejszy. Tak czytamy zmianę kursu.`,
+      en:`EUR/PLN: 4.00 → 4.20 ⇒ PLN weaker. 4.20 → 4.00 ⇒ PLN stronger. That’s how we read it.`
+    }
+  },
+
+  charts_ranges:{
+    title:{pl:"Wykresy i zakresy (1D, 1W, 1M…)",en:"Charts & ranges (1D, 1W, 1M…)"},
+    body:{
+      pl:`Krótki zakres = dużo detali dnia. Długi zakres = widać trend. Zmieniaj zakres, by zrozumieć całość.`,
+      en:`Short range = day details. Long range = trend view. Switch ranges to see the big picture.`
+    }
+  },
+  chart_patterns:{
+    title:{pl:"Wzrosty, spadki i zygzaki",en:"Ups, downs & zig-zags"},
+    body:{
+      pl:`Linia w górę → wzrost. W dół → spadek. Zygzaki → zmienność. To normalne – dlatego mamy plan.`,
+      en:`Line up → rise. Down → drop. Zig-zags → volatility. That’s normal — that’s why we plan.`
+    }
+  },
+
+  accounting:{
+    title:{pl:"Księgowość = ślad pieniędzy",en:"Accounting = money trail"},
+    body:{
+      pl:`Zapisujemy każdą transakcję: ile, kiedy i za ile. Dzięki temu wiemy, co działa, a co poprawić.`,
+      en:`We record every transaction: how much, when and for how much. Then we know what works and what to improve.`
+    }
+  },
+  pl_meaning:{
+    title:{pl:"P/L – wynik gry",en:"P/L – your score"},
+    body:{
+      pl:`Unrealized P/L – wynik na pozycjach, które trzymasz. Realized P/L – wynik po sprzedaży. Ucz się na swoich decyzjach.`,
+      en:`Unrealized P/L – result on positions you still hold. Realized P/L – after selling. Learn from your choices.`
+    }
+  },
+  fees_note:{
+    title:{pl:"Opłaty i podatki (prawdziwy świat)",en:"Fees & taxes (real world)"},
+    body:{
+      pl:`W naszej nauce nie ma prawdziwych opłat. W realnym świecie opłaty i podatki mogą występować.`,
+      en:`In learning mode there are no real fees. In the real world, fees and taxes may apply.`
+    }
+  },
+
+  /* ——— NARZĘDZIA W APLIKACJI ——— */
+  watchlist:{
+    title:{pl:"Watchlist = lista ciekawych rzeczy",en:"Watchlist = list of interesting things"},
+    body:{
+      pl:`Dodaj spółki lub pary walut do obserwacji. Kliknij kartę, by zobaczyć szczegóły i duży wykres.`,
+      en:`Add stocks or currency pairs to track. Click a card to see details and a big chart.`
+    }
+  },
+  basket:{
+    title:{pl:"Koszyk (Basket)",en:"Basket"},
+    body:{
+      pl:`Najpierw planujemy w koszyku, dopiero potem kupujemy. To jak lista zakupów — bez pośpiechu.`,
+      en:`Plan in the basket first, buy later. It’s like a shopping list — no rush.`
+    }
+  },
+  portfolio:{
+    title:{pl:"Portfel i średni koszt",en:"Portfolio & average cost"},
+    body:{
+      pl:`Portfel pokazuje, co posiadasz. Średni koszt mówi, ile średnio zapłaciłeś za 1 sztukę.`,
+      en:`Portfolio shows what you own. Average cost tells how much you paid on average per unit.`
+    }
+  },
+
+  /* ——— BEZPIECZEŃSTWO I DOBRE NAWYKI ——— */
+  safety:{
+    title:{pl:"Bezpieczeństwo 100%",en:"100% Safety"},
+    body:{
+      pl:`W aplikacji nie używamy prawdziwych pieniędzy. Zawsze pytaj dorosłego, gdy czegoś nie rozumiesz. PIN i hasła są tajne.`,
+      en:`We don’t use real money here. Always ask an adult if you don’t understand. PINs and passwords are secret.`
+    }
+  },
+  online_safety:{
+    title:{pl:"Bezpieczny internet",en:"Online safety"},
+    body:{
+      pl:`Nie klikaj w dziwne linki. Nie podawaj danych. Jeśli coś brzmi „zbyt pięknie”, zapytaj rodzica.`,
+      en:`Don’t click weird links. Don’t share data. If it sounds “too good”, ask a parent.`
+    }
+  },
+  scam_check:{
+    title:{pl:"Test „czy to ściema?”",en:"“Is it a scam?” test"},
+    body:{
+      pl:`Czy obiecują pewny zysk? Czy proszą o szybki przelew? Czy wymagają tajemnicy? Jeśli TAK — stop i zapytaj dorosłego.`,
+      en:`Do they promise guaranteed profit? Ask for fast payment? Ask for secrecy? If YES — stop and ask an adult.`
+    }
+  },
+
+  /* ——— KROK PO KROKU ——— */
+  howto_stock:{
+    title:{pl:"Krok po kroku: kup akcję",en:"Step by step: buy a stock"},
+    body:{
+      pl:`1) Stocks → wybierz spółkę.
+2) Add to basket → ustaw ilość.
+3) Sprawdź Investment Jar.
+4) Kliknij Buy → gotowe! Potem śledź P/L w Portfelu.`,
+      en:`1) Stocks → choose a company.
+2) Add to basket → set quantity.
+3) Check Investment Jar.
+4) Click Buy → done! Then track P/L in Portfolio.`
+    }
+  },
+  howto_fx:{
+    title:{pl:"Krok po kroku: kup walutę (FX)",en:"Step by step: buy a currency (FX)"},
+    body:{
+      pl:`1) Currencies (FX) → wybierz parę.
+2) Add to basket → ilość.
+3) Sprawdź Investment Jar.
+4) Buy → obserwuj kurs i wynik.`,
+      en:`1) Currencies (FX) → choose a pair.
+2) Add to basket → quantity.
+3) Check Investment Jar.
+4) Buy → watch rate and result.`
+    }
+  },
+
+  /* ——— NAWYKI & POSTAWA ——— */
+  money_mindset:{
+    title:{pl:"Nastawienie do pieniędzy",en:"Money mindset"},
+    body:{
+      pl:`Pieniądze to narzędzie do celów. Dbamy o szacunek, plan i cierpliwość.`,
+      en:`Money is a tool for goals. We practice respect, planning and patience.`
+    }
+  },
+  reflection_journal:{
+    title:{pl:"Dziennik pieniędzy (2 minuty)",en:"Money journal (2 minutes)"},
+    body:{
+      pl:`Zapisz 1 rzecz, której się dziś nauczyłeś i 1 decyzję, z której jesteś dumny.`,
+      en:`Write 1 thing you learned today and 1 decision you are proud of.`
+    }
+  },
+  gratitude_share:{
+    title:{pl:"Wdzięczność i dzielenie się",en:"Gratitude & sharing"},
+    body:{
+      pl:`Małe wsparcie dla innych daje wielką radość. 10% do słoika „Prezenty” to dobry start.`,
+      en:`Small support for others brings big joy. 10% to the “Gifts” jar is a great start.`
+    }
+  },
+  inflation_simple:{
+    title:{pl:"Inflacja (prosto)",en:"Inflation (simple)"},
+    body:{
+      pl:`Gdy ceny rosną, ta sama kwota kupuje mniej. Dlatego oszczędzamy i planujemy zakupy mądrze.`,
+      en:`If prices rise, the same money buys less. That’s why we save and plan wisely.`
+    }
+  },
+  compound_magic:{
+    title:{pl:"Magia procentu składanego",en:"Magic of compounding"},
+    body:{
+      pl:`Gdy oszczędności rosną, „odsetki” też mogą rosnąć. Śnieżna kula dobra — zaczyna się od małej kulki.`,
+      en:`As savings grow, “interest” can grow too. A good snowball starts small and rolls on.`
+    }
+  }
+};
+
+/* ========== LEARN renderer — porządek, tylko karty, bez quizów ========== */
+function fillLearn(){
+  const L = getLang();
+  const wrap = $('#ai-learn');
+  if (!wrap) return;
+
+  // Kolejność: od słoików → planowania → rynek → narzędzia → bezpieczeństwo → krok-po-kroku → mindset
+  const order = [
+    // Słoiki
+    'jars_intro','savings','earnings','gifts','invest','allowance','pocket_rules',
+    // Plan i cele
+    'needs_wants','goals','goal_smart','vision_board','budget','split_rule','habit_loop','jar_refill',
+    // Rynek i pojęcia
+    'trading_intro','market_stock','stock_vs_etf','dividend_intro','market_fx','fx_examples',
+    'charts_ranges','chart_patterns','accounting','pl_meaning','fees_note',
+    // Narzędzia w aplikacji
+    'watchlist','basket','portfolio',
+    // Bezpieczeństwo
+    'safety','online_safety','scam_check',
+    // Krok po kroku
+    'howto_stock','howto_fx',
+    // Mindset
+    'money_mindset','reflection_journal','gratitude_share','inflation_simple','compound_magic'
+  ];
+
+  wrap.innerHTML = order.map(key => {
+    const card = LEARN[key];
+    if (!card) return '';
+    const title = card.title[L] || card.title.en;
+    const body  = card.body[L]  || card.body.en;
+    return cardHTML(title, body);
+  }).join('');
+}
+
 
   /* ========== Glossary ========== */
   const GLOSSARY = {
@@ -5416,6 +5760,130 @@ onReady(() => {
   ensureFab();
   $('#langSelect')?.addEventListener('change', refreshPanelLang);
 });
+/* ---------- LEARN: extend content + hard override renderer ---------- */
+(() => {
+  // 1) DODATKOWE KARTY (kid-friendly) — dopisujemy tylko brakujące klucze:
+  const EXTRA = {
+    allowance:{ title:{pl:"Kieszonkowe (Allowance)",en:"Allowance"},
+      body:{pl:"Rodzic jednym kliknięciem dodaje kieszonkowe. Ustalcie zasadę: trochę do Oszczędności, trochę do Inwestycji.",
+            en:"A parent can add allowance with one click. Rule: some to Savings, some to Investments."}},
+    pocket_rules:{ title:{pl:"Proste zasady kieszonkowego",en:"Pocket money rules"},
+      body:{pl:"1) Najpierw odkładam. 2) Potem planuję. 3) Na końcu wydaję z głową.",
+            en:"1) Save first. 2) Plan next. 3) Spend wisely."}},
+    needs_wants:{ title:{pl:"Potrzeby vs Zachcianki",en:"Needs vs Wants"},
+      body:{pl:"Potrzeba = ważne (plecak). Zachcianka = fajne (kolejna gra). Najpierw potrzeby.",
+            en:"Need = important (school bag). Want = nice (another game). Needs first."}},
+    goals:{ title:{pl:"Cele – małe kroki",en:"Goals – small steps"},
+      body:{pl:"Zapisz cel, kwotę i datę. Każda wpłata to krok bliżej.",
+            en:"Write your goal, amount and date. Every deposit is a step closer."}},
+    goal_smart:{ title:{pl:"Cel SMART",en:"SMART goal"},
+      body:{pl:"S: konkretny • M: mierzalny • A: osiągalny • R: ważny • T: do kiedy.",
+            en:"S: specific • M: measurable • A: achievable • R: relevant • T: time-bound."}},
+    vision_board:{ title:{pl:"Tablica marzeń",en:"Dream board"},
+      body:{pl:"Narysuj/wklej obrazki celu. Widzisz — łatwiej oszczędzać.",
+            en:"Draw/paste pictures of your goal. Seeing it helps saving."}},
+    budget:{ title:{pl:"Budżet = plan na pieniądze",en:"Budget = plan for money"},
+      body:{pl:"Budżet mówi „ile na co”. Decyzje są łatwiejsze, niespodzianki mniejsze.",
+            en:"Budget says “how much for what”. Easier choices, fewer surprises."}},
+    split_rule:{ title:{pl:"Podział na 4 słoiki",en:"4-jars split"},
+      body:{pl:"Np. 40% Oszczędności • 30% Inwestycje • 20% Wydatki • 10% Prezenty.",
+            en:"E.g. 40% Savings • 30% Investments • 20% Spend • 10% Gifts."}},
+    habit_loop:{ title:{pl:"Nawyk odkładania",en:"Saving habit"},
+      body:{pl:"Sygnał → wpłata → nagroda (odznaka/pucha). Powtarzaj co tydzień.",
+            en:"Cue → deposit → reward (badge/praise). Repeat weekly."}},
+    jar_refill:{ title:{pl:"Doładowania słoików",en:"Refilling jars"},
+      body:{pl:"Przykład 20 zł: 10zł Oszczędności, 6zł Inwestycje, 3zł Wydatki, 1zł Prezenty.",
+            en:"Example $10: $5 Savings, $3 Investments, $2 Spend, $1 Gifts."}},
+    charts_ranges:{ title:{pl:"Wykresy i zakresy (1D/1W/1M…)",en:"Charts & ranges (1D/1W/1M…)"},
+      body:{pl:"Krótki zakres = detale. Długi = trend. Zmieniaj zakres, by widzieć całość.",
+            en:"Short = detail. Long = trend. Switch ranges to see the big picture."}},
+    chart_patterns:{ title:{pl:"Wzrosty, spadki, zygzaki",en:"Ups, downs & zig-zags"},
+      body:{pl:"Góra = wzrost, dół = spadek, zygzaki = zmienność. Dlatego mamy plan.",
+            en:"Up = rise, down = drop, zig-zags = volatility. That’s why we plan."}},
+    stock_vs_etf:{ title:{pl:"Akcja vs ETF (prosto)",en:"Stock vs ETF (simple)"},
+      body:{pl:"Akcja = jedna firma. ETF = koszyk firm → łatwiejsza dywersyfikacja.",
+            en:"Stock = one company. ETF = basket of companies → easier diversification."}},
+    dividend_intro:{ title:{pl:"Dywidenda (prosto)",en:"Dividend (simple)"},
+      body:{pl:"Czasem firma dzieli się zyskiem. Nie każda.",
+            en:"Sometimes a company shares profit. Not all do."}},
+    fx_examples:{ title:{pl:"Siła walut – przykłady",en:"Currency strength – examples"},
+      body:{pl:"EUR/PLN 4.00→4.20 ⇒ PLN słabszy. 4.20→4.00 ⇒ PLN silniejszy.",
+            en:"EUR/PLN 4.00→4.20 ⇒ PLN weaker. 4.20→4.00 ⇒ PLN stronger."}},
+    fees_note:{ title:{pl:"Opłaty i podatki (świat realny)",en:"Fees & taxes (real world)"},
+      body:{pl:"W nauce brak prawdziwych opłat. W realu mogą występować.",
+            en:"No real fees in learning mode. In real life they may apply."}},
+    watchlist:{ title:{pl:"Watchlist = lista ciekawych",en:"Watchlist = interesting list"},
+      body:{pl:"Dodaj spółki lub pary FX. Kliknij kartę, by zobaczyć szczegóły i duży wykres.",
+            en:"Add stocks or FX pairs. Click a card for details and a big chart."}},
+    basket:{ title:{pl:"Koszyk (Basket)",en:"Basket"},
+      body:{pl:"Planuj w koszyku, kupuj później — jak lista zakupów.",
+            en:"Plan in basket, buy later — like a shopping list."}},
+    portfolio:{ title:{pl:"Portfel i średni koszt",en:"Portfolio & average cost"},
+      body:{pl:"Portfel = co masz. Śr.koszt = ile średnio zapłaciłeś za 1 szt.",
+            en:"Portfolio = what you own. Avg cost = average you paid per unit."}},
+    online_safety:{ title:{pl:"Bezpieczny internet",en:"Online safety"},
+      body:{pl:"Nie klikaj dziwnych linków. Nie podawaj danych. Zapytaj rodzica.",
+            en:"Don’t click weird links. Don’t share data. Ask a parent."}},
+    scam_check:{ title:{pl:"Test „czy to ściema?”",en:"“Is it a scam?” test"},
+      body:{pl:"Pewny zysk? Pośpiech? Tajemnica? — STOP i pytaj dorosłego.",
+            en:"Guaranteed profit? Rush? Secrecy? — STOP and ask an adult."}},
+    howto_fx:{ title:{pl:"Krok po kroku: kup walutę",en:"Step by step: buy a currency"},
+      body:{pl:"1) Currencies → wybierz parę • 2) Add to basket • 3) Sprawdź Investment Jar • 4) Buy.",
+            en:"1) Currencies → choose a pair • 2) Add to basket • 3) Check Investment Jar • 4) Buy."}},
+    money_mindset:{ title:{pl:"Nastawienie do pieniędzy",en:"Money mindset"},
+      body:{pl:"Pieniądze to narzędzie do celów. Szacunek, plan, cierpliwość.",
+            en:"Money is a tool for goals. Respect, plan, patience."}},
+    reflection_journal:{ title:{pl:"Dziennik 2 min",en:"2-minute journal"},
+      body:{pl:"Zapisz 1 rzecz, której się nauczyłeś, i 1 decyzję, z której jesteś dumny.",
+            en:"Write 1 thing you learned and 1 decision you’re proud of."}},
+    gratitude_share:{ title:{pl:"Wdzięczność i dzielenie",en:"Gratitude & sharing"},
+      body:{pl:"10% do słoika „Prezenty” to dobry start.",
+            en:"10% to the “Gifts” jar is a great start."}},
+    inflation_simple:{ title:{pl:"Inflacja (prosto)",en:"Inflation (simple)"},
+      body:{pl:"Gdy ceny rosną, ta sama kwota kupuje mniej. Planuj mądrze.",
+            en:"When prices rise, the same money buys less. Plan wisely."}},
+    compound_magic:{ title:{pl:"Magia procentu składanego",en:"Magic of compounding"},
+      body:{pl:"Małe kwoty + czas = śnieżna kula dobra.",
+            en:"Small amounts + time = a good snowball."}}
+  };
+
+  // Dołącz tylko te, których nie masz:
+  Object.keys(EXTRA).forEach(k => { if (!LEARN[k]) LEARN[k] = EXTRA[k]; });
+
+  // 2) KOLEJNOŚĆ WYŚWIETLANIA (i fallback na resztę kluczy):
+  const ORDER = [
+    'jars_intro','savings','earnings','gifts','invest','allowance','pocket_rules',
+    'needs_wants','goals','goal_smart','vision_board','budget','split_rule','habit_loop','jar_refill',
+    'trading_intro','market_stock','stock_vs_etf','dividend_intro','market_fx','fx_examples',
+    'charts_ranges','chart_patterns','accounting','pl_meaning','fees_note',
+    'watchlist','basket','portfolio','safety','online_safety','scam_check',
+    'howto_stock','howto_fx',
+    'money_mindset','reflection_journal','gratitude_share','inflation_simple','compound_magic'
+  ];
+
+  // 3) NOWY RENDERER — NADPISANIE LOKALNEGO SYMBOLU `fillLearn`
+  function fillLearnV2(){
+    const L = getLang();
+    const wrap = document.querySelector('#ai-learn');
+    if (!wrap) return;
+    const keys = [...ORDER, ...Object.keys(LEARN).filter(k => !ORDER.includes(k))];
+    wrap.innerHTML = keys.map(k => {
+      const c = LEARN[k]; if (!c) return '';
+      const title = c.title?.[L] ?? c.title?.en ?? '';
+      const body  = c.body?.[L]  ?? c.body?.en  ?? '';
+      return cardHTML(title, body);
+    }).join('');
+  }
+
+  // <- TO JEST KLUCZOWE:
+  fillLearn = fillLearnV2;          // nadpisujemy wewnętrzny symbol używany przez panel
+  window.fillLearn = fillLearnV2;   // i dla pewności eksport
+
+  // Jeżeli panel już otwarty, odśwież karty teraz:
+  try { fillLearnV2(); } catch {}
+})();
+
+
 })(); // ← zamknięcie IIFE agenta
 
 /* --- SORT jest obsługiwany wyłącznie w index.html ---
