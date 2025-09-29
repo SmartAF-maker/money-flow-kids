@@ -3377,135 +3377,6 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-/* === SORT ARROW: mobile-safe + PERSIST sort dir === */
-(() => {
-  // zapamiętany kierunek (globalnie)
-  window.__sortStocksDir = window.__sortStocksDir || null; // 'asc'|'desc'|null
-  window.__sortFxDir     = window.__sortFxDir     || null;
-
-  const BTN_SELECTOR = '[data-sort-btn], #stockControls .maxprice-filter .sort, #fxControls .maxprice-filter .sort';
-
-  const toNum = t => {
-    const v = parseFloat(String(t||'').replace(/[^\d.,-]/g,'').replace(',', '.'));
-    return Number.isFinite(v) ? v : NaN;
-  };
-  const getPrice = (card) => {
-    const ds = card.getAttribute && card.getAttribute('data-price');
-    if (ds && Number.isFinite(+ds)) return +ds;
-    const el = card.querySelector && card.querySelector('[data-price], .price, .row-price, .wl-price');
-    if (el){
-      const v = toNum((el.getAttribute && el.getAttribute('data-price')) || el.textContent);
-      if (Number.isFinite(v)) return v;
-    }
-    const txt = card.textContent || '';
-    const m = txt.match(/-?\d+(?:[.,]\d+)?/g);
-    return m ? toNum(m[m.length-1]) : NaN;
-  };
-
-  function sortListCompat(btn, dir){
-    const list =
-      btn.closest('#stockControls') ? document.getElementById('stockList') :
-      btn.closest('#fxControls')    ? document.getElementById('fxList')   : null;
-    if (!list) return;
-    const cards = Array.from(list.children).filter(n => n.nodeType === 1 && !n.classList.contains('maxprice-filter'));
-    cards.sort((a,b) => {
-      const av=getPrice(a), bv=getPrice(b);
-      if (!Number.isFinite(av) && !Number.isFinite(bv)) return 0;
-      if (!Number.isFinite(av)) return 1;
-      if (!Number.isFinite(bv)) return -1;
-      return dir==='asc' ? av - bv : bv - av;
-    });
-    const frag = document.createDocumentFragment();
-    // jeśli w liście siedzi pasek filtra – zostaw go na początku
-    const filterBar = list.querySelector('.maxprice-filter');
-    if (filterBar) frag.appendChild(filterBar);
-    cards.forEach(c => frag.appendChild(c));
-    list.appendChild(frag);
-  }
-
-  function setSortState(btn, state) {
-    const dir = state === 'desc' ? 'desc' : 'asc';
-    btn.setAttribute('data-dir', dir);
-    btn.classList.toggle('desc',    dir === 'desc');
-    btn.classList.toggle('is-desc', dir === 'desc'); // wsteczna zgodność
-    btn.classList.add('sort');
-    btn.dataset.scope = btn.closest('#stockControls') ? 'stocks'
-                      : btn.closest('#fxControls')    ? 'fx'
-                      : (btn.dataset.scope || 'stocks');
-    btn.setAttribute('role', 'button');
-    btn.setAttribute('tabindex', '0');
-    btn.setAttribute('aria-pressed', 'true');
-    btn.setAttribute('aria-label', dir === 'desc' ? 'Sort: highest to lowest' : 'Sort: lowest to highest');
-    btn.title = dir === 'desc' ? 'Sort: highest → lowest' : 'Sort: lowest → highest';
-  }
-
-  function toggle(btn) {
-    const cur  = (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase();
-    const next = cur === 'desc' ? 'asc' : 'desc';
-    setSortState(btn, next);
-
-    // 🧠 zapamiętaj kierunek per-sekcja i odśwież listę,
-    //    żeby tick 2–3 s nie „cofał” sortu
-    if (btn.dataset.scope === 'fx') {
-      window.__sortFxDir = next;
-      if (typeof renderFxList === 'function') {
-        const v = document.getElementById('fxSearch')?.value || "";
-        renderFxList(v);
-        return;
-      }
-    } else {
-      window.__sortStocksDir = next;
-      if (typeof renderStocks === 'function') {
-        const v = document.getElementById('stockSearch')?.value || "";
-        renderStocks(v);
-        return;
-      }
-    }
-
-    // fallback: posortuj istniejące karty w DOM (gdyby render* nie istniały)
-    sortListCompat(btn, next);
-  }
-
-  function onTap(e) {
-    if (e.cancelable) e.preventDefault();
-    e.stopPropagation();
-    toggle(e.currentTarget);
-  }
-  function onKey(e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e.currentTarget); }
-  }
-
-  function init() {
-    document.querySelectorAll(BTN_SELECTOR).forEach(btn => {
-      if (btn._sortWired) return;
-      btn._sortWired = true;
-
-      // startowy stan (i zakres: stocks/fx)
-      setSortState(btn, (btn.getAttribute('data-dir') || (btn.classList.contains('desc') ? 'desc' : 'asc')).toLowerCase());
-
-      // dotyk klika natychmiast
-      if (btn.tagName === 'BUTTON' && !btn.getAttribute('type')) btn.setAttribute('type','button');
-      btn.style.touchAction = 'manipulation';
-
-      // niezawodne handlery
-      if ('PointerEvent' in window) btn.addEventListener('pointerup', onTap, { passive: false });
-      btn.addEventListener('touchend', onTap, { passive: false });
-      btn.addEventListener('click',    onTap, false);
-      btn.addEventListener('keydown',  onKey);
-    });
-  }
-
-  (document.readyState === 'loading')
-    ? document.addEventListener('DOMContentLoaded', init)
-    : init();
-
-  // jeśli filtry się przebudowują – dowiąż ponownie
-  ['#stockControls','#fxControls'].forEach(sel => {
-    const root = document.querySelector(sel);
-    if (root) new MutationObserver(init).observe(root, {childList:true, subtree:true});
-  });
-})();
-
 
 
 
@@ -3575,9 +3446,56 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("tutorialSeen", "1");
   }
 });
+// === SORT: globalny kierunek + togglery ===
+window.__sortStocksDir = window.__sortStocksDir || null; // 'asc' | 'desc' | null
+window.__sortFxDir     = window.__sortFxDir     || null;
+
+function setSortState(btn, dir){
+  if (!btn) return;
+  btn.dataset.dir = dir;
+  btn.classList.toggle('desc', dir === 'desc');
+  btn.setAttribute('aria-label', dir==='desc' ? 'Sort: highest to lowest' : 'Sort: lowest to highest');
+}
+
+function toggleStocksSort(){
+  const btn  = document.querySelector('#stockControls .maxprice-filter .sort');
+  const next = (btn?.dataset.dir === 'desc') ? 'asc' : 'desc';
+  window.__sortStocksDir = next;
+  setSortState(btn, next);
+  renderStocks(document.getElementById('stockSearch')?.value || "");
+}
+
+function toggleFxSort(){
+  const btn  = document.querySelector('#fxControls .maxprice-filter .sort');
+  const next = (btn?.dataset.dir === 'desc') ? 'asc' : 'desc';
+  window.__sortFxDir = next;
+  setSortState(btn, next);
+  renderFxList(document.getElementById('fxSearch')?.value || "");
+}
+
+
 window.addEventListener('DOMContentLoaded', () => {
+  // 1) Podłącz kliki (po załadowaniu DOM)
+  const sBtn = document.querySelector('#stockControls .maxprice-filter .sort');
+  const fBtn = document.querySelector('#fxControls .maxprice-filter .sort');
+
+  if (sBtn && !sBtn._wired) {
+    sBtn._wired = true;
+    sBtn.addEventListener('click', (e)=>{ e.preventDefault(); toggleStocksSort(); });
+  }
+  if (fBtn && !fBtn._wired) {
+    fBtn._wired = true;
+    fBtn.addEventListener('click', (e)=>{ e.preventDefault(); toggleFxSort(); });
+  }
+
+  // 2) Przywróć zapamiętany kierunek na przyciskach
+  if (window.__sortStocksDir) setSortState(sBtn, window.__sortStocksDir);
+  if (window.__sortFxDir)     setSortState(fBtn, window.__sortFxDir);
+
+  // 3) Normalny start UI
   renderAll();
 });
+
 /* ===== I18N bootstrap (safe, single-init) ===== */
 (function () {
   if (window.__MFK_I18N_INIT__) return;
