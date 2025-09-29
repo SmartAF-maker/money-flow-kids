@@ -3128,7 +3128,7 @@ const tBtnLoginTop = document.getElementById('t-btnLoginTop');
 const tBtnLogoutTop = document.getElementById('t-btnLogout');
 
 // === App title (nagłówek/logotyp tekstowy) ===
-const appTitleEl = document.getElementById('appTitle'); // <div id="appTitle"></div> w HTML
+const appTitleEl = document.querySelector('#t-appTitle, #appTitle, .brand-title') // <div id="appTitle"></div> w HTML
 
 function fillLoginChildSelector() {
   if (!loginChild) return;
@@ -4445,8 +4445,10 @@ window.dispatchEvent(new Event('fx:universe-changed'));
     tour:{pl:"Start tour",en:"Start tour"},
     ph:{pl:"Napisz… (np. co to trading, kurs AAPL, pokaż wykres EUR/USD tydzień, start quiz)",
         en:"Type… (e.g., what is trading, price AAPL, show chart EUR/USD week, start quiz)"},
-    quick:{pl:["Wyjaśnij wykres","Sprawdź kurs","Rebalans","Start quiz"],
-           en:["Explain chart","Check price","Rebalance","Start quiz"]},
+    quick:{
+  pl:["Jak czytać wykres","Co to Watchlist?","Rebalans","Start quiz"],
+  en:["Read a chart","What is watchlist?","Rebalance","Start quiz"]
+},
     learnHead:{pl:"Tematy Nauki",en:"Learning Topics"},
     tutHead:{pl:"Szybkie Tutoriale",en:"Quick Tutorials"},
     playHead:{pl:"Mini gry i quizy",en:"Mini games & quizzes"},
@@ -5611,8 +5613,8 @@ function fillLearn(){
 
     // wire
     $('#ai-x').onclick   = ()=> root.remove();
-    $('#ai-explain').onclick = ()=> writeLog(explainSeries(window.__LAST_SERIES__));
-    $('#ai-price').onclick   = ()=> runCmd((getLang()==='pl'?'kurs':'price')+' AAPL');
+ $('#ai-explain').onclick = ()=> showLearn(['charts_ranges','chart_patterns']);
+$('#ai-price').onclick   = ()=> showLearn(['watchlist']);
     $('#ai-rebal').onclick   = ()=> writeLog(rebalanceTip());
     $('#ai-quiz').onclick    = ()=> { startQuiz(); switchTab('play'); };
     $('#ai-send').onclick    = ()=> { const v=$('#ai-input').value.trim(); if(v) runCmd(v); };
@@ -5673,6 +5675,31 @@ function fillLearn(){
   function writeLog(t){ const el=$('#ai-log'); if(el){ el.dataset.help = (t===buildHelp()?'1':''); el.textContent=String(t||''); } }
   const writeHelp = ()=> writeLog(buildHelp());
   function writeToast(type){ const host = $('#ai-toast'); if(!host) return; host.innerHTML=''; const el=document.createElement('div'); el.style.cssText='background:#0b1324;border:1px solid #334155;color:#e5e7eb;border-radius:10px;padding:8px 10px;box-shadow:0 10px 28px rgba(2,8,23,.45)'; const L=getLang(); el.textContent = type==='good'?UI.good[L]:type==='bad'?UI.bad[L]: (L==='pl'?'Start!':'Go!'); host.appendChild(el); setTimeout(()=>{ el.remove(); }, 1200); }
+function showLearn(keys){
+  const L = getLang();
+  const parts = (keys||[]).map(k=>{
+    const c = LEARN[k]; if(!c) return '';
+    const title = c.title?.[L] ?? c.title?.en ?? '';
+    const body  = c.body?.[L]  ?? c.body?.en  ?? '';
+    return `• ${title}\n${body}`;
+  }).filter(Boolean);
+
+  if(parts.length) writeLog(parts.join('\n\n'));
+
+  // przełącz na zakładkę Learn
+  switchTab('learn');
+
+  // delikatny scroll do pierwszej wskazanej karty
+  setTimeout(()=>{
+    const wrap = document.querySelector('#ai-learn');
+    if(!wrap) return;
+    const firstKey = keys?.[0];
+    const targetTitle = (LEARN[firstKey]?.title?.[L] ?? '').toLowerCase();
+    const cards = [...wrap.querySelectorAll('.learn-card > div:first-child')];
+    const hit = cards.find(d => d.textContent.trim().toLowerCase().includes(targetTitle));
+    hit?.closest('.learn-card')?.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 60);
+}
 
   /* ===== Learn cards ===== */
   function cardHTML(title, body){ return `<div class="learn-card" style="border:1px solid #334155;border-radius:10px;padding:10px;background:#0b1324"><div style="font-weight:700;margin-bottom:6px">${title}</div><div style="font-size:13px;white-space:pre-wrap;opacity:.95">${body}</div></div>`; }
