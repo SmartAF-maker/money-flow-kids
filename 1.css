@@ -4544,3 +4544,4 @@ maxprice-filter .sort.desc svg{ transform:rotate(180deg); }
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+#ai-explain, #ai-price { display:none !important; }
